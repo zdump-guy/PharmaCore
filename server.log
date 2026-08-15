@@ -1,0 +1,4 @@
+
+> yo-project@0.1.0 dev
+> npx -y node@20 node_modules/.bin/next dev -p 8080
+

@@ -1,0 +1,105 @@
+{
+  "nav": {
+    "home": "Home",
+    "courses": "Courses"
+  },
+  "hero": {
+    "eyebrow": "Pharmacy Education Platform",
+    "title": "Master Pharmacy,",
+    "titleAccent": "One Lecture at a Time",
+    "subtitle": "Comprehensive, university-level pharmacology and pharmaceutical sciences courses — freely accessible to all students.",
+    "ctaPrimary": "Browse Courses",
+    "ctaSecondary": "Learn More"
+  },
+  "about": {
+    "eyebrow": "About PharmaCore",
+    "title": "Who We Are",
+    "subtitle": "A dedicated educational platform built for pharmacy students and professionals.",
+    "feature1Title": "Expert-Led Courses",
+    "feature1Desc": "All content is curated and delivered by qualified pharmacy educators and mentors.",
+    "feature2Title": "Video Lectures",
+    "feature2Desc": "Embedded YouTube lectures for seamless, distraction-free learning from anywhere.",
+    "feature3Title": "Quizzes & Assessment",
+    "feature3Desc": "Test your knowledge with targeted quizzes covering every lecture and course.",
+    "feature4Title": "Community Q&A",
+    "feature4Desc": "Ask questions directly — get answers from mentors and admins in a public forum."
+  },
+  "courses": {
+    "eyebrow": "Our Courses",
+    "title": "Available Courses",
+    "subtitle": "Browse all available pharmacy and pharmacology courses. No sign-up required.",
+    "viewCourse": "View Course →",
+    "noCourses": "No courses available yet. Check back soon!"
+  },
+  "course": {
+    "lectures": "Lectures",
+    "objectives": "Learning Objectives",
+    "prerequisites": "Prerequisites",
+    "startLearning": "Start with Lecture 1",
+    "lectureCount": "{{count}} lectures"
+  },
+  "lecture": {
+    "resources": "Resources",
+    "quiz": "Take the Quiz",
+    "qa": "Community Q&A",
+    "qaPlaceholder": "Ask a question about this lecture...",
+    "qaNamePlaceholder": "Your name",
+    "qaEmailPlaceholder": "your@email.com",
+    "qaSubmit": "Submit Question",
+    "qaSubmitting": "Submitting...",
+    "qaSuccess": "Your question has been submitted!",
+    "qaNoQuestions": "No questions yet. Be the first to ask!",
+    "noResources": "No resources available for this lecture."
+  },
+  "quiz": {
+    "question": "Question",
+    "of": "of",
+    "submit": "Submit Quiz",
+    "retake": "Retake Quiz",
+    "yourScore": "Your Score",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "correctAnswer": "Correct answer",
+    "shortAnswerPlaceholder": "Type your answer here...",
+    "trueOption": "True",
+    "falseOption": "False"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "lectures": "Lectures",
+    "quizzes": "Quizzes",
+    "qa": "Q&A",
+    "logout": "Sign Out",
+    "addCourse": "Add Course",
+    "addLecture": "Add Lecture",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this?",
+    "roleLabel": "Logged in as"
+  },
+  "login": {
+    "title": "Admin Login",
+    "subtitle": "Sign in to access the PharmaCore admin dashboard.",
+    "email": "Email address",
+    "password": "Password",
+    "submit": "Sign In",
+    "submitting": "Signing in...",
+    "error": "Invalid email or password. Please try again."
+  },
+  "footer": {
+    "teamTitle": "Our Team",
+    "teamDesc": "Built with passion by a dedicated team of pharmacy educators and developers.",
+    "devTitle": "Developer & Maintainer",
+    "rights": "All rights reserved.",
+    "madeBy": "Crafted by"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong. Please try again.",
+    "backToCourse": "← Back to Course",
+    "backToCourses": "← All Courses"
+  }
+}
