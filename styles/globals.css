@@ -421,24 +421,39 @@ select.input {
 .lang-switcher {
   display: flex;
   align-items: center;
-  background: var(--bg-surface);
+  background: var(--bg-elevated);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
 }
 .lang-switcher__btn {
-  padding: 8px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  min-width: 40px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--text-muted);
   background: transparent;
   border: none;
+  border-radius: 999px;
   cursor: pointer;
   transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  line-height: 1;
+}
+.lang-switcher__btn:hover:not(.lang-switcher__btn--active) {
+  color: var(--text-primary);
+  background: var(--bg-overlay);
 }
 .lang-switcher__btn--active {
-  background: var(--gradient-brand);
+  background: var(--color-accent-1);
   color: white;
+  box-shadow: 0 1px 4px rgba(106,166,184,0.35);
 }
 
 /* ─── Footer ──────────────────────────────────────────────────── */

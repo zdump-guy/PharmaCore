@@ -12,10 +12,11 @@ import { supabase } from '@/lib/supabaseClient';
 import { Course, Lecture, Quiz, CommunityQuestion, UserProfile, UserRole } from '@/types';
 
 // ── Admin Layout ────────────────────────────────────────────────
-function AdminLayout({ children, activeTab, onTabChange }: {
+function AdminLayout({ children, activeTab, onTabChange, userRole }: {
   children: React.ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  userRole?: UserRole;
 }) {
   const { t } = useTranslation('common');
   const router = useRouter();
@@ -33,6 +34,10 @@ function AdminLayout({ children, activeTab, onTabChange }: {
     { id: 'quizzes', label: t('admin.quizzes'), icon: '📝' },
     { id: 'qa', label: t('admin.qa'), icon: '💬' },
   ];
+
+  if (userRole === 'super_admin' || userRole === 'dev') {
+    tabs.push({ id: 'users', label: 'Users', icon: '👥' });
+  }
 
   return (
     <div lang={locale} dir={isAr ? 'rtl' : 'ltr'} style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -267,6 +272,121 @@ function QATab({ userId }: { userId: string }) {
   );
 }
 
+// ── Users Tab ───────────────────────────────────────────────────
+function UsersTab() {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'mentor' as UserRole });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    setUsers(data ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const res = await fetch('/api/admin/users/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(form)
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.details || 'Failed to create user');
+      }
+      
+      setShowForm(false);
+      setForm({ email: '', password: '', full_name: '', role: 'mentor' });
+      fetchUsers();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="admin-header">
+        <h2>Users Management</h2>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>+ Add User</button>
+      </div>
+
+      {showForm && (
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: 28, marginBottom: 32 }}>
+          <h3 style={{ marginBottom: 20 }}>Add New User</h3>
+          {error && <p className="error-message" style={{ marginBottom: 16 }}>{error}</p>}
+          <form onSubmit={handleSave}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" className="input" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" className="input" required value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Full Name</label>
+                <input type="text" className="input" required value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label>Role</label>
+                <select className="input" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole }))}>
+                  <option value="mentor">Mentor</option>
+                  <option value="super_admin">Super Admin</option>
+                  <option value="dev">Dev</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving ? 'Saving...' : 'Save User'}</button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading-state"><div className="spinner" /></div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {users.map(u => (
+            <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+              <div className="qa-avatar">{u.full_name.charAt(0).toUpperCase()}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600 }}>{u.full_name}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u.email}</div>
+              </div>
+              <div>
+                <span className="badge">{u.role.replace('_', ' ')}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Admin Page ─────────────────────────────────────────────
 export default function AdminPage() {
   const router = useRouter();
@@ -304,6 +424,7 @@ export default function AdminPage() {
     switch (activeTab) {
       case 'courses': return <CoursesTab userRole={userRole} userId={userId} />;
       case 'qa': return <QATab userId={userId} />;
+      case 'users': return (userRole === 'super_admin' || userRole === 'dev') ? <UsersTab /> : null;
       default: return (
         <div className="empty-state">
           <div className="empty-state__icon">🚧</div>
@@ -315,7 +436,7 @@ export default function AdminPage() {
 
   return (
     <ThemeProvider>
-      <AdminLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      <AdminLayout activeTab={activeTab} onTabChange={setActiveTab} userRole={userRole}>
         <div style={{ marginBottom: 8 }}>
           <span className="badge">{userRole.replace('_', ' ')}</span>
           {profile?.full_name && <span style={{ marginLeft: 10, fontSize: '0.9rem', color: 'var(--text-muted)' }}>{profile.full_name}</span>}

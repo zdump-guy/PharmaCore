@@ -38,6 +38,7 @@ export default function Navbar() {
               className={`lang-switcher__btn${locale === 'ar' ? ' lang-switcher__btn--active' : ''}`}
               onClick={() => switchLocale('ar')}
               aria-pressed={locale === 'ar'}
+              style={{ fontSize: '1rem', fontFamily: 'Tajawal, sans-serif' }}
             >
               ع
             </button>
