@@ -2,14 +2,14 @@ import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
 
 const teamMembers = [
-  { name: 'Mohamed Mostafa Othman Ibrahim', role: 'Dev & Maintainer', links: [] },
+  { name: 'Ghost', role: 'Dev & Maintainer', links: [] },
   // Add more team members here
 ];
 
 const socialLinks = [
-  { label: 'LinkedIn', href: 'https://linkedin.com', icon: '🔗' },
-  { label: 'Portfolio', href: 'https://onevoxel.com', icon: '🌐' },
-  { label: 'GitHub', href: 'https://github.com', icon: '💻' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mohamed-mostafa-uiux', icon: '🔗' },
+  { label: 'Portfolio', href: 'https://mohamed-mostafa-uiux.vercel.app', icon: '🌐' },
+  { label: 'GitHub', href: 'https://github.com/zdump-guy', icon: '💻' },
 ];
 
 export default function Footer() {
@@ -51,13 +51,10 @@ export default function Footer() {
             <p className="footer__section-title">{t('footer.devTitle', 'Developer & Maintainer')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Mohamed Mostafa Othman Ibrahim
+                Ghost (Mohamed Mostafa)
               </p>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Freelance UI/UX & Front-End Developer
-              </p>
-              <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: 'var(--color-accent-1)', fontWeight: 600 }}>
-                <span>⬡</span> One Voxel
+                UI/UX & Web Developer
               </p>
               <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
                 {socialLinks.map((link) => (

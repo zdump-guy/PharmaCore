@@ -15,13 +15,17 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('submitting');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setErrorMsg('');
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) {
+      console.error('Login error:', error);
       setStatus('error');
+      setErrorMsg(error.message);
     } else {
       router.replace('/admin');
     }
@@ -96,7 +100,7 @@ export default function LoginPage() {
             </div>
 
             {status === 'error' && (
-              <p className="error-message" role="alert">{t('login.error')}</p>
+              <p className="error-message" role="alert">{errorMsg || t('login.error')}</p>
             )}
 
             <button
