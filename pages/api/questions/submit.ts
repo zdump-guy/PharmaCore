@@ -21,17 +21,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { lectureId, authorName, authorEmail, text } = parsed.data;
 
-  const { error } = await supabaseAdmin.from('community_questions').insert([{
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: 'Supabase is not configured' });
+  }
+
+  const { data: question, error } = await supabaseAdmin.from('community_questions').insert([{
     lecture_id: lectureId,
     author_name: authorName,
     author_email: authorEmail,
     text,
-  }]);
+  }]).select().single();
 
   if (error) {
     console.error('Error inserting question:', error);
     return res.status(500).json({ error: 'Failed to submit question' });
   }
 
-  return res.status(201).json({ success: true });
+  return res.status(201).json({ success: true, question: { ...question, answers: [] } });
 }

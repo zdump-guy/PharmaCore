@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createServerClient } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { z } from 'zod';
 
@@ -13,30 +12,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Verify auth session using cookies
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return Object.entries(req.cookies).map(([name, value]) => ({ name, value: value ?? '' }));
-        },
-        setAll() {},
-      },
-    }
-  );
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: 'Supabase is not configured' });
+  }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+  if (authError || !user) return res.status(401).json({ error: 'Unauthorized' });
 
   // Verify user is admin or mentor
   const { data: profile } = await supabaseAdmin
     .from('users')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   if (!profile || !['dev', 'super_admin', 'mentor'].includes(profile.role)) {
@@ -50,15 +43,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { questionId, text } = parsed.data;
 
-  const { error } = await supabaseAdmin.from('community_answers').insert([{
+  const { data: answer, error } = await supabaseAdmin.from('community_answers').insert([{
     question_id: questionId,
-    responder_id: session.user.id,
+    responder_id: user.id,
     text,
-  }]);
+  }]).select().single();
 
   if (error) {
     return res.status(500).json({ error: 'Failed to post answer' });
   }
 
-  return res.status(201).json({ success: true });
+  return res.status(201).json({ success: true, answer });
 }

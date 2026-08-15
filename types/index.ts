@@ -5,7 +5,7 @@ export type UserRole = 'dev' | 'super_admin' | 'mentor';
 export interface UserProfile {
   id: string;
   email: string;
-  full_name: string;
+  full_name: string | null;
   role: UserRole;
   created_at: string;
 }
@@ -14,12 +14,12 @@ export interface Course {
   id: string;
   title_en: string;
   title_ar: string;
-  description_en: string;
-  description_ar: string;
-  objectives_en: string;
-  objectives_ar: string;
-  prerequisites_en: string;
-  prerequisites_ar: string;
+  description_en: string | null;
+  description_ar: string | null;
+  objectives_en: string | null;
+  objectives_ar: string | null;
+  prerequisites_en: string | null;
+  prerequisites_ar: string | null;
   thumbnail_url: string | null;
   mentor_id: string | null;
   created_at: string;
@@ -31,8 +31,8 @@ export interface Lecture {
   course_id: string;
   title_en: string;
   title_ar: string;
-  details_en: string;
-  details_ar: string;
+  details_en: string | null;
+  details_ar: string | null;
   youtube_url: string;
   order: number;
   created_at: string;
@@ -57,7 +57,7 @@ export interface Quiz {
   title_ar: string;
   lecture_id: string | null;
   course_id: string | null;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -76,7 +76,7 @@ export interface CommunityQuestion {
   id: string;
   lecture_id: string;
   author_name: string;
-  author_email: string;
+  author_email?: string;
   text: string;
   created_at: string;
   answers?: CommunityAnswer[];
@@ -85,7 +85,7 @@ export interface CommunityQuestion {
 export interface CommunityAnswer {
   id: string;
   question_id: string;
-  responder_id: string;
+  responder_id: string | null;
   text: string;
   created_at: string;
   responder?: UserProfile;

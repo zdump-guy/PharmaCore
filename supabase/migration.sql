@@ -20,10 +20,10 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.users (id, email, full_name, role)
-  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name', COALESCE(NEW.raw_user_meta_data->>'role', 'mentor'));
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name', 'mentor');
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -114,7 +114,7 @@ CREATE INDEX IF NOT EXISTS cq_lecture_id_idx ON public.community_questions(lectu
 CREATE TABLE IF NOT EXISTS public.community_answers (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   question_id   UUID NOT NULL REFERENCES public.community_questions(id) ON DELETE CASCADE,
-  responder_id  UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  responder_id  UUID REFERENCES public.users(id) ON DELETE SET NULL,
   text          TEXT NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -124,6 +124,19 @@ CREATE TABLE IF NOT EXISTS public.mentor_course_assignments (
   mentor_id   UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   course_id   UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   PRIMARY KEY (mentor_id, course_id)
+);
+
+CREATE INDEX IF NOT EXISTS community_answers_question_id_idx ON public.community_answers(question_id);
+CREATE INDEX IF NOT EXISTS resources_lecture_id_idx ON public.resources(lecture_id);
+CREATE INDEX IF NOT EXISTS quizzes_lecture_id_idx ON public.quizzes(lecture_id);
+CREATE INDEX IF NOT EXISTS quizzes_course_id_idx ON public.quizzes(course_id);
+
+-- ── 10. Editable public website content ─────────────────────────
+CREATE TABLE IF NOT EXISTS public.site_content (
+  id          TEXT PRIMARY KEY,
+  content     JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_by  UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ================================================================
@@ -139,12 +152,13 @@ ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.community_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.community_answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mentor_course_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 
 -- ── Helper function: get caller's role ───────────────────────────
 CREATE OR REPLACE FUNCTION public.get_user_role()
 RETURNS TEXT AS $$
   SELECT role FROM public.users WHERE id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- ── Public read policies (anonymous) ─────────────────────────────
 CREATE POLICY "Public read courses" ON public.courses FOR SELECT USING (true);
@@ -154,6 +168,14 @@ CREATE POLICY "Public read quizzes" ON public.quizzes FOR SELECT USING (true);
 CREATE POLICY "Public read questions" ON public.questions FOR SELECT USING (true);
 CREATE POLICY "Public read community_questions" ON public.community_questions FOR SELECT USING (true);
 CREATE POLICY "Public read community_answers" ON public.community_answers FOR SELECT USING (true);
+CREATE POLICY "Public read site content" ON public.site_content FOR SELECT USING (true);
+
+GRANT SELECT ON public.site_content TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.site_content TO authenticated;
+
+-- Do not expose student email addresses through client-side REST queries.
+REVOKE SELECT ON public.community_questions FROM anon, authenticated;
+GRANT SELECT (id, lecture_id, author_name, text, created_at) ON public.community_questions TO anon, authenticated;
 
 -- ── Write policies: dev + super_admin full access ─────────────────
 CREATE POLICY "Admins manage courses" ON public.courses
@@ -171,6 +193,10 @@ CREATE POLICY "Admins manage quizzes" ON public.quizzes
 CREATE POLICY "Admins manage questions" ON public.questions
   FOR ALL USING (public.get_user_role() IN ('dev', 'super_admin'));
 
+CREATE POLICY "Developers manage site content" ON public.site_content
+  FOR ALL USING (public.get_user_role() = 'dev')
+  WITH CHECK (public.get_user_role() = 'dev');
+
 -- ── Mentor: only assigned courses ────────────────────────────────
 CREATE POLICY "Mentor manage assigned courses" ON public.courses
   FOR ALL USING (
@@ -185,9 +211,7 @@ CREATE POLICY "Mentor manage assigned lectures" ON public.lectures
   );
 
 -- ── Community Q&A writes ──────────────────────────────────────────
--- Anyone can insert a question (via API route using service role)
-CREATE POLICY "Anyone insert community questions" ON public.community_questions
-  FOR INSERT WITH CHECK (true);
+-- Questions are inserted through the validated API route using the service role.
 
 -- Only admins/mentors can answer
 CREATE POLICY "Admins and mentors answer questions" ON public.community_answers

@@ -2,7 +2,7 @@ import type { GetServerSideProps } from "next"
 import { useState } from "react"
 import { useRouter } from "next/router"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
-import { ArrowRight, CheckCircle2, KeyRound, Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
+import { FiArrowRight as ArrowRight, FiCheckCircle as CheckCircle2, FiKey as KeyRound, FiLoader as Loader2, FiLock as LockKeyhole, FiMail as Mail, FiShield as ShieldCheck } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import BrandMark from "@/components/BrandMark"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient"
+import { loadSiteContent } from "@/lib/siteContent"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -19,12 +20,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle")
   const [errorMsg, setErrorMsg] = useState("")
-  const copy = isAr ? { eyebrow: "منطقة الإدارة الآمنة", title: "أدر المحتوى من مكان واحد.", body: "وصول مخصص للمطور والمشرفين والمرشدين، مع صلاحيات واضحة لكل دور.", point1: "إدارة المقررات والمحاضرات", point2: "إنشاء الاختبارات والموارد", point3: "متابعة أسئلة الطلاب والرد عليها", login: "تسجيل دخول المشرف", helper: "استخدم حسابك الإداري للوصول إلى لوحة التحكم.", email: "البريد الإلكتروني", password: "كلمة المرور", submit: "تسجيل الدخول", submitting: "جارٍ التحقق...", error: "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.", secure: "اتصال آمن ومحمي" } : { eyebrow: "Secure admin area", title: "Manage every learning touchpoint.", body: "Purpose-built access for developers, admins, and mentors, with clear permissions for every role.", point1: "Manage courses and lectures", point2: "Build quizzes and resources", point3: "Review and answer student questions", login: "Admin sign in", helper: "Use your staff account to access the dashboard.", email: "Email address", password: "Password", submit: "Sign in", submitting: "Verifying...", error: "Could not sign in. Check your details and try again.", secure: "Secure, protected connection" }
+  const copy = isAr ? { eyebrow: "منطقة الإدارة الآمنة", title: "أدر المحتوى من مكان واحد.", body: "وصول مخصص للمطور والمشرفين والمرشدين، مع صلاحيات واضحة لكل دور.", point1: "إدارة المقررات والمحاضرات", point2: "إنشاء الاختبارات والموارد", point3: "متابعة أسئلة الطلاب والرد عليها", login: "تسجيل دخول المشرف", helper: "استخدم حسابك الإداري للوصول إلى لوحة التحكم.", email: "البريد الإلكتروني", password: "كلمة المرور", submit: "تسجيل الدخول", submitting: "جارٍ التحقق...", error: "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.", config: "أضف متغيرات Supabase إلى ملف البيئة أولًا.", secure: "اتصال آمن ومحمي" } : { eyebrow: "Secure admin area", title: "Manage every learning touchpoint.", body: "Purpose-built access for developers, admins, and mentors, with clear permissions for every role.", point1: "Manage courses and lectures", point2: "Build quizzes and resources", point3: "Review and answer student questions", login: "Admin sign in", helper: "Use your staff account to access the dashboard.", email: "Email address", password: "Password", submit: "Sign in", submitting: "Verifying...", error: "Could not sign in. Check your details and try again.", config: "Add the Supabase environment variables before signing in.", secure: "Secure, protected connection" }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     setStatus("submitting")
-    if (!isSupabaseConfigured) { await router.push("/admin"); return }
+    if (!supabase) { setErrorMsg(copy.config); setStatus("error"); return }
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     if (error) {
       console.error('Login error:', error);
@@ -63,4 +64,4 @@ export default function LoginPage() {
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({ props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) } })
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({ props: { siteContent: await loadSiteContent(), ...(await serverSideTranslations(locale ?? "en", ["common"])) } })

@@ -1,57 +1,56 @@
 import Link from "next/link"
-import { Mail, ShieldCheck } from "lucide-react"
+import { FiGlobe, FiMail as Mail, FiShield as ShieldCheck } from "react-icons/fi"
+import { FaGithub, FaLinkedinIn } from "react-icons/fa6"
 import { useRouter } from "next/router"
-import { useTranslation } from 'next-i18next'
 import BrandMark from "@/components/BrandMark"
+import { useSiteContent } from "@/components/SiteContentProvider"
 
 const socialLinks = [
-  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mohamed-mostafa-uiux', icon: '🔗' },
-  { label: 'Portfolio', href: 'https://mohamed-mostafa-uiux.vercel.app', icon: '🌐' },
-  { label: 'GitHub', href: 'https://github.com/zdump-guy', icon: '💻' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mohamed-mostafa-uiux', Icon: FaLinkedinIn },
+  { label: 'Portfolio', href: 'https://mohamed-mostafa-uiux.vercel.app', Icon: FiGlobe },
+  { label: 'GitHub', href: 'https://github.com/zdump-guy', Icon: FaGithub },
 ];
 
 export default function Footer() {
   const { locale } = useRouter()
-  const { t } = useTranslation('common')
+  const siteContent = useSiteContent()
   const isAr = locale === "ar"
   const year = new Date().getFullYear()
+  const copy = siteContent[isAr ? "ar" : "en"]
 
   return (
     <footer className="border-t bg-card" role="contentinfo">
       <div className="page-shell py-12 lg:py-16">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr_1fr]">
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
           <div className="max-w-sm">
             <Link href="/" className="inline-flex min-h-11 items-center gap-3"><BrandMark /><span className="text-lg font-extrabold">PharmaCore</span></Link>
-            <p className="mt-4 text-sm text-muted-foreground">{isAr ? "تعليم صيدلي واضح، موثوق، ومتاح للجميع — من المفهوم الأول حتى الممارسة السريرية." : "Clear, trustworthy pharmacy education — from first principles to clinical practice."}</p>
-            <div className="mt-5 flex items-center gap-2 text-xs font-semibold text-primary"><ShieldCheck className="size-4" />{isAr ? "محتوى تعليمي بإشراف متخصصين" : "Educator-reviewed learning"}</div>
+            <p className="mt-4 text-sm text-muted-foreground">{copy.footer_description}</p>
+            <div className="mt-5 flex items-center gap-2 text-xs font-semibold text-primary"><ShieldCheck className="size-4" />{copy.footer_reviewed}</div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold">{isAr ? "فريق المنصة" : "Platform team"}</h2>
-            <p className="mt-4 text-sm font-semibold">Ghost (Mohamed Mostafa)</p>
-            <p className="mt-1 text-sm text-muted-foreground">UI/UX & Web Developer</p>
-            <a href="mailto:hello@pharmacore.education" className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline"><Mail className="size-4" /> hello@pharmacore.education</a>
-          </div>
-          <div>
-            <h2 className="text-sm font-bold">{t('footer.devTitle', 'Developer & Maintainer')}</h2>
+          <div className="lg:justify-self-end lg:min-w-[420px]">
+            <h2 className="text-sm font-bold">{copy.footer_links_title}</h2>
+            <p className="mt-4 text-sm font-semibold">{copy.footer_team_name}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{copy.footer_team_role}</p>
+            <a href={`mailto:${copy.footer_email}`} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline"><Mail className="size-4" />{copy.footer_email}</a>
             <div className="mt-5 flex flex-wrap gap-2">
-                {socialLinks.map((link) => (
+                {socialLinks.map(({ label, href, Icon }) => (
                   <a
-                    key={link.label}
-                    href={link.href}
+                    key={label}
+                    href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={link.label}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-background text-muted-foreground transition-colors hover:border-primary hover:text-primary text-xs font-medium"
+                    aria-label={label}
+                    className="flex min-h-11 items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                   >
-                    <span>{link.icon}</span> {link.label}
+                    <Icon className="size-3.5" aria-hidden="true" />{label}
                   </a>
                 ))}
             </div>
           </div>
         </div>
         <div className="mt-10 flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} PharmaCore. {isAr ? "جميع الحقوق محفوظة." : "All rights reserved."}</p>
-          <p>{isAr ? "صُمّم وبُني بعناية للتعلّم." : "Designed and built for focused learning."}</p>
+          <p>© {year} PharmaCore. {copy.footer_rights}</p>
+          <p>{copy.footer_tagline}</p>
         </div>
       </div>
     </footer>

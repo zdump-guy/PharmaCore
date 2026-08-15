@@ -3,7 +3,7 @@ import Link from "next/link"
 import { useRouter } from "next/router"
 import { useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, ClipboardCheck, RotateCcw, Send, X } from "lucide-react"
+import { FiArrowLeft as ArrowLeft, FiArrowRight as ArrowRight, FiCheck as Check, FiCheckCircle as CheckCircle2, FiClipboard as ClipboardCheck, FiRotateCcw as RotateCcw, FiSend as Send, FiX as X } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -11,12 +11,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import { demoQuizQuestions, demoQuizzes } from "@/lib/demo-data"
-import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient"
+import { supabase } from "@/lib/supabaseClient"
+import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { cn } from "@/lib/utils"
 import type { Question, Quiz } from "@/types"
 
-interface QuizPageProps { quiz: Quiz | null; questions: Question[] }
+interface QuizPageProps { quiz: Quiz | null; questions: Question[]; siteContent: SiteContent }
 
 export default function QuizPage({ quiz, questions }: QuizPageProps) {
   const { locale } = useRouter()
@@ -95,9 +95,9 @@ export default function QuizPage({ quiz, questions }: QuizPageProps) {
 
 export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ params, locale }) => {
   const id = params?.id as string
-  let quiz: Quiz | null = demoQuizzes.find((item) => item.id === id) ?? null
-  let questions = quiz ? demoQuizQuestions : []
-  if (isSupabaseConfigured) {
+  let quiz: Quiz | null = null
+  let questions: Question[] = []
+  if (supabase) {
     try {
       const { data: quizData } = await supabase.from("quizzes").select("*").eq("id", id).single()
       if (quizData) quiz = quizData
@@ -105,5 +105,5 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
       if (questionData) questions = questionData
     } catch {}
   }
-  return { props: { quiz, questions, ...(await serverSideTranslations(locale ?? "en", ["common"])) } }
+  return { props: { quiz, questions, siteContent: await loadSiteContent(), ...(await serverSideTranslations(locale ?? "en", ["common"])) } }
 }

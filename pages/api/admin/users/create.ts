@@ -1,11 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize the Supabase admin client with the service role key
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,6 +7,10 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: 'Supabase is not configured' });
   }
 
   // Basic auth check: The request should include an Authorization header with a Bearer token
@@ -45,6 +43,14 @@ export default async function handler(
 
   if (!email || !password || !full_name || !role) {
     return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (!['dev', 'super_admin', 'mentor'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+
+  if (typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' });
   }
 
   try {
@@ -82,9 +88,11 @@ export default async function handler(
           .eq('id', newUserId);
           
         if (updateError) {
+            await supabaseAdmin.auth.admin.deleteUser(newUserId);
             return res.status(500).json({ error: 'Failed to update user profile', details: updateError.message });
         }
       } else {
+        await supabaseAdmin.auth.admin.deleteUser(newUserId);
         return res.status(500).json({ error: 'Failed to create user profile', details: insertError.message });
       }
     }

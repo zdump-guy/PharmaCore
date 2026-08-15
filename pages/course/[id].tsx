@@ -2,18 +2,19 @@ import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, ClipboardCheck, Clock3, GraduationCap, LockKeyhole, PlayCircle } from "lucide-react"
+import { FiArrowLeft as ArrowLeft, FiArrowRight as ArrowRight, FiBookOpen as BookOpen, FiCheckCircle as CheckCircle2, FiClipboard as ClipboardCheck, FiLock as LockKeyhole, FiPlayCircle as PlayCircle } from "react-icons/fi"
+import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { demoCourses, demoLectures } from "@/lib/demo-data"
-import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient"
+import { supabase } from "@/lib/supabaseClient"
+import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import type { Course, Lecture } from "@/types"
 
-interface CoursePageProps { course: Course | null; lectures: Lecture[] }
+interface CoursePageProps { course: Course | null; lectures: Lecture[]; siteContent: SiteContent }
 
 export default function CoursePage({ course, lectures }: CoursePageProps) {
   const { locale } = useRouter()
@@ -25,9 +26,9 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
   }
 
   const title = isAr ? course.title_ar : course.title_en
-  const description = isAr ? course.description_ar : course.description_en
-  const objectives = (isAr ? course.objectives_ar : course.objectives_en).split(/[.،]\s*/).filter(Boolean)
-  const prerequisites = isAr ? course.prerequisites_ar : course.prerequisites_en
+  const description = (isAr ? course.description_ar : course.description_en) ?? ""
+  const objectives = ((isAr ? course.objectives_ar : course.objectives_en) ?? "").split(/[.،]\s*/).filter(Boolean)
+  const prerequisites = (isAr ? course.prerequisites_ar : course.prerequisites_en) ?? ""
   const copy = isAr ? { label: "مقرر تعليمي", back: "كل المقررات", lectures: "محتوى المقرر", intro: "رحلة متدرجة من المفاهيم الأساسية إلى التطبيق.", overview: "نظرة عامة", goals: "ماذا ستتعلم", req: "قبل أن تبدأ", start: "ابدأ المحاضرة الأولى", lesson: "محاضرة", mins: "دقيقة", open: "فتح المحاضرة", progress: "تقدم المقرر", ready: "جاهز للبدء", free: "وصول مفتوح" } : { label: "Learning course", back: "All courses", lectures: "Course content", intro: "A progressive journey from first principles to practical application.", overview: "Overview", goals: "What you will learn", req: "Before you start", start: "Start lecture one", lesson: "Lecture", mins: "min", open: "Open lecture", progress: "Course progress", ready: "Ready to begin", free: "Open access" }
 
   return (
@@ -69,7 +70,7 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                   <AccordionItem key={lecture.id} value={lecture.id} className="rounded-xl border bg-card px-5 data-[state=open]:border-primary/35">
                     <AccordionTrigger className="min-h-20 gap-4 py-4 text-start hover:no-underline">
                       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-secondary font-bold text-primary">{String(index + 1).padStart(2, "0")}</span>
-                      <span className="flex-1"><span className="block text-base font-bold">{lectureTitle}</span><span className="mt-1 flex items-center gap-2 text-xs font-normal text-muted-foreground"><Clock3 className="size-3.5" />{18 + index * 6} {copy.mins}</span></span>
+                      <span className="flex-1"><span className="block text-base font-bold">{lectureTitle}</span></span>
                     </AccordionTrigger>
                     <AccordionContent className="pb-5 ps-14">
                       <p className="text-sm text-muted-foreground">{details}</p>
@@ -102,9 +103,9 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
 
 export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ params, locale }) => {
   const id = params?.id as string
-  let course: Course | null = demoCourses.find((item) => item.id === id) ?? null
-  let lectures: Lecture[] = course ? demoLectures.map((item) => ({ ...item, course_id: course!.id })) : []
-  if (isSupabaseConfigured) {
+  let course: Course | null = null
+  let lectures: Lecture[] = []
+  if (supabase) {
     try {
       const { data: courseData } = await supabase.from("courses").select("*").eq("id", id).single()
       if (courseData) course = courseData
@@ -112,5 +113,5 @@ export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ 
       if (lectureData) lectures = lectureData
     } catch {}
   }
-  return { props: { course, lectures, ...(await serverSideTranslations(locale ?? "en", ["common"])) } }
+  return { props: { course, lectures, siteContent: await loadSiteContent(), ...(await serverSideTranslations(locale ?? "en", ["common"])) } }
 }

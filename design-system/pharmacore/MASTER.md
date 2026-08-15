@@ -34,14 +34,14 @@
 
 ### Typography
 
-- **Heading Font:** Noto Naskh Arabic
-- **Body Font:** Noto Sans Arabic
-- **Mood:** arabic, elegant, traditional, cultural, RTL, readable
-- **Google Fonts:** [Noto Naskh Arabic + Noto Sans Arabic](https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;700&display=swap)
+- **English Font:** Inter
+- **Arabic Font:** Tajawal
+- **Mood:** modern, clinical, bilingual, readable
+- **Google Fonts:** [Inter + Tajawal](https://fonts.google.com/?query=Inter%20Tajawal)
 
 **CSS Import:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;700&display=swap');
+/* Loaded through next/font/google: Inter for English, Tajawal for Arabic. */
 ```
 
 ### Spacing Variables

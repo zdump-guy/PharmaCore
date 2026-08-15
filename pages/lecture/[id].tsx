@@ -3,7 +3,7 @@ import Link from "next/link"
 import { useRouter } from "next/router"
 import { useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
-import { ArrowLeft, ArrowRight, CheckCircle2, Download, ExternalLink, FileImage, FileText, HelpCircle, MessageCircle, PlayCircle, Send, ShieldCheck, Sparkles, UserRound } from "lucide-react"
+import { FiArrowLeft as ArrowLeft, FiArrowRight as ArrowRight, FiCheckCircle as CheckCircle2, FiDownload as Download, FiExternalLink as ExternalLink, FiImage as FileImage, FiFileText as FileText, FiHelpCircle as HelpCircle, FiMessageCircle as MessageCircle, FiPlayCircle as PlayCircle, FiSend as Send, FiShield as ShieldCheck, FiStar as Sparkles } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -13,11 +13,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { demoLectures, demoQuestions, demoQuizzes, demoResources } from "@/lib/demo-data"
-import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient"
+import { supabase } from "@/lib/supabaseClient"
+import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import type { CommunityQuestion, Lecture, Quiz, Resource } from "@/types"
 
-interface LecturePageProps { lecture: Lecture | null; resources: Resource[]; quizzes: Quiz[]; questions: CommunityQuestion[]; courseId: string | null }
+interface LecturePageProps { lecture: Lecture | null; resources: Resource[]; quizzes: Quiz[]; questions: CommunityQuestion[]; courseId: string | null; siteContent: SiteContent }
 
 function QuestionForm({ lectureId, isAr, onAdded }: { lectureId: string; isAr: boolean; onAdded: (question: CommunityQuestion) => void }) {
   const [name, setName] = useState("")
@@ -29,14 +29,11 @@ function QuestionForm({ lectureId, isAr, onAdded }: { lectureId: string; isAr: b
     event.preventDefault()
     if (!name.trim() || !email.trim() || !question.trim()) return
     setStatus("submitting")
-    if (!isSupabaseConfigured) {
-      onAdded({ id: `local-${Date.now()}`, lecture_id: lectureId, author_name: name, author_email: email, text: question, created_at: new Date().toISOString(), answers: [] })
-      setName(""); setEmail(""); setQuestion(""); setStatus("success")
-      return
-    }
     try {
       const response = await fetch("/api/questions/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lectureId, authorName: name, authorEmail: email, text: question }) })
       if (!response.ok) throw new Error()
+      const data = await response.json()
+      onAdded(data.question)
       setName(""); setEmail(""); setQuestion(""); setStatus("success")
     } catch { setStatus("error") }
   }
@@ -66,9 +63,9 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
   }
 
   const title = isAr ? lecture.title_ar : lecture.title_en
-  const details = isAr ? lecture.details_ar : lecture.details_en
+  const details = (isAr ? lecture.details_ar : lecture.details_en) ?? ""
   const videoId = lecture.youtube_url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]{11})/)?.[1]
-  const copy = isAr ? { back: "العودة إلى المقرر", lecture: "محاضرة", summary: "الملخص", outcomes: "بعد هذه المحاضرة ستتمكن من", resources: "المواد", discussion: "الأسئلة", quiz: "اختبر فهمك", quizBody: "اختبار قصير يساعدك على تثبيت المفاهيم الأساسية.", startQuiz: "بدء الاختبار", noResources: "لا توجد مواد مرفقة حتى الآن.", mentor: "إجابة المرشد", ask: "لديك سؤال؟", askBody: "اكتب سؤالك بوضوح ليستفيد منه باقي الطلاب أيضًا.", questions: "أسئلة الطلاب" } : { back: "Back to course", lecture: "Lecture", summary: "Summary", outcomes: "After this lecture, you will be able to", resources: "Resources", discussion: "Discussion", quiz: "Check your understanding", quizBody: "A short checkpoint to reinforce the core ideas.", startQuiz: "Start quiz", noResources: "No resources are attached yet.", mentor: "Mentor answer", ask: "Have a question?", askBody: "Ask clearly so other students can benefit from the answer too.", questions: "Student questions" }
+  const copy = isAr ? { back: "العودة إلى المقرر", lecture: "محاضرة", summary: "الملخص", outcomes: "بعد هذه المحاضرة ستتمكن من", resources: "المواد", quizzes: "الاختبارات", discussion: "الأسئلة", quiz: "اختبر فهمك", quizBody: "اختبار قصير يساعدك على تثبيت المفاهيم الأساسية.", startQuiz: "بدء الاختبار", noResources: "لا توجد مواد مرفقة حتى الآن.", noQuizzes: "لا توجد اختبارات مرتبطة بهذه المحاضرة حتى الآن.", mentor: "إجابة المرشد", ask: "لديك سؤال؟", askBody: "اكتب سؤالك بوضوح ليستفيد منه باقي الطلاب أيضًا.", questions: "أسئلة الطلاب" } : { back: "Back to course", lecture: "Lecture", summary: "Summary", outcomes: "After this lecture, you will be able to", resources: "Resources", quizzes: "Quizzes", discussion: "Discussion", quiz: "Check your understanding", quizBody: "A short checkpoint to reinforce the core ideas.", startQuiz: "Start quiz", noResources: "No resources are attached yet.", noQuizzes: "No quizzes are linked to this lecture yet.", mentor: "Mentor answer", ask: "Have a question?", askBody: "Ask clearly so other students can benefit from the answer too.", questions: "Student questions" }
 
   return (
     <Layout title={`${title} — PharmaCore`} description={details}>
@@ -84,20 +81,21 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
       </section>
 
       <div className="page-shell py-8 lg:py-12">
-        <div className="grid gap-8 xl:grid-cols-[1fr_320px]">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <div className="min-w-0">
             <div className="aspect-video overflow-hidden rounded-2xl border bg-[#101819] shadow-sm">
               {videoId ? <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${videoId}`} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <div className="grid h-full place-items-center text-center text-white"><div><PlayCircle className="mx-auto size-14 text-[#8BCDE1]" /><p className="mt-4 font-semibold">{isAr ? "سيُضاف فيديو المحاضرة قريبًا" : "Lecture video coming soon"}</p></div></div>}
             </div>
 
             <Tabs defaultValue="summary" className="mt-8">
-              <TabsList className="grid h-auto w-full grid-cols-3 bg-muted p-1">
+              <TabsList className="grid h-auto w-full grid-cols-4 bg-muted p-1">
                 <TabsTrigger value="summary" className="min-h-11">{copy.summary}</TabsTrigger>
                 <TabsTrigger value="resources" className="min-h-11">{copy.resources}</TabsTrigger>
+                <TabsTrigger value="quizzes" className="min-h-11">{copy.quizzes}</TabsTrigger>
                 <TabsTrigger value="discussion" className="min-h-11">{copy.discussion}</TabsTrigger>
               </TabsList>
               <TabsContent value="summary" className="mt-5">
-                <Card className="shadow-none"><CardContent className="p-6 sm:p-8"><h2 className="text-2xl font-bold">{copy.outcomes}</h2><div className="mt-6 grid gap-4 sm:grid-cols-2">{[isAr ? "شرح مراحل ADME بوضوح" : "Explain each ADME stage", isAr ? "ربط خصائص الدواء بتوافره الحيوي" : "Connect drug properties to bioavailability", isAr ? "تمييز دور الكبد والكلى" : "Distinguish liver and kidney roles", isAr ? "قراءة المصطلحات الحركية بثقة" : "Read pharmacokinetic terms confidently"].map((item) => <div key={item} className="flex gap-3 rounded-xl border bg-muted/35 p-4 text-sm"><CheckCircle2 className="size-5 shrink-0 text-primary" /><span className="font-medium">{item}</span></div>)}</div></CardContent></Card>
+                <Card className="shadow-none"><CardContent className="p-6 sm:p-8"><h2 className="text-2xl font-bold">{copy.summary}</h2><p className="mt-5 leading-7 text-muted-foreground">{details}</p></CardContent></Card>
               </TabsContent>
               <TabsContent value="resources" className="mt-5 space-y-3">
                 {resources.length ? resources.map((resource) => {
@@ -105,20 +103,22 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
                   return <a key={resource.id} href={resource.url} target="_blank" rel="noreferrer" className="flex min-h-16 items-center gap-4 rounded-xl border bg-card p-4 transition-colors hover:border-primary/45"><span className="icon-tile"><ResourceIcon className="size-5" /></span><span className="flex-1 font-semibold">{isAr ? resource.title_ar : resource.title_en}</span><ExternalLink className="size-4 text-muted-foreground" /></a>
                 }) : <Card className="shadow-none"><CardContent className="p-8 text-center text-muted-foreground"><Download className="mx-auto mb-3 size-8" />{copy.noResources}</CardContent></Card>}
               </TabsContent>
-              <TabsContent value="discussion" className="mt-5">
-                <div className="space-y-5">
-                  <Card className="shadow-none"><CardHeader><CardTitle className="flex items-center gap-3"><span className="icon-tile"><HelpCircle className="size-5" /></span>{copy.ask}</CardTitle><p className="text-sm text-muted-foreground">{copy.askBody}</p></CardHeader><CardContent><QuestionForm lectureId={lecture.id} isAr={isAr} onAdded={(item) => setQuestions((current) => [item, ...current])} /></CardContent></Card>
-                  <h2 className="pt-4 text-2xl font-bold">{copy.questions}</h2>
-                  {questions.map((question) => <Card key={question.id} className="shadow-none"><CardContent className="p-6"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-full bg-secondary font-bold text-primary">{question.author_name.charAt(0)}</span><div><p className="font-bold">{question.author_name}</p><p className="text-xs text-muted-foreground">{new Date(question.created_at).toLocaleDateString(locale)}</p></div></div><p className="mt-5 text-pretty">{question.text}</p>{question.answers?.map((answer) => <div key={answer.id} className="mt-5 border-s-2 border-primary bg-secondary/45 p-4"><p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary"><ShieldCheck className="size-3.5" />{copy.mentor}</p><p className="mt-2 text-sm text-muted-foreground">{answer.text}</p></div>)}</CardContent></Card>)}
+              <TabsContent value="quizzes" className="mt-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {quizzes.map((quiz) => <Card key={quiz.id} className="border-primary/25 shadow-none"><CardHeader><div className="icon-tile"><Sparkles className="size-5" /></div><CardTitle className="pt-3 text-xl">{isAr ? quiz.title_ar : quiz.title_en}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{copy.quizBody}</p><Button className="mt-5 w-full" asChild><Link href={`/quiz/${quiz.id}`}>{copy.startQuiz}<ArrowRight className="rtl:rotate-180" /></Link></Button></CardContent></Card>)}
                 </div>
+                {!quizzes.length && <Alert><AlertDescription>{copy.noQuizzes}</AlertDescription></Alert>}
+              </TabsContent>
+              <TabsContent value="discussion" className="mt-5">
+                <Card className="shadow-none" dir={isAr ? "rtl" : "ltr"}><CardHeader><CardTitle className="flex items-center gap-3"><span className="icon-tile"><HelpCircle className="size-5" /></span>{copy.ask}</CardTitle><p className="text-sm text-muted-foreground">{copy.askBody}</p></CardHeader><CardContent><QuestionForm lectureId={lecture.id} isAr={isAr} onAdded={(item) => setQuestions((current) => [item, ...current])} /></CardContent></Card>
               </TabsContent>
             </Tabs>
           </div>
 
-          <aside className="space-y-5 xl:sticky xl:top-28 xl:self-start">
-            {quizzes.map((quiz) => <Card key={quiz.id} className="border-primary/25 shadow-none"><CardHeader><div className="icon-tile"><Sparkles className="size-5" /></div><CardTitle className="pt-3 text-xl">{copy.quiz}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{copy.quizBody}</p><Button className="mt-5 w-full" asChild><Link href={`/quiz/${quiz.id}`}>{copy.startQuiz}<ArrowRight className="rtl:rotate-180" /></Link></Button></CardContent></Card>)}
-            <Card className="shadow-none"><CardContent className="p-5"><div className="flex items-center gap-3"><span className="icon-tile"><UserRound className="size-5" /></span><div><p className="text-xs text-muted-foreground">{isAr ? "مرشد المقرر" : "Course mentor"}</p><p className="font-bold">Dr. Ahmed Hassan</p></div></div></CardContent></Card>
-            <div className="rounded-xl border bg-muted/50 p-4 text-sm text-muted-foreground"><MessageCircle className="mb-3 size-5 text-primary" />{isAr ? "الأسئلة والإجابات ظاهرة لجميع الطلاب للحفاظ على المعرفة المشتركة." : "Questions and answers stay visible to every student, building shared knowledge."}</div>
+          <aside className="min-w-0 space-y-4 xl:sticky xl:top-28 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pe-1 xl:self-start" dir={isAr ? "rtl" : "ltr"} aria-labelledby="student-questions-title">
+            <div className="rounded-xl border bg-muted/50 p-4"><div className="flex items-center gap-3"><span className="icon-tile size-10"><MessageCircle className="size-5" /></span><h2 id="student-questions-title" className="text-xl font-bold">{copy.questions}</h2></div><p className="mt-3 text-sm leading-6 text-muted-foreground">{isAr ? "الأسئلة والإجابات ظاهرة لجميع الطلاب للحفاظ على المعرفة المشتركة." : "Questions and answers stay visible to every student, building shared knowledge."}</p></div>
+            {questions.map((question) => <Card key={question.id} className="shadow-none"><CardContent className="p-5"><div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary font-bold text-primary" aria-hidden="true">{question.author_name.charAt(0)}</span><div className="min-w-0"><p className="truncate font-bold">{question.author_name}</p><p className="text-xs text-muted-foreground">{new Date(question.created_at).toLocaleDateString(locale)}</p></div></div><p className="mt-4 break-words text-pretty text-sm leading-6">{question.text}</p>{question.answers?.map((answer) => <div key={answer.id} className="mt-4 border-s-2 border-primary bg-secondary/45 p-4"><p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary"><ShieldCheck className="size-3.5 shrink-0" />{copy.mentor}</p><p className="mt-2 break-words text-sm leading-6 text-muted-foreground">{answer.text}</p></div>)}</CardContent></Card>)}
+            {!questions.length && <Alert><AlertDescription>{isAr ? "لا توجد أسئلة بعد. كن أول من يسأل." : "No questions yet. Be the first to ask."}</AlertDescription></Alert>}
           </aside>
         </div>
       </div>
@@ -128,24 +128,24 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
 
 export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({ params, locale }) => {
   const id = params?.id as string
-  let lecture: Lecture | null = demoLectures.find((item) => item.id === id) ?? null
-  let resources = lecture ? demoResources : []
-  let quizzes = lecture ? demoQuizzes : []
-  let questions = lecture ? demoQuestions : []
-  let courseId = lecture?.course_id ?? null
-  if (isSupabaseConfigured) {
+  let lecture: Lecture | null = null
+  let resources: Resource[] = []
+  let quizzes: Quiz[] = []
+  let questions: CommunityQuestion[] = []
+  let courseId: string | null = null
+  if (supabase) {
     try {
       const { data: lectureData } = await supabase.from("lectures").select("*").eq("id", id).single()
       if (lectureData) { lecture = lectureData; courseId = lectureData.course_id }
       const [{ data: resourceData }, { data: quizData }, { data: questionData }] = await Promise.all([
         supabase.from("resources").select("*").eq("lecture_id", id),
         supabase.from("quizzes").select("*").eq("lecture_id", id),
-        supabase.from("community_questions").select("*, answers:community_answers(*)").eq("lecture_id", id).order("created_at", { ascending: false }),
+        supabase.from("community_questions").select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)").eq("lecture_id", id).order("created_at", { ascending: false }),
       ])
       if (resourceData) resources = resourceData
       if (quizData) quizzes = quizData
       if (questionData) questions = questionData
     } catch {}
   }
-  return { props: { lecture, resources, quizzes, questions, courseId, ...(await serverSideTranslations(locale ?? "en", ["common"])) } }
+  return { props: { lecture, resources, quizzes, questions, courseId, siteContent: await loadSiteContent(), ...(await serverSideTranslations(locale ?? "en", ["common"])) } }
 }
