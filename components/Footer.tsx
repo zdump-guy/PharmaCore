@@ -1,7 +1,23 @@
+<<<<<<< HEAD
 import Link from "next/link"
 import { BriefcaseBusiness, Code2, Globe2, Mail, ShieldCheck } from "lucide-react"
 import { useRouter } from "next/router"
 import BrandMark from "@/components/BrandMark"
+=======
+import { useTranslation } from 'next-i18next';
+import Link from 'next/link';
+
+const teamMembers = [
+  { name: 'Ghost', role: 'Dev & Maintainer', links: [] },
+  // Add more team members here
+];
+
+const socialLinks = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/mohamed-mostafa-uiux', icon: '🔗' },
+  { label: 'Portfolio', href: 'https://mohamed-mostafa-uiux.vercel.app', icon: '🌐' },
+  { label: 'GitHub', href: 'https://github.com/zdump-guy', icon: '💻' },
+];
+>>>>>>> b1e0d506e8cacc355da8f7d96e5520654d5ca8cc
 
 export default function Footer() {
   const { locale } = useRouter()
@@ -23,6 +39,7 @@ export default function Footer() {
             <div className="mt-5 flex items-center gap-2 text-xs font-semibold text-primary"><ShieldCheck className="size-4" />{isAr ? "محتوى تعليمي بإشراف متخصصين" : "Educator-reviewed learning"}</div>
           </div>
           <div>
+<<<<<<< HEAD
             <h2 className="text-sm font-bold">{isAr ? "فريق المنصة" : "Platform team"}</h2>
             <p className="mt-4 text-sm font-semibold">Mohamed Mostafa Othman Ibrahim</p>
             <p className="mt-1 text-sm text-muted-foreground">{isAr ? "المطوّر والمشرف العام" : "Developer & Maintainer"}</p>
@@ -33,6 +50,48 @@ export default function Footer() {
             <p className="mt-4 text-sm text-muted-foreground">Freelance UI/UX & Front-End Developer</p>
             <div className="mt-5 flex flex-wrap gap-2">
               {links.map(({ label, href, Icon }) => <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} className="grid size-11 place-items-center rounded-lg border bg-background text-muted-foreground transition-colors hover:border-primary hover:text-primary"><Icon className="size-4" /></a>)}
+=======
+            <p className="footer__section-title">{t('footer.devTitle', 'Developer & Maintainer')}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Ghost (Mohamed Mostafa)
+              </p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                UI/UX & Web Developer
+              </p>
+              <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                {socialLinks.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    id={`footer-link-${link.label.toLowerCase()}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 14px',
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.8rem', fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-accent-1)';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--color-accent-1)';
+                    }}
+                    onMouseOut={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-color)';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+                    }}
+                  >
+                    <span>{link.icon}</span> {link.label}
+                  </a>
+                ))}
+              </div>
+>>>>>>> b1e0d506e8cacc355da8f7d96e5520654d5ca8cc
             </div>
           </div>
         </div>
