@@ -36,10 +36,13 @@ export default function Layout({
       <div
         lang={locale}
         dir={dir}
-        style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}
+        className="flex min-h-screen flex-col"
       >
+        <a href="#main-content" className="fixed left-4 top-3 z-50 -translate-y-20 rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground transition-transform focus:translate-y-0">
+          {isAr ? 'تخطي إلى المحتوى' : 'Skip to content'}
+        </a>
         <Navbar />
-        <main style={{ flex: 1 }}>
+        <main id="main-content" className="flex-1">
           {children}
         </main>
         <Footer />

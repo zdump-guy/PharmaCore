@@ -1,124 +1,61 @@
-import { GetServerSideProps } from 'next';
-import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
-import { useTranslation } from 'next-i18next';
-import { useRouter } from 'next/router';
-import { useState } from 'react';
-import Layout from '@/components/Layout';
-import { supabase } from '@/lib/supabaseClient';
+import type { GetServerSideProps } from "next"
+import { useState } from "react"
+import { useRouter } from "next/router"
+import { serverSideTranslations } from "next-i18next/serverSideTranslations"
+import { ArrowRight, CheckCircle2, KeyRound, Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react"
+import Layout from "@/components/Layout"
+import BrandMark from "@/components/BrandMark"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient"
 
 export default function LoginPage() {
-  const { t } = useTranslation('common');
-  const { locale } = useRouter();
-  const router = useRouter();
-  const isAr = locale === 'ar';
+  const router = useRouter()
+  const isAr = router.locale === "ar"
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle")
+  const copy = isAr ? { eyebrow: "منطقة الإدارة الآمنة", title: "أدر المحتوى من مكان واحد.", body: "وصول مخصص للمطور والمشرفين والمرشدين، مع صلاحيات واضحة لكل دور.", point1: "إدارة المقررات والمحاضرات", point2: "إنشاء الاختبارات والموارد", point3: "متابعة أسئلة الطلاب والرد عليها", login: "تسجيل دخول المشرف", helper: "استخدم حسابك الإداري للوصول إلى لوحة التحكم.", email: "البريد الإلكتروني", password: "كلمة المرور", submit: "تسجيل الدخول", submitting: "جارٍ التحقق...", error: "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.", secure: "اتصال آمن ومحمي" } : { eyebrow: "Secure admin area", title: "Manage every learning touchpoint.", body: "Purpose-built access for developers, admins, and mentors, with clear permissions for every role.", point1: "Manage courses and lectures", point2: "Build quizzes and resources", point3: "Review and answer student questions", login: "Admin sign in", helper: "Use your staff account to access the dashboard.", email: "Email address", password: "Password", submit: "Sign in", submitting: "Verifying...", error: "Could not sign in. Check your details and try again.", secure: "Secure, protected connection" }
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'error'>('idle');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus('submitting');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setStatus('error');
-    } else {
-      router.replace('/admin');
-    }
-  };
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setStatus("submitting")
+    if (!isSupabaseConfigured) { await router.push("/admin"); return }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) setStatus("error")
+    else router.replace("/admin")
+  }
 
   return (
-    <Layout
-      title={isAr ? 'تسجيل دخول المشرف — فارما كور' : 'Admin Login — PharmaCore'}
-      description="Secure admin access for PharmaCore platform management."
-    >
-      <div style={{
-        minHeight: 'calc(100vh - var(--navbar-height) - 200px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '48px 24px',
-      }}>
-        <div style={{
-          width: '100%',
-          maxWidth: 440,
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-xl)',
-          padding: '40px 36px',
-          boxShadow: 'var(--shadow-lg)',
-        }}>
-          {/* Logo */}
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{
-              width: 56, height: 56,
-              background: 'var(--gradient-brand)',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1.4rem', fontWeight: 800, color: 'white',
-              margin: '0 auto 16px',
-            }}>
-              Rx
-            </div>
-            <h1 style={{ fontSize: '1.5rem' }}>{t('login.title')}</h1>
-            <p style={{ marginTop: 6, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              {t('login.subtitle')}
-            </p>
+    <Layout title={`${copy.login} — PharmaCore`} description={copy.helper}>
+      <div className="page-shell grid min-h-[calc(100vh-5rem)] items-center gap-10 py-12 lg:grid-cols-2 lg:gap-20">
+        <section className="hidden lg:block">
+          <span className="eyebrow"><ShieldCheck className="size-3.5" />{copy.eyebrow}</span>
+          <h2 className="mt-6 max-w-xl text-5xl font-extrabold leading-tight">{copy.title}</h2>
+          <p className="body-lead mt-5">{copy.body}</p>
+          <div className="mt-8 space-y-4">
+            {[copy.point1, copy.point2, copy.point3].map((point) => <div key={point} className="flex items-center gap-3 font-medium"><span className="grid size-8 place-items-center rounded-full bg-secondary text-primary"><CheckCircle2 className="size-4" /></span>{point}</div>)}
           </div>
+        </section>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <div className="form-group">
-              <label htmlFor="login-email">{t('login.email')}</label>
-              <input
-                id="login-email"
-                type="email"
-                className="input"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                placeholder="admin@pharmacore.com"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="login-password">{t('login.password')}</label>
-              <input
-                id="login-password"
-                type="password"
-                className="input"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {status === 'error' && (
-              <p className="error-message" role="alert">{t('login.error')}</p>
-            )}
-
-            <button
-              id="login-submit-btn"
-              type="submit"
-              className="btn btn-primary"
-              disabled={status === 'submitting'}
-              style={{ marginTop: 8 }}
-            >
-              {status === 'submitting' ? t('login.submitting') : t('login.submit')}
-            </button>
-          </form>
-        </div>
+        <Card className="mx-auto w-full max-w-md border-primary/20 shadow-none">
+          <CardContent className="p-6 sm:p-9">
+            <div className="mb-8"><BrandMark className="size-12" /><h1 className="mt-5 text-3xl font-extrabold lg:text-2xl">{copy.login}</h1><p className="mt-2 text-sm text-muted-foreground">{copy.helper}</p></div>
+            <form onSubmit={submit} className="space-y-5">
+              <div className="space-y-2"><Label htmlFor="login-email">{copy.email}</Label><div className="relative"><Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="ps-10" placeholder="admin@pharmacore.com" required /></div></div>
+              <div className="space-y-2"><Label htmlFor="login-password">{copy.password}</Label><div className="relative"><KeyRound className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" className="ps-10" placeholder="••••••••" required /></div></div>
+              {status === "error" && <Alert variant="destructive" role="alert"><AlertDescription>{copy.error}</AlertDescription></Alert>}
+              <Button type="submit" size="lg" className="w-full" disabled={status === "submitting"}>{status === "submitting" ? <Loader2 className="animate-spin" /> : <LockKeyhole />}{status === "submitting" ? copy.submitting : copy.submit}<ArrowRight className="rtl:rotate-180" /></Button>
+              <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" />{copy.secure}</p>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
-  );
+  )
 }
 
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
-  return {
-    props: {
-      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
-    },
-  };
-};
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({ props: { ...(await serverSideTranslations(locale ?? "en", ["common"])) } })
