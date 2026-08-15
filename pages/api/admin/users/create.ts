@@ -91,7 +91,8 @@ export default async function handler(
 
     return res.status(200).json({ message: 'User created successfully', user: { id: newUserId, email, full_name, role } });
 
-  } catch (err: any) {
-    return res.status(500).json({ error: 'Internal server error', details: err.message });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ error: 'Internal server error', details: message });
   }
 }

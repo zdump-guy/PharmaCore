@@ -18,37 +18,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle")
+  const [errorMsg, setErrorMsg] = useState("")
   const copy = isAr ? { eyebrow: "منطقة الإدارة الآمنة", title: "أدر المحتوى من مكان واحد.", body: "وصول مخصص للمطور والمشرفين والمرشدين، مع صلاحيات واضحة لكل دور.", point1: "إدارة المقررات والمحاضرات", point2: "إنشاء الاختبارات والموارد", point3: "متابعة أسئلة الطلاب والرد عليها", login: "تسجيل دخول المشرف", helper: "استخدم حسابك الإداري للوصول إلى لوحة التحكم.", email: "البريد الإلكتروني", password: "كلمة المرور", submit: "تسجيل الدخول", submitting: "جارٍ التحقق...", error: "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.", secure: "اتصال آمن ومحمي" } : { eyebrow: "Secure admin area", title: "Manage every learning touchpoint.", body: "Purpose-built access for developers, admins, and mentors, with clear permissions for every role.", point1: "Manage courses and lectures", point2: "Build quizzes and resources", point3: "Review and answer student questions", login: "Admin sign in", helper: "Use your staff account to access the dashboard.", email: "Email address", password: "Password", submit: "Sign in", submitting: "Verifying...", error: "Could not sign in. Check your details and try again.", secure: "Secure, protected connection" }
 
-<<<<<<< HEAD
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     setStatus("submitting")
     if (!isSupabaseConfigured) { await router.push("/admin"); return }
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setStatus("error")
-    else router.replace("/admin")
-  }
-=======
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [status, setStatus] = useState<'idle' | 'submitting' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus('submitting');
-    setErrorMsg('');
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     if (error) {
       console.error('Login error:', error);
-      setStatus('error');
+      setStatus("error")
       setErrorMsg(error.message);
-    } else {
-      router.replace('/admin');
     }
-  };
->>>>>>> b1e0d506e8cacc355da8f7d96e5520654d5ca8cc
+    else router.replace("/admin")
+  }
 
   return (
     <Layout title={`${copy.login} — PharmaCore`} description={copy.helper}>
@@ -62,65 +46,18 @@ export default function LoginPage() {
           </div>
         </section>
 
-<<<<<<< HEAD
         <Card className="mx-auto w-full max-w-md border-primary/20 shadow-none">
           <CardContent className="p-6 sm:p-9">
             <div className="mb-8"><BrandMark className="size-12" /><h1 className="mt-5 text-3xl font-extrabold lg:text-2xl">{copy.login}</h1><p className="mt-2 text-sm text-muted-foreground">{copy.helper}</p></div>
             <form onSubmit={submit} className="space-y-5">
               <div className="space-y-2"><Label htmlFor="login-email">{copy.email}</Label><div className="relative"><Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" className="ps-10" placeholder="admin@pharmacore.com" required /></div></div>
               <div className="space-y-2"><Label htmlFor="login-password">{copy.password}</Label><div className="relative"><KeyRound className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" className="ps-10" placeholder="••••••••" required /></div></div>
-              {status === "error" && <Alert variant="destructive" role="alert"><AlertDescription>{copy.error}</AlertDescription></Alert>}
+              {status === "error" && <Alert variant="destructive" role="alert"><AlertDescription>{errorMsg || copy.error}</AlertDescription></Alert>}
               <Button type="submit" size="lg" className="w-full" disabled={status === "submitting"}>{status === "submitting" ? <Loader2 className="animate-spin" /> : <LockKeyhole />}{status === "submitting" ? copy.submitting : copy.submit}<ArrowRight className="rtl:rotate-180" /></Button>
               <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" />{copy.secure}</p>
             </form>
           </CardContent>
         </Card>
-=======
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <div className="form-group">
-              <label htmlFor="login-email">{t('login.email')}</label>
-              <input
-                id="login-email"
-                type="email"
-                className="input"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                placeholder="admin@pharmacore.com"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="login-password">{t('login.password')}</label>
-              <input
-                id="login-password"
-                type="password"
-                className="input"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {status === 'error' && (
-              <p className="error-message" role="alert">{errorMsg || t('login.error')}</p>
-            )}
-
-            <button
-              id="login-submit-btn"
-              type="submit"
-              className="btn btn-primary"
-              disabled={status === 'submitting'}
-              style={{ marginTop: 8 }}
-            >
-              {status === 'submitting' ? t('login.submitting') : t('login.submit')}
-            </button>
-          </form>
-        </div>
->>>>>>> b1e0d506e8cacc355da8f7d96e5520654d5ca8cc
       </div>
     </Layout>
   )

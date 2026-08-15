@@ -27,44 +27,8 @@ export default function Navbar() {
           <span className="text-lg font-extrabold tracking-tight">Pharma<span className="text-primary">Core</span></span>
         </Link>
 
-<<<<<<< HEAD
         <div className="hidden items-center gap-1 md:flex">
           {nav.map((item) => <Button key={item.href} variant="ghost" asChild><Link href={item.href}>{item.label}</Link></Button>)}
-=======
-        {/* Controls */}
-        <div className="navbar__controls">
-          {/* Language Switcher */}
-          <div className="lang-switcher" role="group" aria-label="Language switcher">
-            <button
-              id="lang-en-btn"
-              className={`lang-switcher__btn${locale === 'en' ? ' lang-switcher__btn--active' : ''}`}
-              onClick={() => switchLocale('en')}
-              aria-pressed={locale === 'en'}
-            >
-              EN
-            </button>
-            <button
-              id="lang-ar-btn"
-              className={`lang-switcher__btn${locale === 'ar' ? ' lang-switcher__btn--active' : ''}`}
-              onClick={() => switchLocale('ar')}
-              aria-pressed={locale === 'ar'}
-              style={{ fontSize: '1rem', fontFamily: 'Tajawal, sans-serif' }}
-            >
-              ع
-            </button>
-          </div>
-
-          {/* Theme Toggle */}
-          <button
-            id="theme-toggle-btn"
-            className="icon-btn"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? (isAr ? 'تفعيل الوضع الفاتح' : 'Switch to light mode') : (isAr ? 'تفعيل الوضع الداكن' : 'Switch to dark mode')}
-            title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
->>>>>>> 2cee34113deb55d7775fb195b01195423df9c732
         </div>
 
         <div className="flex items-center gap-1.5">
