@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabaseClient"
-import { defaultSiteContent, mergeSiteContent, type SiteContent } from "@/lib/siteContent"
+import { defaultSiteContent, mergeSiteContent, loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import type { Course } from "@/types"
 
 interface HomeProps { courses: Course[]; siteContent: SiteContent }
@@ -125,16 +125,12 @@ export default function Home({ courses, siteContent }: HomeProps) {
 
 export const getStaticProps: GetStaticProps<HomeProps> = async ({ locale }) => {
   let courses: Course[] = []
-  let siteContent = defaultSiteContent
   if (supabase) {
     try {
-      const [courseResult, contentResult] = await Promise.all([
-        supabase.from("courses").select("*").order("created_at", { ascending: false }),
-        supabase.from("site_content").select("content").eq("id", "main").maybeSingle(),
-      ])
+      const courseResult = await supabase.from("courses").select("*").order("created_at", { ascending: false })
       if (!courseResult.error && courseResult.data) courses = courseResult.data
-      if (!contentResult.error && contentResult.data?.content) siteContent = mergeSiteContent(contentResult.data.content as Partial<SiteContent>)
     } catch {}
   }
+  const siteContent = await loadSiteContent()
   return { props: { courses, siteContent, ...(await serverSideTranslations(locale ?? "en", ["common"])) }, revalidate: 60 }
 }

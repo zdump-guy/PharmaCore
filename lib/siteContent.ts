@@ -35,14 +35,14 @@ export const defaultSiteContent: SiteContent = {
     about_eyebrow: "A deliberate learning experience", about_title: "Everything you need, in one context.", about_body: "Instead of scattered resources, PharmaCore connects video, references, assessment, and discussion in one clear journey.",
     feature_one_title: "Expert-guided clarity", feature_one_body: "Content organized around the outcomes you actually need to master.", feature_two_title: "Focused video learning", feature_two_body: "Lecture, notes, and next steps stay together.", feature_three_title: "Check understanding", feature_three_body: "Targeted quizzes provide immediate feedback.", feature_four_title: "Ask and learn together", feature_four_body: "Public Q&A keeps useful mentor answers available to everyone.",
     courses_eyebrow: "Learning library", courses_title: "Start with the course that fits", courses_body: "Structured, university-level content across pharmaceutical science and clinical practice.", course_view: "View course", course_badge: "Structured lectures", cta_title: "Ready to build a stronger pharmacy foundation?", cta_body: "Start free and learn at your own pace.",
-    footer_description: "Clear, trustworthy pharmacy education — from first principles to clinical practice.", footer_reviewed: "Educator-reviewed learning", footer_team_name: "Ghost (Mohamed Mostafa)", footer_team_role: "UI/UX & Web Developer", footer_email: "hello@pharmacore.education", footer_links_title: "Developer & Maintainer", footer_rights: "All rights reserved.", footer_tagline: "Designed and built for focused learning."
+    footer_description: "Clear, trustworthy pharmacy education — from first principles to clinical practice.", footer_reviewed: "Educator-reviewed learning", footer_team_name: "Ghost (Mohamed Mostafa)", footer_team_role: "UI/UX & Web Developer", footer_email: "mohamedmostafa.dev.main@gmail.com", footer_links_title: "Developer & Maintainer", footer_rights: "All rights reserved.", footer_tagline: "Designed and built for focused learning."
   },
   ar: {
     hero_eyebrow: "منصة تعليم صيدلي مفتوحة", hero_title_a: "افهم الصيدلة", hero_title_b: "بعمق. طبّقها بثقة.", hero_subtitle: "مسارات تعليمية منظمة تجمع المحاضرات والملخصات والاختبارات والأسئلة المجتمعية — متاحة لكل طالب، دون تسجيل.", hero_primary_cta: "استكشف المقررات", hero_secondary_cta: "شاهد طريقة التعلّم", hero_note_one: "دون تسجيل أو اشتراك", hero_note_two: "محتوى منظم بإشراف متخصصين",
     about_eyebrow: "تجربة تعلّم مصممة بوعي", about_title: "كل ما تحتاجه، في سياق واحد.", about_body: "بدل التنقل بين مصادر مشتتة، تجمع PharmaCore الفيديو والملفات والتقييم والنقاش في رحلة واضحة.",
     feature_one_title: "شرح يقوده المتخصص", feature_one_body: "محتوى مرتب حول الأهداف التي تحتاج لإتقانها فعلًا.", feature_two_title: "فيديو بلا تشتيت", feature_two_body: "مشاهدة المحاضرة والمواد المساندة في صفحة واحدة.", feature_three_title: "اختبر فهمك", feature_three_body: "اختبارات قصيرة تعطيك تغذية راجعة مباشرة.", feature_four_title: "اسأل وتعلّم مع الآخرين", feature_four_body: "نقاش عام يحفظ الإجابات المفيدة لكل الطلاب.",
     courses_eyebrow: "المكتبة التعليمية", courses_title: "ابدأ من المقرر المناسب لك", courses_body: "محتوى جامعي منظم حول العلوم الصيدلانية والممارسة السريرية.", course_view: "عرض المقرر", course_badge: "محاضرات منظمة", cta_title: "جاهز لبناء أساس صيدلي أقوى؟", cta_body: "ابدأ مجانًا، وتعلّم بالسرعة التي تناسبك.",
-    footer_description: "تعليم صيدلي واضح، موثوق، ومتاح للجميع — من المفهوم الأول حتى الممارسة السريرية.", footer_reviewed: "محتوى تعليمي بإشراف متخصصين", footer_team_name: "Ghost (Mohamed Mostafa)", footer_team_role: "مصمم UI/UX ومطور ويب", footer_email: "hello@pharmacore.education", footer_links_title: "المطور والمسؤول عن الصيانة", footer_rights: "جميع الحقوق محفوظة.", footer_tagline: "صُمّم وبُني بعناية للتعلّم."
+    footer_description: "تعليم صيدلي واضح، موثوق، ومتاح للجميع — من المفهوم الأول حتى الممارسة السريرية.", footer_reviewed: "محتوى تعليمي بإشراف متخصصين", footer_team_name: "Ghost (Mohamed Mostafa)", footer_team_role: "مصمم UI/UX ومطور ويب", footer_email: "mohamedmostafa.dev.main@gmail.com", footer_links_title: "المطور والمسؤول عن الصيانة", footer_rights: "جميع الحقوق محفوظة.", footer_tagline: "صُمّم وبُني بعناية للتعلّم."
   }
 }
 
@@ -61,12 +61,5 @@ export const mergeSiteContent = (content?: Partial<SiteContent> | null): SiteCon
 })
 
 export async function loadSiteContent(): Promise<SiteContent> {
-  try {
-    const { supabase } = await import("@/lib/supabaseClient")
-    if (!supabase) return defaultSiteContent
-    const { data, error } = await supabase.from("site_content").select("content").eq("id", "main").maybeSingle()
-    return !error && data?.content ? mergeSiteContent(data.content as Partial<SiteContent>) : defaultSiteContent
-  } catch {
-    return defaultSiteContent
-  }
+  return defaultSiteContent;
 }
