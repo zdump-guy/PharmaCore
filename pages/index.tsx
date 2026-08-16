@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabaseClient"
-import { defaultSiteContent, mergeSiteContent, type SiteContent } from "@/lib/siteContent"
+import { defaultSiteContent, mergeSiteContent, loadSiteContent, type SiteContent } from "@/lib/siteContent"
+import { getDirectImageUrl } from "@/lib/utils"
 import type { Course } from "@/types"
 
 interface HomeProps { courses: Course[]; siteContent: SiteContent }
@@ -85,11 +86,12 @@ export default function Home({ courses, siteContent }: HomeProps) {
             {courses.map((course, index) => {
               const title = isAr ? course.title_ar : course.title_en
               const description = isAr ? course.description_ar : course.description_en
+              const coverUrl = getDirectImageUrl(course.thumbnail_url)
               return (
                 <Link href={`/course/${course.id}`} key={course.id} className="group rounded-xl focus-visible:ring-2">
                   <Card className="card-interactive h-full overflow-hidden shadow-none">
-                    <div className="relative flex h-40 items-end border-b bg-secondary/65 bg-cover bg-center p-6" style={course.thumbnail_url ? { backgroundImage: `url(${course.thumbnail_url})` } : undefined} role={course.thumbnail_url ? "img" : undefined} aria-label={course.thumbnail_url ? `${title} cover` : undefined}>
-                      {course.thumbnail_url && <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" aria-hidden="true" />}
+                    <div className="relative flex h-40 items-end border-b bg-secondary/65 bg-cover bg-center p-6" style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined} role={coverUrl ? "img" : undefined} aria-label={coverUrl ? `${title} cover` : undefined}>
+                      {coverUrl && <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" aria-hidden="true" />}
                       <div className="relative flex w-full items-end justify-between">
                         <div className="icon-tile size-14 bg-card"><GraduationCap className="size-6" /></div>
                         <span className="text-5xl font-black text-primary/15">0{index + 1}</span>
@@ -125,16 +127,12 @@ export default function Home({ courses, siteContent }: HomeProps) {
 
 export const getStaticProps: GetStaticProps<HomeProps> = async ({ locale }) => {
   let courses: Course[] = []
-  let siteContent = defaultSiteContent
   if (supabase) {
     try {
-      const [courseResult, contentResult] = await Promise.all([
-        supabase.from("courses").select("*").order("created_at", { ascending: false }),
-        supabase.from("site_content").select("content").eq("id", "main").maybeSingle(),
-      ])
+      const courseResult = await supabase.from("courses").select("*").order("created_at", { ascending: false })
       if (!courseResult.error && courseResult.data) courses = courseResult.data
-      if (!contentResult.error && contentResult.data?.content) siteContent = mergeSiteContent(contentResult.data.content as Partial<SiteContent>)
     } catch {}
   }
+  const siteContent = await loadSiteContent()
   return { props: { courses, siteContent, ...(await serverSideTranslations(locale ?? "en", ["common"])) }, revalidate: 60 }
 }

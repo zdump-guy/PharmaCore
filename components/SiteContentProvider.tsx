@@ -7,12 +7,7 @@ const SiteContentContext = createContext<SiteContent>(defaultSiteContent)
 export function SiteContentProvider({ children, initialContent }: { children: ReactNode; initialContent?: SiteContent }) {
   const [content, setContent] = useState(() => mergeSiteContent(initialContent))
 
-  useEffect(() => {
-    if (!supabase) return
-    void supabase.from("site_content").select("content").eq("id", "main").maybeSingle().then(({ data }) => {
-      if (data?.content) setContent(mergeSiteContent(data.content as Partial<SiteContent>))
-    })
-  }, [])
+  useEffect(() => {}, [])
 
   return <SiteContentContext.Provider value={content}>{children}</SiteContentContext.Provider>
 }
