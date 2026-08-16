@@ -28,7 +28,6 @@ export default function LoginPage() {
     if (!supabase) { setErrorMsg(copy.config); setStatus("error"); return }
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     if (error) {
-      console.error('Login error:', error);
       setStatus("error")
       setErrorMsg(error.message);
     }
