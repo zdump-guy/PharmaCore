@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabaseClient"
-import { defaultSiteContent, mergeSiteContent, loadSiteContent, type SiteContent } from "@/lib/siteContent"
+import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { getDirectImageUrl } from "@/lib/utils"
 import type { Course } from "@/types"
 
