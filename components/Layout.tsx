@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { useSiteContent } from '@/components/SiteContentProvider';
+import { siteBranding, siteMetadata } from '@/lib/siteContent';
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,11 +17,10 @@ export default function Layout({
   description,
 }: LayoutProps) {
   const { locale, pathname } = useRouter();
-  const siteContent = useSiteContent();
   const isAr = locale === 'ar';
-  const localeContent = siteContent[isAr ? 'ar' : 'en'];
-  const resolvedTitle = title || localeContent.meta_title;
-  const resolvedDescription = description || localeContent.meta_description;
+  const metadata = siteMetadata[isAr ? 'ar' : 'en'];
+  const resolvedTitle = title || metadata.title;
+  const resolvedDescription = description || metadata.description;
   const dir = isAr ? 'rtl' : 'ltr';
   const hideNavbar = pathname === '/login' || pathname === '/admin' || pathname.startsWith('/admin/');
 
@@ -32,17 +31,17 @@ export default function Layout({
         <meta name="description" content={resolvedDescription} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta charSet="utf-8" />
-        <link rel="icon" href={siteContent.branding.favicon_url || "/favicon.ico"} />
+        <link rel="icon" href={siteBranding.faviconUrl} />
         {/* Open Graph */}
         <meta property="og:title" content={resolvedTitle} />
         <meta property="og:description" content={resolvedDescription} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="PharmaCore" />
-        {siteContent.branding.preview_image_url && <meta property="og:image" content={siteContent.branding.preview_image_url} />}
-        <meta name="twitter:card" content={siteContent.branding.preview_image_url ? "summary_large_image" : "summary"} />
+        {siteBranding.previewImageUrl && <meta property="og:image" content={siteBranding.previewImageUrl} />}
+        <meta name="twitter:card" content={siteBranding.previewImageUrl ? "summary_large_image" : "summary"} />
         <meta name="twitter:title" content={resolvedTitle} />
         <meta name="twitter:description" content={resolvedDescription} />
-        {siteContent.branding.preview_image_url && <meta name="twitter:image" content={siteContent.branding.preview_image_url} />}
+        {siteBranding.previewImageUrl && <meta name="twitter:image" content={siteBranding.previewImageUrl} />}
       </Head>
 
       <div

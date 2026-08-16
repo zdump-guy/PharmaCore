@@ -27,7 +27,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
   ]
 
   return (
-    <Layout title={copy.meta_title} description={copy.meta_description}>
+    <Layout>
       <section className="relative overflow-hidden border-b">
         <div className="clinical-grid pointer-events-none absolute inset-0 opacity-70" aria-hidden="true" />
         <div className="page-shell relative flex min-h-[620px] items-center py-16 lg:py-24">

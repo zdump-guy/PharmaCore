@@ -5,6 +5,7 @@ import { useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
 import { FiArrowLeft as ArrowLeft, FiArrowRight as ArrowRight, FiCheckCircle as CheckCircle2, FiDownload as Download, FiExternalLink as ExternalLink, FiImage as FileImage, FiFileText as FileText, FiHelpCircle as HelpCircle, FiMessageCircle as MessageCircle, FiPlayCircle as PlayCircle, FiSend as Send, FiShield as ShieldCheck, FiStar as Sparkles } from "react-icons/fi"
 import Layout from "@/components/Layout"
+import YouTubePlayer from "@/components/YouTubePlayer"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -84,7 +85,7 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <div className="min-w-0">
             <div className="aspect-video overflow-hidden rounded-2xl border bg-[#101819] shadow-sm">
-              {videoId ? <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${videoId}`} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <div className="grid h-full place-items-center text-center text-white"><div><PlayCircle className="mx-auto size-14 text-[#8BCDE1]" /><p className="mt-4 font-semibold">{isAr ? "سيُضاف فيديو المحاضرة قريبًا" : "Lecture video coming soon"}</p></div></div>}
+              {videoId ? <YouTubePlayer videoId={videoId} title={title} /> : <div className="grid h-full place-items-center text-center text-white"><div><PlayCircle className="mx-auto size-14 text-[#8BCDE1]" /><p className="mt-4 font-semibold">{isAr ? "سيُضاف فيديو المحاضرة قريبًا" : "Lecture video coming soon"}</p></div></div>}
             </div>
 
             <Tabs defaultValue="summary" className="mt-8">

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none" role="img" aria-labelledby="title">
+  <title id="title">PharmaCore mark</title>
+  <circle cx="128" cy="128" r="119" fill="#fff" stroke="#DFE3E5" stroke-width="3"/>
+  <g stroke="#18262C" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M49 106h158c-3 45-37 73-79 73s-76-28-79-73Z"/>
+    <path d="M128 179v49M94 228h68"/>
+    <path d="M128 179c-23 12-27 34-18 49M128 179c23 12 27 34 18 49"/>
+    <path d="M77 95c2-35 25-54 51-56-1 29-18 53-51 56Z"/>
+    <path d="M128 39c33 3 53 31 48 67"/>
+  </g>
+</svg>
