@@ -68,33 +68,19 @@ export default async function handler(
 
     const newUserId = authData.user.id;
 
-    // 2. Insert into public.users (handle conflict if trigger already inserted it)
-    const { error: insertError } = await supabaseAdmin
+    // 2. Upsert into public.users (handle conflict gracefully if trigger already inserted it)
+    const { error: upsertError } = await supabaseAdmin
       .from('users')
-      .insert([
-        {
-          id: newUserId,
-          email,
-          full_name,
-          role,
-        }
-      ]);
+      .upsert({
+        id: newUserId,
+        email,
+        full_name,
+        role,
+      });
       
-    if (insertError) {
-      if (insertError.code === '23505') { // Unique violation
-        const { error: updateError } = await supabaseAdmin
-          .from('users')
-          .update({ full_name, role })
-          .eq('id', newUserId);
-          
-        if (updateError) {
-            await supabaseAdmin.auth.admin.deleteUser(newUserId);
-            return res.status(500).json({ error: 'Failed to update user profile', details: updateError.message });
-        }
-      } else {
-        await supabaseAdmin.auth.admin.deleteUser(newUserId);
-        return res.status(500).json({ error: 'Failed to create user profile', details: insertError.message });
-      }
+    if (upsertError) {
+      await supabaseAdmin.auth.admin.deleteUser(newUserId);
+      return res.status(500).json({ error: 'Failed to create user profile', details: upsertError.message });
     }
 
     return res.status(200).json({ message: 'User created successfully', user: { id: newUserId, email, full_name, role } });
