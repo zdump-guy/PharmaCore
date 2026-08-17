@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
 import { FiArrowLeft as ArrowLeft, FiArrowRight as ArrowRight, FiCheck as Check, FiCheckCircle as CheckCircle2, FiClipboard as ClipboardCheck, FiRotateCcw as RotateCcw, FiSend as Send, FiX as X } from "react-icons/fi"
 import Layout from "@/components/Layout"
@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { cn } from "@/lib/utils"
+import { trackQuizStart, trackQuestionAnswered, trackQuizSubmit, trackQuizRetry } from "@/lib/analytics"
 import type { Question, Quiz } from "@/types"
 
 interface QuizPageProps { quiz: Quiz | null; questions: Question[]; siteContent: SiteContent }
@@ -25,17 +26,63 @@ export default function QuizPage({ quiz, questions }: QuizPageProps) {
   const [submitted, setSubmitted] = useState(false)
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
+  const title = quiz ? (isAr ? quiz.title_ar : quiz.title_en) : ""
+
+  useEffect(() => {
+    if (quiz) {
+      trackQuizStart({
+        quizId: quiz.id,
+        quizTitle: title,
+        lectureId: quiz.lecture_id,
+        courseId: quiz.course_id,
+        totalQuestions: questions.length,
+      })
+    }
+  }, [quiz, title, questions.length])
+
   if (!quiz) return <Layout title="Quiz not found"><div className="page-shell section-space text-center"><ClipboardCheck className="mx-auto size-12 text-muted-foreground" /><h1 className="mt-5 text-3xl font-bold">{isAr ? "الاختبار غير موجود" : "Quiz not found"}</h1></div></Layout>
 
-  const title = isAr ? quiz.title_ar : quiz.title_en
   const answeredCount = Object.values(answers).filter(Boolean).length
   const score = questions.filter((question) => (answers[question.id] ?? "").trim().toLowerCase() === question.correct_answer.trim().toLowerCase()).length
   const percent = questions.length ? Math.round((score / questions.length) * 100) : 0
   const backHref = quiz.lecture_id ? `/lecture/${quiz.lecture_id}` : quiz.course_id ? `/course/${quiz.course_id}` : "/"
   const copy = isAr ? { back: "العودة للمحاضرة", label: "اختبار قصير", helper: "اختر أفضل إجابة لكل سؤال. يمكنك المراجعة قبل الإرسال.", answered: "تمت الإجابة", of: "من", submit: "إرسال الإجابات", complete: "أجب عن جميع الأسئلة للإرسال", result: "نتيجتك", excellent: "إتقان ممتاز — يمكنك الانتقال بثقة.", improve: "بداية جيدة. راجع الإجابات وحاول مرة أخرى.", correct: "إجابة صحيحة", incorrect: "تحتاج مراجعة", answer: "الإجابة الصحيحة", retry: "إعادة المحاولة", true: "صح", false: "خطأ", placeholder: "اكتب إجابتك هنا" } : { back: "Back to lecture", label: "Knowledge checkpoint", helper: "Choose the best answer for each question. You can review before submitting.", answered: "Answered", of: "of", submit: "Submit answers", complete: "Answer every question to submit", result: "Your result", excellent: "Excellent mastery — move forward with confidence.", improve: "Good start. Review the feedback and try once more.", correct: "Correct answer", incorrect: "Needs review", answer: "Correct answer", retry: "Retake quiz", true: "True", false: "False", placeholder: "Type your answer here" }
 
-  const setAnswer = (id: string, value: string) => setAnswers((current) => ({ ...current, [id]: value }))
-  const reset = () => { setAnswers({}); setSubmitted(false); window.scrollTo({ top: 0, behavior: "smooth" }) }
+  const setAnswer = (id: string, value: string) => {
+    setAnswers((current) => ({ ...current, [id]: value }))
+    const qIndex = questions.findIndex((q) => q.id === id)
+    const targetQ = questions[qIndex]
+    if (targetQ) {
+      trackQuestionAnswered({
+        quizId: quiz.id,
+        questionId: id,
+        questionType: targetQ.type,
+        isCorrect: value.trim().toLowerCase() === targetQ.correct_answer.trim().toLowerCase(),
+        questionIndex: qIndex + 1,
+      })
+    }
+  }
+
+  const reset = () => {
+    trackQuizRetry({ quizId: quiz.id, quizTitle: title })
+    setAnswers({})
+    setSubmitted(false)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleSubmitQuiz = () => {
+    setSubmitted(true)
+    trackQuizSubmit({
+      quizId: quiz.id,
+      quizTitle: title,
+      score,
+      totalQuestions: questions.length,
+      percentage: percent,
+      passed: percent >= 70,
+    })
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
 
   return (
     <Layout title={`${title} — PharmaCore`} description={copy.helper}>
@@ -86,12 +133,13 @@ export default function QuizPage({ quiz, questions }: QuizPageProps) {
         </div>
         <div className="sticky bottom-4 z-20 mt-8 flex flex-col gap-3 rounded-2xl border bg-background/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">{answeredCount < questions.length ? copy.complete : `${questions.length} / ${questions.length}`}</p>
-          {submitted ? <Button size="lg" variant="outline" onClick={reset}><RotateCcw />{copy.retry}</Button> : <Button size="lg" disabled={answeredCount !== questions.length} onClick={() => { setSubmitted(true); window.scrollTo({ top: 0, behavior: "smooth" }) }}><Send />{copy.submit}</Button>}
+          {submitted ? <Button size="lg" variant="outline" onClick={reset}><RotateCcw />{copy.retry}</Button> : <Button size="lg" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}><Send />{copy.submit}</Button>}
         </div>
       </section>
     </Layout>
   )
 }
+
 
 export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ params, locale }) => {
   const id = params?.id as string

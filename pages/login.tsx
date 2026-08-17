@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { loadSiteContent } from "@/lib/siteContent"
 import { supabase } from "@/lib/supabaseClient"
+import { identifyUser } from "@/lib/analytics"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,13 +27,20 @@ export default function LoginPage() {
     event.preventDefault()
     setStatus("submitting")
     if (!supabase) { setErrorMsg(copy.config); setStatus("error"); return }
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     if (error) {
       setStatus("error")
       setErrorMsg(error.message);
+    } else {
+      if (data.user) {
+        identifyUser(data.user.id, {
+          email: data.user.email,
+        })
+      }
+      router.replace("/admin")
     }
-    else router.replace("/admin")
   }
+
 
   return (
     <Layout title={`${copy.login} — PharmaCore`} description={copy.helper}>

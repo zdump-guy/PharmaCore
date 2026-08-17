@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import { FiMaximize as Maximize, FiMinimize as Minimize, FiPause as Pause, FiPlay as Play, FiVolume2 as Volume2, FiVolumeX as VolumeX } from "react-icons/fi"
+import { trackVideoEvent } from "@/lib/analytics"
 
 interface YouTubePlayerInstance {
   destroy: () => void
@@ -75,10 +76,22 @@ const qualityLabel = (quality: string) => ({
   highres: "High res",
 }[quality] ?? "Auto")
 
-export default function YouTubePlayer({ videoId, title }: { videoId: string; title: string }) {
+export default function YouTubePlayer({
+  videoId,
+  title,
+  lectureId,
+  lectureTitle,
+}: {
+  videoId: string
+  title: string
+  lectureId?: string
+  lectureTitle?: string
+}) {
   const host = useRef<HTMLDivElement>(null)
   const shell = useRef<HTMLDivElement>(null)
   const player = useRef<YouTubePlayerInstance | null>(null)
+  const milestonesFired = useRef<{ [key: string]: boolean }>({ "25%": false, "50%": false, "75%": false, "100%": false })
+  const hasStartedRef = useRef(false)
   const [ready, setReady] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -94,6 +107,8 @@ export default function YouTubePlayer({ videoId, title }: { videoId: string; tit
 
   useEffect(() => {
     let disposed = false
+    milestonesFired.current = { "25%": false, "50%": false, "75%": false, "100%": false }
+    hasStartedRef.current = false
     setReady(false); setUnavailable(false); setPlaying(false); setCurrentTime(0); setDuration(0); setLoaded(0); setQuality("auto")
     void loadYouTubeApi().then((YT) => {
       if (disposed || !host.current) return
@@ -117,15 +132,57 @@ export default function YouTubePlayer({ videoId, title }: { videoId: string; tit
             setRates(target.getAvailablePlaybackRates())
             setReady(true)
           },
-          onStateChange: ({ data }) => setPlaying(data === 1),
+          onStateChange: ({ data }) => {
+            const isNowPlaying = data === 1
+            const isEnded = data === 0
+            const isPaused = data === 2
+            setPlaying(isNowPlaying)
+
+            if (isNowPlaying && !hasStartedRef.current) {
+              hasStartedRef.current = true
+              trackVideoEvent({
+                action: "started",
+                videoId,
+                lectureId,
+                lectureTitle: lectureTitle || title,
+                duration: player.current?.getDuration(),
+              })
+            } else if (isPaused) {
+              trackVideoEvent({
+                action: "paused",
+                videoId,
+                lectureId,
+                lectureTitle: lectureTitle || title,
+                currentTime: player.current?.getCurrentTime(),
+                duration: player.current?.getDuration(),
+              })
+            } else if (isEnded) {
+              trackVideoEvent({
+                action: "completed",
+                videoId,
+                lectureId,
+                lectureTitle: lectureTitle || title,
+                duration: player.current?.getDuration(),
+              })
+            }
+          },
           onPlaybackQualityChange: ({ data }) => setQuality(data || "auto"),
-          onPlaybackRateChange: ({ data }) => setRate(data),
+          onPlaybackRateChange: ({ data }) => {
+            setRate(data)
+            trackVideoEvent({
+              action: "rate_changed",
+              videoId,
+              lectureId,
+              lectureTitle: lectureTitle || title,
+              playbackRate: data,
+            })
+          },
           onError: () => setUnavailable(true),
         },
       })
     }).catch(() => setUnavailable(true))
     return () => { disposed = true; player.current?.destroy(); player.current = null }
-  }, [title, videoId])
+  }, [title, videoId, lectureId, lectureTitle])
 
   useEffect(() => {
     const updateFullscreen = () => setFullscreen(document.fullscreenElement === shell.current)
@@ -137,21 +194,60 @@ export default function YouTubePlayer({ videoId, title }: { videoId: string; tit
     const timer = window.setInterval(() => {
       const instance = player.current
       if (!instance || !ready) return
-      setCurrentTime(instance.getCurrentTime())
-      setDuration(instance.getDuration())
-      setLoaded(instance.getVideoLoadedFraction() * instance.getDuration())
+      const current = instance.getCurrentTime()
+      const total = instance.getDuration()
+      setCurrentTime(current)
+      setDuration(total)
+      setLoaded(instance.getVideoLoadedFraction() * total)
       setVolume(instance.getVolume())
       setMuted(instance.isMuted())
+
+      // Check milestones
+      if (total > 0) {
+        const ratio = current / total
+        const milestones: [number, "25%" | "50%" | "75%" | "100%"][] = [
+          [0.25, "25%"],
+          [0.5, "50%"],
+          [0.75, "75%"],
+          [0.98, "100%"],
+        ]
+        for (const [threshold, milestone] of milestones) {
+          if (ratio >= threshold && !milestonesFired.current[milestone]) {
+            milestonesFired.current[milestone] = true
+            trackVideoEvent({
+              action: "milestone",
+              videoId,
+              lectureId,
+              lectureTitle: lectureTitle || title,
+              currentTime: current,
+              duration: total,
+              milestone,
+            })
+          }
+        }
+      }
     }, 400)
     return () => window.clearInterval(timer)
-  }, [ready])
+  }, [ready, videoId, lectureId, lectureTitle, title])
 
   const togglePlay = () => {
     if (!player.current) return
     if (player.current.getPlayerState() === 1) player.current.pauseVideo()
     else player.current.playVideo()
   }
-  const seek = (event: ChangeEvent<HTMLInputElement>) => player.current?.seekTo(Number(event.target.value), true)
+  const seek = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextTime = Number(event.target.value)
+    player.current?.seekTo(nextTime, true)
+    trackVideoEvent({
+      action: "seeked",
+      videoId,
+      lectureId,
+      lectureTitle: lectureTitle || title,
+      currentTime: nextTime,
+      duration: player.current?.getDuration(),
+    })
+  }
+
   const changeVolume = (event: ChangeEvent<HTMLInputElement>) => setPlayerVolume(Number(event.target.value))
   const toggleMute = () => {
     if (!player.current) return

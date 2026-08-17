@@ -49,7 +49,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
         </div>
       </section>
 
-      <section id="about" className="section-space">
+      <section id="about" className="section-space scroll-mt-20 sm:scroll-mt-24">
         <div className="page-shell">
           <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:gap-16">
             <div>
@@ -72,7 +72,8 @@ export default function Home({ courses, siteContent }: HomeProps) {
         </div>
       </section>
 
-      <section id="courses" className="section-space border-y bg-muted/45">
+      <section id="courses" className="section-space border-y bg-muted/45 scroll-mt-20 sm:scroll-mt-24">
+
         <div className="page-shell">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -88,25 +89,29 @@ export default function Home({ courses, siteContent }: HomeProps) {
               const description = isAr ? course.description_ar : course.description_en
               const coverUrl = getDirectImageUrl(course.thumbnail_url)
               return (
-                <Link href={`/course/${course.id}`} key={course.id} className="group rounded-xl focus-visible:ring-2">
-                  <Card className="card-interactive h-full overflow-hidden shadow-none">
-                    <div className="relative flex h-40 items-end border-b bg-secondary/65 bg-cover bg-center p-6" style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined} role={coverUrl ? "img" : undefined} aria-label={coverUrl ? `${title} cover` : undefined}>
+                <Link href={`/course/${course.id}`} key={course.id} className="group rounded-xl focus-visible:ring-2 block h-full">
+                  <Card className="card-interactive h-full flex flex-col justify-between overflow-hidden shadow-none">
+                    <div className="relative flex h-40 items-end border-b bg-secondary/65 bg-cover bg-center p-6 shrink-0" style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined} role={coverUrl ? "img" : undefined} aria-label={coverUrl ? `${title} cover` : undefined}>
                       {coverUrl && <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" aria-hidden="true" />}
                       <div className="relative flex w-full items-end justify-between">
                         <div className="icon-tile size-14 bg-card"><GraduationCap className="size-6" /></div>
                         <span className="text-5xl font-black text-primary/15">0{index + 1}</span>
                       </div>
                     </div>
-                    <CardContent className="p-6">
-                      <Badge variant="outline">{copy.course_badge}</Badge>
-                      <h3 className="mt-4 text-xl font-bold">{title}</h3>
-                      <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">{description}</p>
+                    <CardContent className="p-6 flex flex-col flex-1 justify-between">
+                      <div>
+                        <Badge variant="outline">{copy.course_badge}</Badge>
+                        <h3 className="mt-4 text-xl font-bold leading-snug">{title}</h3>
+                        <p className="mt-3 line-clamp-3 text-sm text-muted-foreground leading-relaxed">{description}</p>
+                      </div>
                       <div className="mt-6 flex min-h-11 items-center justify-between border-t pt-4 text-sm font-bold text-primary">
-                        {copy.course_view}<ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:rotate-[-90deg]" />
+                        <span>{copy.course_view}</span>
+                        <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:rotate-[-90deg]" />
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
+
               )
             })}
           </div>

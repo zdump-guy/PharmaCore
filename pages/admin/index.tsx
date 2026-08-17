@@ -2,45 +2,111 @@ import type { GetServerSideProps } from "next"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
-import { FiBookOpen as BookOpen, FiHelpCircle as CircleHelp, FiClipboard as ClipboardCheck, FiImage as FileImage, FiFileText as FileText, FiVideo as FileVideo, FiLoader as Loader2, FiMessageCircle as MessageCircle, FiEdit2 as Pencil, FiPlus as Plus, FiSend as Send, FiShield as ShieldCheck, FiTrash2 as Trash2, FiType as TypeIcon, FiHome as HomeIcon, FiLogOut as LogOut, FiUsers as UsersIcon, FiUserPlus as UserPlus, FiSlash as SuspendIcon, FiCheckCircle as ActivateIcon, FiClock as ClockIcon, FiUser as UserIcon } from "react-icons/fi"
+import { FiLoader as Loader2 } from "react-icons/fi"
 import Layout from "@/components/Layout"
+import AdminHeader from "@/components/admin/AdminHeader"
+import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard"
+import CurriculumManager from "@/components/admin/CurriculumManager"
+import CommunityManager from "@/components/admin/CommunityManager"
+import UserManager, { type ManagedUser, type UserForm } from "@/components/admin/UserManager"
+import SiteContentManager from "@/components/admin/SiteContentManager"
+import AdminModals, {
+  type CourseForm,
+  type LectureForm,
+  type QuizForm,
+  type ResourceForm,
+  type QuestionForm,
+} from "@/components/admin/AdminModals"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabaseClient"
-import { contentGroups, contentLabel, defaultSiteContent, loadSiteContent, mergeSiteContent, type SiteContent, type SiteLocale, type SiteLocaleContent } from "@/lib/siteContent"
-import type { CommunityQuestion, Course, Lecture, Question, QuestionType, Quiz, Resource, ResourceType, UserProfile, UserRole } from "@/types"
+import {
+  defaultSiteContent,
+  loadSiteContent,
+  mergeSiteContent,
+  type SiteContent,
+} from "@/lib/siteContent"
+import { trackAdminAction, resetUser } from "@/lib/analytics"
+import type {
+  CommunityQuestion,
+  Course,
+  Lecture,
+  Question,
+  Quiz,
+  Resource,
+  UserProfile,
+} from "@/types"
 
 type Editor = "course" | "lecture" | "quiz" | "resource" | "question" | null
 type Notice = { error?: boolean; text: string } | null
-type CourseForm = Pick<Course, "title_en" | "title_ar" | "description_en" | "description_ar" | "objectives_en" | "objectives_ar" | "prerequisites_en" | "prerequisites_ar"> & { id?: string; thumbnail_url: string }
-type LectureForm = Pick<Lecture, "course_id" | "title_en" | "title_ar" | "details_en" | "details_ar" | "youtube_url" | "order"> & { id?: string }
-type QuizForm = Pick<Quiz, "title_en" | "title_ar"> & { id?: string; course_id: string; lecture_id: string }
-type ResourceForm = Pick<Resource, "lecture_id" | "title_en" | "title_ar" | "url" | "type"> & { id?: string; course_id: string }
-type QuestionForm = Pick<Question, "quiz_id" | "text_en" | "text_ar" | "type" | "correct_answer" | "order"> & { id?: string; optionsText: string }
-type UserForm = { full_name: string; email: string; password: string; role: UserRole }
-type ManagedUser = UserProfile & { last_sign_in_at: string | null; banned_until: string | null }
-type UserEditForm = { full_name: string; email: string; password: string; role: UserRole }
 
-const emptyCourse: CourseForm = { title_en: "", title_ar: "", description_en: "", description_ar: "", objectives_en: "", objectives_ar: "", prerequisites_en: "", prerequisites_ar: "", thumbnail_url: "" }
-const emptyLecture: LectureForm = { course_id: "", title_en: "", title_ar: "", details_en: "", details_ar: "", youtube_url: "", order: 1 }
-const emptyQuiz: QuizForm = { course_id: "", lecture_id: "", title_en: "", title_ar: "" }
-const emptyResource: ResourceForm = { course_id: "", lecture_id: "", title_en: "", title_ar: "", url: "", type: "pdf" }
-const emptyQuestion: QuestionForm = { quiz_id: "", text_en: "", text_ar: "", type: "multiple_choice", optionsText: "", correct_answer: "", order: 1 }
-const emptyUser: UserForm = { full_name: "", email: "", password: "", role: "mentor" }
-const merge = <T extends { id: string }>(rows: T[], row: T) => rows.some(({ id }) => id === row.id) ? rows.map((item) => item.id === row.id ? row : item) : [row, ...rows]
+const emptyCourse: CourseForm = {
+  title_en: "",
+  title_ar: "",
+  description_en: "",
+  description_ar: "",
+  objectives_en: "",
+  objectives_ar: "",
+  prerequisites_en: "",
+  prerequisites_ar: "",
+  thumbnail_url: "",
+}
+
+const emptyLecture: LectureForm = {
+  course_id: "",
+  title_en: "",
+  title_ar: "",
+  details_en: "",
+  details_ar: "",
+  youtube_url: "",
+  order: 1,
+}
+
+const emptyQuiz: QuizForm = {
+  course_id: "",
+  lecture_id: "",
+  title_en: "",
+  title_ar: "",
+}
+
+const emptyResource: ResourceForm = {
+  course_id: "",
+  lecture_id: "",
+  title_en: "",
+  title_ar: "",
+  url: "",
+  type: "pdf",
+}
+
+const emptyQuestion: QuestionForm = {
+  quiz_id: "",
+  text_en: "",
+  text_ar: "",
+  type: "multiple_choice",
+  optionsText: "",
+  correct_answer: "",
+  order: 1,
+}
+
+const emptyUser: UserForm = {
+  full_name: "",
+  email: "",
+  password: "",
+  role: "mentor",
+}
+
+const merge = <T extends { id: string }>(rows: T[], row: T) =>
+  rows.some(({ id }) => id === row.id)
+    ? rows.map((item) => (item.id === row.id ? row : item))
+    : [row, ...rows]
 
 async function callUserApi(token: string, init?: RequestInit) {
   const response = await fetch("/api/admin/users", {
     ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
   })
   const payload = await response.json()
   if (!response.ok) throw new Error(payload.error || "User operation failed")
@@ -48,168 +114,786 @@ async function callUserApi(token: string, init?: RequestInit) {
 }
 
 export default function AdminPage() {
-  const router = useRouter(), isAr = router.locale === "ar", tr = (en: string, ar: string) => isAr ? ar : en
-  const [ready, setReady] = useState(false), [saving, setSaving] = useState(false), [editor, setEditor] = useState<Editor>(null), [notice, setNotice] = useState<Notice>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null), [courses, setCourses] = useState<Course[]>([]), [lectures, setLectures] = useState<Lecture[]>([]), [quizzes, setQuizzes] = useState<Quiz[]>([]), [resources, setResources] = useState<Resource[]>([]), [questions, setQuestions] = useState<Question[]>([]), [community, setCommunity] = useState<CommunityQuestion[]>([])
-  const [courseForm, setCourseForm] = useState(emptyCourse), [lectureForm, setLectureForm] = useState(emptyLecture), [quizForm, setQuizForm] = useState(emptyQuiz), [resourceForm, setResourceForm] = useState(emptyResource), [questionForm, setQuestionForm] = useState(emptyQuestion)
-  const [selectedQuiz, setSelectedQuiz] = useState(""), [reply, setReply] = useState<Record<string, string>>({})
+  const router = useRouter()
+  const isAr = router.locale === "ar"
+  const tr = (en: string, ar: string) => (isAr ? ar : en)
+
+  const [ready, setReady] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editor, setEditor] = useState<Editor>(null)
+  const [notice, setNotice] = useState<Notice>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [lectures, setLectures] = useState<Lecture[]>([])
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [resources, setResources] = useState<Resource[]>([])
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [community, setCommunity] = useState<CommunityQuestion[]>([])
+
+  const [courseForm, setCourseForm] = useState<CourseForm>(emptyCourse)
+  const [lectureForm, setLectureForm] = useState<LectureForm>(emptyLecture)
+  const [quizForm, setQuizForm] = useState<QuizForm>(emptyQuiz)
+  const [resourceForm, setResourceForm] = useState<ResourceForm>(emptyResource)
+  const [questionForm, setQuestionForm] = useState<QuestionForm>(emptyQuestion)
+
+  const [selectedQuizId, setSelectedQuizId] = useState("")
+  const [reply, setReply] = useState<Record<string, string>>({})
   const [siteContent, setSiteContent] = useState<SiteContent>(defaultSiteContent)
-  const [activeTab, setActiveTab] = useState("courses"), [questionAlertOpen, setQuestionAlertOpen] = useState(false)
-  const [userForm, setUserForm] = useState<UserForm>(emptyUser), [creatingUser, setCreatingUser] = useState(false)
-  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]), [loadingUsers, setLoadingUsers] = useState(false), [userActionId, setUserActionId] = useState<string | null>(null)
-  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null), [userEditForm, setUserEditForm] = useState<UserEditForm>(emptyUser), [deletingUser, setDeletingUser] = useState<ManagedUser | null>(null)
+  const [activeTab, setActiveTab] = useState("analytics")
+  const [questionAlertOpen, setQuestionAlertOpen] = useState(false)
+
+  // Users management
+  const [userForm, setUserForm] = useState<UserForm>(emptyUser)
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [userActionId, setUserActionId] = useState<string | null>(null)
+  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null)
+  const [userEditForm, setUserEditForm] = useState<UserForm>(emptyUser)
+  const [deletingUser, setDeletingUser] = useState<ManagedUser | null>(null)
 
   useEffect(() => {
     const client = supabase
-    if (!client) { router.replace("/login"); return }
+    if (!client) {
+      router.replace("/login")
+      return
+    }
+
     client.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { router.replace("/login"); return }
-      const data = await Promise.all([client.from("users").select("*").eq("id", session.user.id).single(), client.from("courses").select("*").order("created_at", { ascending: false }), client.from("lectures").select("*").order("order"), client.from("quizzes").select("*").order("created_at", { ascending: false }), client.from("resources").select("*"), client.from("questions").select("*").order("order"), client.from("community_questions").select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)").order("created_at", { ascending: false }), client.from("site_content").select("content").eq("id", "main").maybeSingle()])
-      if (data[0].data) { setProfile(data[0].data); if (["dev", "super_admin"].includes(data[0].data.role)) { setLoadingUsers(true); try { const payload = await callUserApi(session.access_token); setManagedUsers(payload.users) } catch (error) { setNotice({ error: true, text: error instanceof Error ? error.message : "Could not load users" }) } finally { setLoadingUsers(false) } } }; if (data[1].data) setCourses(data[1].data); if (data[2].data) setLectures(data[2].data); if (data[3].data) { setQuizzes(data[3].data); setSelectedQuiz(data[3].data[0]?.id ?? "") }; if (data[4].data) setResources(data[4].data); if (data[5].data) setQuestions(data[5].data); if (data[6].data) { setCommunity(data[6].data); if (data[6].data.some((question) => !question.answers?.length)) setQuestionAlertOpen(true) }; if (data[7].data?.content) setSiteContent(mergeSiteContent(data[7].data.content as Partial<SiteContent>))
-      const error = data.slice(0, 7).find((item) => item.error)?.error; if (error) setNotice({ error: true, text: error.message }); setReady(true)
+      if (!session) {
+        router.replace("/login")
+        return
+      }
+
+      const data = await Promise.all([
+        client.from("users").select("*").eq("id", session.user.id).single(),
+        client.from("courses").select("*").order("created_at", { ascending: false }),
+        client.from("lectures").select("*").order("order"),
+        client.from("quizzes").select("*").order("created_at", { ascending: false }),
+        client.from("resources").select("*"),
+        client.from("questions").select("*").order("order"),
+        client
+          .from("community_questions")
+          .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
+          .order("created_at", { ascending: false }),
+        client.from("site_content").select("content").eq("id", "main").maybeSingle(),
+      ])
+
+      if (data[0].data) {
+        setProfile(data[0].data)
+        if (["dev", "super_admin"].includes(data[0].data.role)) {
+          setLoadingUsers(true)
+          try {
+            const payload = await callUserApi(session.access_token)
+            setManagedUsers(payload.users)
+          } catch (error) {
+            setNotice({
+              error: true,
+              text: error instanceof Error ? error.message : "Could not load users",
+            })
+          } finally {
+            setLoadingUsers(false)
+          }
+        }
+      }
+
+      if (data[1].data) setCourses(data[1].data)
+      if (data[2].data) setLectures(data[2].data)
+      if (data[3].data) {
+        setQuizzes(data[3].data)
+        setSelectedQuizId(data[3].data[0]?.id ?? "")
+      }
+      if (data[4].data) setResources(data[4].data)
+      if (data[5].data) setQuestions(data[5].data)
+      if (data[6].data) {
+        setCommunity(data[6].data)
+        if (data[6].data.some((question) => !question.answers?.length)) {
+          setQuestionAlertOpen(true)
+        }
+      }
+      if (data[7].data?.content) {
+        setSiteContent(mergeSiteContent(data[7].data.content as Partial<SiteContent>))
+      }
+
+      const error = data.slice(0, 7).find((item) => item.error)?.error
+      if (error) setNotice({ error: true, text: error.message })
+      setReady(true)
     })
   }, [router])
 
-  const courseName = (id: string | null) => { const item = courses.find((row) => row.id === id); return item ? (isAr ? item.title_ar : item.title_en) : "—" }
-  const lectureName = (id: string | null) => { const item = lectures.find((row) => row.id === id); return item ? (isAr ? item.title_ar : item.title_en) : "—" }
-  const quizLectures = lectures.filter((row) => row.course_id === quizForm.course_id), resourceLectures = lectures.filter((row) => row.course_id === resourceForm.course_id), selectedQuestions = questions.filter((row) => row.quiz_id === selectedQuiz)
-  const unansweredCommunity = community.filter((question) => !question.answers?.length), answeredCommunity = community.filter((question) => !!question.answers?.length)
   const canManageUsers = profile?.role === "dev" || profile?.role === "super_admin"
-  const labels = { cancel: tr("Cancel", "إلغاء"), saving: tr("Saving...", "جارٍ الحفظ...") }
-  const result = (error: { message: string } | null, text: string) => setNotice({ error: !!error, text: error?.message ?? text })
+  const isDev = profile?.role === "dev"
+  const unansweredCommunity = community.filter((q) => !q.answers?.length)
 
-  async function saveCourse(e: React.FormEvent) { e.preventDefault(); if (!supabase) return; setSaving(true); const { id, ...form } = courseForm, payload = { ...form, thumbnail_url: form.thumbnail_url || null, mentor_id: null }; const res = id ? await supabase.from("courses").update(payload).eq("id", id).select().single() : await supabase.from("courses").insert([payload]).select().single(); if (res.data) { setCourses((rows) => merge(rows, res.data)); setEditor(null); setCourseForm(emptyCourse) }; result(res.error, tr("Course saved.", "تم حفظ المقرر.")); setSaving(false) }
-  async function saveLecture(e: React.FormEvent) { e.preventDefault(); if (!supabase) return; setSaving(true); const { id, ...payload } = lectureForm; const res = id ? await supabase.from("lectures").update(payload).eq("id", id).select().single() : await supabase.from("lectures").insert([payload]).select().single(); if (res.data) { setLectures((rows) => merge(rows, res.data)); setEditor(null); setLectureForm(emptyLecture) }; result(res.error, tr("Lecture saved.", "تم حفظ المحاضرة.")); setSaving(false) }
-  async function saveQuiz(e: React.FormEvent) { e.preventDefault(); if (!supabase || !profile) return; setSaving(true); const { id, ...form } = quizForm, payload = { ...form, created_by: profile.id }; const res = id ? await supabase.from("quizzes").update(payload).eq("id", id).select().single() : await supabase.from("quizzes").insert([payload]).select().single(); if (res.data) { setQuizzes((rows) => merge(rows, res.data)); setSelectedQuiz(res.data.id); setEditor(null); setQuizForm(emptyQuiz) }; result(res.error, tr("Quiz saved.", "تم حفظ الاختبار.")); setSaving(false) }
-  async function saveResource(e: React.FormEvent) { e.preventDefault(); if (!supabase) return; setSaving(true); const { id } = resourceForm, payload = { lecture_id: resourceForm.lecture_id, title_en: resourceForm.title_en, title_ar: resourceForm.title_ar, url: resourceForm.url, type: resourceForm.type }; const res = id ? await supabase.from("resources").update(payload).eq("id", id).select().single() : await supabase.from("resources").insert([payload]).select().single(); if (res.data) { setResources((rows) => merge(rows, res.data)); setEditor(null); setResourceForm(emptyResource) }; result(res.error, tr("Resource saved.", "تم حفظ المادة.")); setSaving(false) }
-  async function saveQuestion(e: React.FormEvent) { e.preventDefault(); if (!supabase) return; setSaving(true); const { id, optionsText, ...form } = questionForm, options = form.type === "multiple_choice" ? optionsText.split("\n").map((v) => v.trim()).filter(Boolean) : form.type === "true_false" ? ["True", "False"] : null; if (form.type === "multiple_choice" && (options?.length ?? 0) < 2) { setNotice({ error: true, text: tr("Enter at least two options, one per line.", "أدخل خيارين على الأقل، كل خيار في سطر.") }); setSaving(false); return }; const payload = { ...form, options }; const res = id ? await supabase.from("questions").update(payload).eq("id", id).select().single() : await supabase.from("questions").insert([payload]).select().single(); if (res.data) { setQuestions((rows) => merge(rows, res.data)); setEditor(null); setQuestionForm({ ...emptyQuestion, quiz_id: res.data.quiz_id }) }; result(res.error, tr("Question saved.", "تم حفظ السؤال.")); setSaving(false) }
+  const result = (error: { message: string } | null, text: string) =>
+    setNotice({ error: !!error, text: error?.message ?? text })
 
-  async function remove(table: "courses" | "lectures" | "quizzes" | "resources" | "questions", id: string, name: string) {
+  // ─── CRUD Handlers ──────────────────────────────────────────────────────────
+
+  async function saveCourse(e: React.FormEvent) {
+    e.preventDefault()
+    if (!supabase) return
+    setSaving(true)
+    const { id, ...form } = courseForm
+    const payload = { ...form, thumbnail_url: form.thumbnail_url || null, mentor_id: null }
+    const res = id
+      ? await supabase.from("courses").update(payload).eq("id", id).select().single()
+      : await supabase.from("courses").insert([payload]).select().single()
+
+    if (res.data) {
+      setCourses((rows) => merge(rows, res.data))
+      setEditor(null)
+      setCourseForm(emptyCourse)
+      trackAdminAction({
+        action: id ? "updated" : "created",
+        entityType: "course",
+        entityId: res.data.id,
+        entityName: res.data.title_en,
+      })
+    }
+    result(res.error, tr("Course saved successfully.", "تم حفظ المقرر بنجاح."))
+    setSaving(false)
+  }
+
+  async function saveLecture(e: React.FormEvent) {
+    e.preventDefault()
+    if (!supabase) return
+    setSaving(true)
+    const { id, ...payload } = lectureForm
+    const res = id
+      ? await supabase.from("lectures").update(payload).eq("id", id).select().single()
+      : await supabase.from("lectures").insert([payload]).select().single()
+
+    if (res.data) {
+      setLectures((rows) => merge(rows, res.data))
+      setEditor(null)
+      setLectureForm(emptyLecture)
+      trackAdminAction({
+        action: id ? "updated" : "created",
+        entityType: "lecture",
+        entityId: res.data.id,
+        entityName: res.data.title_en,
+      })
+    }
+    result(res.error, tr("Lecture saved successfully.", "تم حفظ المحاضرة بنجاح."))
+    setSaving(false)
+  }
+
+  async function saveQuiz(e: React.FormEvent) {
+    e.preventDefault()
+    if (!supabase || !profile) return
+    setSaving(true)
+    const { id, ...form } = quizForm
+    const payload = { ...form, created_by: profile.id }
+    const res = id
+      ? await supabase.from("quizzes").update(payload).eq("id", id).select().single()
+      : await supabase.from("quizzes").insert([payload]).select().single()
+
+    if (res.data) {
+      setQuizzes((rows) => merge(rows, res.data))
+      setSelectedQuizId(res.data.id)
+      setEditor(null)
+      setQuizForm(emptyQuiz)
+      trackAdminAction({
+        action: id ? "updated" : "created",
+        entityType: "quiz",
+        entityId: res.data.id,
+        entityName: res.data.title_en,
+      })
+    }
+    result(res.error, tr("Quiz saved successfully.", "تم حفظ الاختبار بنجاح."))
+    setSaving(false)
+  }
+
+  async function saveResource(e: React.FormEvent) {
+    e.preventDefault()
+    if (!supabase) return
+    setSaving(true)
+    const { id } = resourceForm
+    const payload = {
+      lecture_id: resourceForm.lecture_id,
+      title_en: resourceForm.title_en,
+      title_ar: resourceForm.title_ar,
+      url: resourceForm.url,
+      type: resourceForm.type,
+    }
+    const res = id
+      ? await supabase.from("resources").update(payload).eq("id", id).select().single()
+      : await supabase.from("resources").insert([payload]).select().single()
+
+    if (res.data) {
+      setResources((rows) => merge(rows, res.data))
+      setEditor(null)
+      setResourceForm(emptyResource)
+      trackAdminAction({
+        action: id ? "updated" : "created",
+        entityType: "resource",
+        entityId: res.data.id,
+        entityName: res.data.title_en,
+      })
+    }
+    result(res.error, tr("Resource saved successfully.", "تم حفظ المادة بنجاح."))
+    setSaving(false)
+  }
+
+  async function saveQuestion(e: React.FormEvent) {
+    e.preventDefault()
+    if (!supabase) return
+    setSaving(true)
+    const { id, optionsText, ...form } = questionForm
+    const options =
+      form.type === "multiple_choice"
+        ? optionsText.split("\n").map((v) => v.trim()).filter(Boolean)
+        : form.type === "true_false"
+        ? ["True", "False"]
+        : null
+
+    if (form.type === "multiple_choice" && (options?.length ?? 0) < 2) {
+      setNotice({
+        error: true,
+        text: tr("Enter at least two options, one per line.", "أدخل خيارين على الأقل، كل خيار في سطر."),
+      })
+      setSaving(false)
+      return
+    }
+
+    const payload = { ...form, options }
+    const res = id
+      ? await supabase.from("questions").update(payload).eq("id", id).select().single()
+      : await supabase.from("questions").insert([payload]).select().single()
+
+    if (res.data) {
+      setQuestions((rows) => merge(rows, res.data))
+      setEditor(null)
+      setQuestionForm({ ...emptyQuestion, quiz_id: res.data.quiz_id })
+      trackAdminAction({
+        action: id ? "updated" : "created",
+        entityType: "question",
+        entityId: res.data.id,
+        entityName: res.data.text_en,
+      })
+    }
+    result(res.error, tr("Question saved successfully.", "تم حفظ السؤال بنجاح."))
+    setSaving(false)
+  }
+
+  async function remove(
+    table: "courses" | "lectures" | "quizzes" | "resources" | "questions",
+    id: string,
+    name: string
+  ) {
     if (!supabase || !confirm(tr(`Delete ${name}? Related records may also be deleted.`, `حذف ${name}؟ قد تُحذف السجلات المرتبطة أيضًا.`))) return
     const { error } = await supabase.from(table).delete().eq("id", id)
-    if (!error && table === "courses") { const lectureIds = lectures.filter((x) => x.course_id === id).map((x) => x.id), quizIds = quizzes.filter((x) => x.course_id === id).map((x) => x.id); setCourses((r) => r.filter((x) => x.id !== id)); setLectures((r) => r.filter((x) => x.course_id !== id)); setResources((r) => r.filter((x) => !lectureIds.includes(x.lecture_id))); setQuizzes((r) => r.filter((x) => x.course_id !== id)); setQuestions((r) => r.filter((x) => !quizIds.includes(x.quiz_id))) }
-    if (!error && table === "lectures") { const quizIds = quizzes.filter((x) => x.lecture_id === id).map((x) => x.id); setLectures((r) => r.filter((x) => x.id !== id)); setResources((r) => r.filter((x) => x.lecture_id !== id)); setQuizzes((r) => r.filter((x) => x.lecture_id !== id)); setQuestions((r) => r.filter((x) => !quizIds.includes(x.quiz_id))) }
-    if (!error && table === "quizzes") { setQuizzes((r) => r.filter((x) => x.id !== id)); setQuestions((r) => r.filter((x) => x.quiz_id !== id)); if (selectedQuiz === id) setSelectedQuiz("") }
+
+    if (!error) {
+      trackAdminAction({
+        action: "deleted",
+        entityType:
+          table === "courses"
+            ? "course"
+            : table === "lectures"
+            ? "lecture"
+            : table === "quizzes"
+            ? "quiz"
+            : table === "resources"
+            ? "resource"
+            : "question",
+        entityId: id,
+        entityName: name,
+      })
+    }
+
+    if (!error && table === "courses") {
+      const lectureIds = lectures.filter((x) => x.course_id === id).map((x) => x.id)
+      const quizIds = quizzes.filter((x) => x.course_id === id).map((x) => x.id)
+      setCourses((r) => r.filter((x) => x.id !== id))
+      setLectures((r) => r.filter((x) => x.course_id !== id))
+      setResources((r) => r.filter((x) => !lectureIds.includes(x.lecture_id)))
+      setQuizzes((r) => r.filter((x) => x.course_id !== id))
+      setQuestions((r) => r.filter((x) => !quizIds.includes(x.quiz_id)))
+    }
+    if (!error && table === "lectures") {
+      const quizIds = quizzes.filter((x) => x.lecture_id === id).map((x) => x.id)
+      setLectures((r) => r.filter((x) => x.id !== id))
+      setResources((r) => r.filter((x) => x.lecture_id !== id))
+      setQuizzes((r) => r.filter((x) => x.lecture_id !== id))
+      setQuestions((r) => r.filter((x) => !quizIds.includes(x.quiz_id)))
+    }
+    if (!error && table === "quizzes") {
+      setQuizzes((r) => r.filter((x) => x.id !== id))
+      setQuestions((r) => r.filter((x) => x.quiz_id !== id))
+      if (selectedQuizId === id) setSelectedQuizId("")
+    }
     if (!error && table === "resources") setResources((r) => r.filter((x) => x.id !== id))
     if (!error && table === "questions") setQuestions((r) => r.filter((x) => x.id !== id))
-    result(error, tr("Deleted.", "تم الحذف."))
+
+    result(error, tr("Deleted successfully.", "تم الحذف بنجاح."))
   }
-  async function sendReply(id: string) { const text = reply[id]?.trim(); if (!text || !supabase || !profile) return; const { data, error } = await supabase.from("community_answers").insert([{ question_id: id, responder_id: profile.id, text }]).select().single(); if (data) { setCommunity((rows) => rows.map((q) => q.id === id ? { ...q, answers: [...(q.answers ?? []), data] } : q)); setReply((r) => ({ ...r, [id]: "" })) }; result(error, tr("Reply sent.", "تم إرسال الرد.")) }
-  async function saveSiteContent() { if (!supabase || profile?.role !== "dev") return; setSaving(true); const { error } = await supabase.from("site_content").upsert({ id: "main", content: siteContent, updated_by: profile.id, updated_at: new Date().toISOString() }); result(error, tr("Site content saved. The public pages will refresh shortly.", "تم حفظ محتوى الموقع. ستتحدث الصفحات العامة قريبًا.")); setSaving(false) }
-  async function logout() { if (supabase) await supabase.auth.signOut(); await router.push("/login") }
+
+  async function sendReply(id: string) {
+    const text = reply[id]?.trim()
+    if (!text || !supabase || !profile) return
+    const { data, error } = await supabase
+      .from("community_answers")
+      .insert([{ question_id: id, responder_id: profile.id, text }])
+      .select()
+      .single()
+
+    if (data) {
+      setCommunity((rows) =>
+        rows.map((q) => (q.id === id ? { ...q, answers: [...(q.answers ?? []), data] } : q))
+      )
+      setReply((r) => ({ ...r, [id]: "" }))
+      trackAdminAction({
+        action: "created",
+        entityType: "qa_reply",
+        entityId: id,
+        details: { responder_role: profile.role },
+      })
+    }
+    result(error, tr("Reply posted successfully.", "تم نشر الإجابة بنجاح."))
+  }
+
+  async function saveSiteContent() {
+    if (!supabase || profile?.role !== "dev") return
+    setSaving(true)
+    const { error } = await supabase
+      .from("site_content")
+      .upsert({
+        id: "main",
+        content: siteContent,
+        updated_by: profile.id,
+        updated_at: new Date().toISOString(),
+      })
+
+    if (!error) {
+      trackAdminAction({ action: "content_updated", entityType: "site_content" })
+    }
+    result(
+      error,
+      tr("Site content updated successfully.", "تم تحديث نصوص ومحتوى الموقع بنجاح.")
+    )
+    setSaving(false)
+  }
+
+  async function logout() {
+    resetUser()
+    if (supabase) await supabase.auth.signOut()
+    await router.push("/login")
+  }
+
+  // ─── User Management Handlers ───────────────────────────────────────────────
+
   async function loadManagedUsers() {
     if (!supabase) return
     setLoadingUsers(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session) throw new Error(tr("Your session expired. Sign in again.", "انتهت الجلسة. سجّل الدخول مرة أخرى."))
       const payload = await callUserApi(session.access_token)
       setManagedUsers(payload.users)
     } catch (error) {
-      setNotice({ error: true, text: error instanceof Error ? error.message : tr("Could not load users.", "تعذر تحميل المستخدمين.") })
-    } finally { setLoadingUsers(false) }
+      setNotice({
+        error: true,
+        text: error instanceof Error ? error.message : tr("Could not load users.", "تعذر تحميل المستخدمين."),
+      })
+    } finally {
+      setLoadingUsers(false)
+    }
   }
+
   async function createAdminUser(event: React.FormEvent) {
-    event.preventDefault(); if (!supabase || !canManageUsers) return; setCreatingUser(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { setNotice({ error: true, text: tr("Your session expired. Sign in again.", "انتهت الجلسة. سجّل الدخول مرة أخرى.") }); setCreatingUser(false); return }
+    event.preventDefault()
+    if (!supabase || !canManageUsers) return
+    setCreatingUser(true)
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session) {
+      setNotice({
+        error: true,
+        text: tr("Your session expired. Sign in again.", "انتهت الجلسة. سجّل الدخول مرة أخرى."),
+      })
+      setCreatingUser(false)
+      return
+    }
+
     try {
-      const response = await fetch("/api/admin/users/create", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify(userForm) })
+      const response = await fetch("/api/admin/users/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(userForm),
+      })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error || tr("Could not create user.", "تعذر إنشاء المستخدم."))
-      setUserForm(emptyUser); await loadManagedUsers(); setNotice({ text: tr("Administrative user created successfully.", "تم إنشاء المستخدم الإداري بنجاح.") })
-    } catch (error) { setNotice({ error: true, text: error instanceof Error ? error.message : tr("Could not create user.", "تعذر إنشاء المستخدم.") }) } finally { setCreatingUser(false) }
+      trackAdminAction({
+        action: "created",
+        entityType: "user",
+        details: { email: userForm.email, role: userForm.role },
+      })
+      setUserForm(emptyUser)
+      await loadManagedUsers()
+      setNotice({ text: tr("Administrative user created successfully.", "تم إنشاء المستخدم الإداري بنجاح.") })
+    } catch (error) {
+      setNotice({
+        error: true,
+        text: error instanceof Error ? error.message : tr("Could not create user.", "تعذر إنشاء المستخدم."),
+      })
+    } finally {
+      setCreatingUser(false)
+    }
   }
-  const userIsSuspended = (user: ManagedUser) => !!user.banned_until && new Date(user.banned_until).getTime() > Date.now()
-  const openUserEditor = (user: ManagedUser) => { setEditingUser(user); setUserEditForm({ full_name: user.full_name ?? "", email: user.email, password: "", role: user.role }) }
+
+  const openUserEditor = (user: ManagedUser) => {
+    setEditingUser(user)
+    setUserEditForm({
+      full_name: user.full_name ?? "",
+      email: user.email,
+      password: "",
+      role: user.role,
+    })
+  }
+
   async function updateManagedUser(userId: string, changes: Record<string, unknown>, success: string) {
     if (!supabase) return false
     setUserActionId(userId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session) throw new Error(tr("Your session expired. Sign in again.", "انتهت الجلسة. سجّل الدخول مرة أخرى."))
-      await callUserApi(session.access_token, { method: "PATCH", body: JSON.stringify({ userId, ...changes }) })
-      await loadManagedUsers(); setNotice({ text: success }); return true
-    } catch (error) { setNotice({ error: true, text: error instanceof Error ? error.message : tr("Could not update user.", "تعذر تحديث المستخدم.") }); return false } finally { setUserActionId(null) }
+      await callUserApi(session.access_token, {
+        method: "PATCH",
+        body: JSON.stringify({ userId, ...changes }),
+      })
+      trackAdminAction({ action: "updated", entityType: "user", entityId: userId, details: changes })
+      await loadManagedUsers()
+      setNotice({ text: success })
+      return true
+    } catch (error) {
+      setNotice({
+        error: true,
+        text: error instanceof Error ? error.message : tr("Could not update user.", "تعذر تحديث المستخدم."),
+      })
+      return false
+    } finally {
+      setUserActionId(null)
+    }
   }
+
   async function saveManagedUser(event: React.FormEvent) {
-    event.preventDefault(); if (!editingUser) return
-    const updated = await updateManagedUser(editingUser.id, userEditForm, tr("User details updated.", "تم تحديث بيانات المستخدم."))
+    event.preventDefault()
+    if (!editingUser) return
+    const updated = await updateManagedUser(
+      editingUser.id,
+      userEditForm,
+      tr("User details updated successfully.", "تم تحديث بيانات المستخدم بنجاح.")
+    )
     if (updated) setEditingUser(null)
   }
+
   async function toggleManagedUser(user: ManagedUser) {
-    const suspended = userIsSuspended(user)
-    await updateManagedUser(user.id, { banned: !suspended }, suspended ? tr("User access restored.", "تمت إعادة تفعيل المستخدم.") : tr("User access suspended.", "تم إيقاف وصول المستخدم."))
+    const suspended = !!user.banned_until && new Date(user.banned_until).getTime() > Date.now()
+    await updateManagedUser(
+      user.id,
+      { banned: !suspended },
+      suspended
+        ? tr("User access restored.", "تمت إعادة تفعيل المستخدم.")
+        : tr("User access suspended.", "تم إيقاف وصول المستخدم.")
+    )
   }
+
   async function deleteManagedUser() {
     if (!supabase || !deletingUser) return
-    const target = deletingUser; setUserActionId(target.id)
+    const target = deletingUser
+    setUserActionId(target.id)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session) throw new Error(tr("Your session expired. Sign in again.", "انتهت الجلسة. سجّل الدخول مرة أخرى."))
-      await callUserApi(session.access_token, { method: "DELETE", body: JSON.stringify({ userId: target.id }) })
-      setManagedUsers((users) => users.filter((user) => user.id !== target.id)); setDeletingUser(null); setNotice({ text: tr("User deleted permanently.", "تم حذف المستخدم نهائيًا.") })
-    } catch (error) { setNotice({ error: true, text: error instanceof Error ? error.message : tr("Could not delete user.", "تعذر حذف المستخدم.") }) } finally { setUserActionId(null) }
+      await callUserApi(session.access_token, {
+        method: "DELETE",
+        body: JSON.stringify({ userId: target.id }),
+      })
+      trackAdminAction({ action: "deleted", entityType: "user", entityId: target.id, entityName: target.email })
+      setManagedUsers((users) => users.filter((user) => user.id !== target.id))
+      setDeletingUser(null)
+      setNotice({ text: tr("User deleted permanently.", "تم حذف المستخدم نهائيًا.") })
+    } catch (error) {
+      setNotice({
+        error: true,
+        text: error instanceof Error ? error.message : tr("Could not delete user.", "تعذر حذف المستخدم."),
+      })
+    } finally {
+      setUserActionId(null)
+    }
   }
-  const answerNow = () => { setActiveTab("qa"); setQuestionAlertOpen(false) }
-  const communityCard = (question: CommunityQuestion) => <Card key={question.id} className="shadow-none"><CardContent className="p-5"><div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between"><p className="font-bold">{question.author_name}</p><Badge variant={question.answers?.length ? "secondary" : "outline"}>{question.answers?.length ? tr("Answered", "تمت الإجابة") : tr("Awaiting answer", "بانتظار الإجابة")}</Badge></div><p className="mt-4 leading-7">{question.text}</p>{question.answers?.map((answer) => <div key={answer.id} className="mt-3 border-s-2 border-primary bg-secondary/50 p-3 text-sm"><p className="mb-1 text-xs font-bold uppercase tracking-wider text-primary">{tr("Staff answer", "إجابة الفريق")}</p>{answer.text}</div>)}<div className="mt-4 flex flex-col gap-2 sm:flex-row"><Input value={reply[question.id] ?? ""} onChange={(event) => setReply({ ...reply, [question.id]: event.target.value })} placeholder={question.answers?.length ? tr("Add another reply...", "أضف ردًا آخر...") : tr("Write an answer...", "اكتب الإجابة...")} aria-label={tr(`Reply to ${question.author_name}`, `الرد على ${question.author_name}`)} /><Button className="shrink-0" onClick={() => sendReply(question.id)} disabled={!reply[question.id]?.trim()}><Send />{tr("Send", "إرسال")}</Button></div></CardContent></Card>
 
-  const openCourse = (x?: Course) => { setCourseForm(x ? { id: x.id, title_en: x.title_en, title_ar: x.title_ar, description_en: x.description_en ?? "", description_ar: x.description_ar ?? "", objectives_en: x.objectives_en ?? "", objectives_ar: x.objectives_ar ?? "", prerequisites_en: x.prerequisites_en ?? "", prerequisites_ar: x.prerequisites_ar ?? "", thumbnail_url: x.thumbnail_url ?? "" } : emptyCourse); setEditor("course") }
-  const openLecture = (x?: Lecture) => { setLectureForm(x ? { id: x.id, course_id: x.course_id, title_en: x.title_en, title_ar: x.title_ar, details_en: x.details_en ?? "", details_ar: x.details_ar ?? "", youtube_url: x.youtube_url, order: x.order } : { ...emptyLecture, order: lectures.length + 1 }); setEditor("lecture") }
-  const openQuiz = (x?: Quiz) => { setQuizForm(x ? { id: x.id, course_id: x.course_id ?? "", lecture_id: x.lecture_id ?? "", title_en: x.title_en, title_ar: x.title_ar } : emptyQuiz); setEditor("quiz") }
-  const openResource = (x?: Resource) => { const lecture = lectures.find((l) => l.id === x?.lecture_id); setResourceForm(x ? { id: x.id, course_id: lecture?.course_id ?? "", lecture_id: x.lecture_id, title_en: x.title_en, title_ar: x.title_ar, url: x.url, type: x.type } : emptyResource); setEditor("resource") }
-  const openQuestion = (x?: Question) => { setQuestionForm(x ? { id: x.id, quiz_id: x.quiz_id, text_en: x.text_en, text_ar: x.text_ar, type: x.type, optionsText: x.options?.join("\n") ?? "", correct_answer: x.correct_answer, order: x.order } : { ...emptyQuestion, quiz_id: selectedQuiz, order: selectedQuestions.length + 1 }); setEditor("question") }
+  // ─── Modal Openers ──────────────────────────────────────────────────────────
 
-  if (!ready) return <Layout title="Admin"><div className="grid min-h-screen place-items-center"><Loader2 className="size-8 animate-spin text-primary" /></div></Layout>
-  const tabs = [["courses", tr("Courses", "المقررات"), BookOpen], ["lectures", tr("Lectures", "المحاضرات"), FileVideo], ["quizzes", tr("Quizzes", "الاختبارات"), ClipboardCheck], ["resources", tr("Resources", "المواد"), FileText], ["qa", tr("Q&A", "الأسئلة"), MessageCircle]] as const
+  const openCourse = (x?: Course) => {
+    setCourseForm(
+      x
+        ? {
+            id: x.id,
+            title_en: x.title_en,
+            title_ar: x.title_ar,
+            description_en: x.description_en ?? "",
+            description_ar: x.description_ar ?? "",
+            objectives_en: x.objectives_en ?? "",
+            objectives_ar: x.objectives_ar ?? "",
+            prerequisites_en: x.prerequisites_en ?? "",
+            prerequisites_ar: x.prerequisites_ar ?? "",
+            thumbnail_url: x.thumbnail_url ?? "",
+          }
+        : emptyCourse
+    )
+    setEditor("course")
+  }
 
-  return <Layout title={`${tr("Content administration", "إدارة المحتوى")} — PharmaCore`}>
-    <section className="border-b bg-muted/40"><div className="page-shell flex flex-col gap-6 py-8 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-3 text-lg font-bold text-primary">{tr(`Hi, ${profile?.full_name || profile?.email || "there"}`, `مرحبًا، ${profile?.full_name || profile?.email || "بك"}`)}</p><Badge variant="outline" className="gap-2 bg-card"><ShieldCheck className="size-3.5" />{profile?.role?.replace("_", " ")}</Badge><h1 className="mt-4 text-3xl font-extrabold sm:text-4xl">{tr("Content administration", "إدارة المحتوى")}</h1><p className="mt-2 text-muted-foreground">{tr("Create, edit, and organize every learning asset.", "أنشئ وعدّل ونظّم جميع عناصر المحتوى.")}</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => router.push("/")}><HomeIcon />{tr("Go to main page", "الذهاب للصفحة الرئيسية")}</Button><Button variant="outline" className="text-destructive hover:text-destructive" onClick={logout}><LogOut />{tr("Log out", "تسجيل الخروج")}</Button></div></div></section>
-    <div className="page-shell py-8 lg:py-12">{notice && <Alert variant={notice.error ? "destructive" : "default"} className="mb-6"><AlertDescription>{notice.text}</AlertDescription></Alert>}<Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8"><TabsList className={`grid h-auto grid-cols-3 gap-1 p-1 ${profile?.role === "dev" ? "sm:grid-cols-7" : canManageUsers ? "sm:grid-cols-6" : "sm:grid-cols-5"}`}>{tabs.map(([v, label, Icon]) => <TabsTrigger key={v} value={v} className="min-h-12 gap-2"><Icon className="size-4" /><span className="hidden md:inline">{label}</span>{v === "qa" && unansweredCommunity.length > 0 && <Badge className="ms-1 min-w-6 justify-center px-1.5">{unansweredCommunity.length}</Badge>}</TabsTrigger>)}{canManageUsers && <TabsTrigger value="users" className="min-h-12 gap-2"><UsersIcon className="size-4" /><span className="hidden md:inline">{tr("Users", "المستخدمون")}</span></TabsTrigger>}{profile?.role === "dev" && <TabsTrigger value="content" className="min-h-12 gap-2"><TypeIcon className="size-4" /><span className="hidden md:inline">{tr("Site content", "محتوى الموقع")}</span></TabsTrigger>}</TabsList>
-      <TabsContent value="courses" className="space-y-5"><Header title={tr("Courses", "المقررات")} help={tr("Bilingual course profiles and URL-based cover images.", "بيانات ثنائية اللغة وصور غلاف عبر URL.")} action={tr("New course", "مقرر جديد")} onClick={() => openCourse()} /><Grid>{courses.map((x) => <Item key={x.id} icon={<BookOpen />} title={isAr ? x.title_ar : x.title_en} meta={x.thumbnail_url ? tr("Cover image configured", "تم إعداد صورة الغلاف") : tr("No cover image", "لا توجد صورة غلاف")} edit={() => openCourse(x)} remove={() => remove("courses", x.id, isAr ? x.title_ar : x.title_en)} />)}</Grid>{!courses.length && <Empty text={tr("No courses yet. Create the first course to continue.", "لا توجد مقررات بعد. أنشئ أول مقرر للمتابعة.")} />}</TabsContent>
-      <TabsContent value="lectures" className="space-y-5"><Header title={tr("Lectures", "المحاضرات")} help={tr("Every lecture is assigned to one course.", "كل محاضرة مرتبطة بمقرر واحد.")} action={tr("New lecture", "محاضرة جديدة")} onClick={() => openLecture()} disabled={!courses.length} /><Grid>{lectures.map((x) => <Item key={x.id} icon={<FileVideo />} title={isAr ? x.title_ar : x.title_en} meta={`${courseName(x.course_id)} · #${x.order}`} edit={() => openLecture(x)} remove={() => remove("lectures", x.id, isAr ? x.title_ar : x.title_en)} />)}</Grid>{!lectures.length && <Empty text={tr("No lectures yet. A course is required first.", "لا توجد محاضرات بعد. يجب إنشاء مقرر أولًا.")} />}</TabsContent>
-      <TabsContent value="quizzes" className="space-y-7"><Header title={tr("Quizzes", "الاختبارات")} help={tr("Choose a course, then a lecture, then build its questions.", "اختر المقرر ثم المحاضرة ثم أنشئ الأسئلة.")} action={tr("New quiz", "اختبار جديد")} onClick={() => openQuiz()} disabled={!lectures.length} /><Grid>{quizzes.map((x) => <Item key={x.id} icon={<ClipboardCheck />} title={isAr ? x.title_ar : x.title_en} meta={`${courseName(x.course_id)} · ${lectureName(x.lecture_id)}`} edit={() => openQuiz(x)} remove={() => remove("quizzes", x.id, isAr ? x.title_ar : x.title_en)} />)}</Grid><Card className="shadow-none"><CardContent className="space-y-5 p-5"><Header title={tr("Quiz questions", "أسئلة الاختبار")} help={tr("Select a quiz to manage its questions.", "اختر اختبارًا لإدارة أسئلته.")} action={tr("New question", "سؤال جديد")} onClick={() => openQuestion()} disabled={!selectedQuiz} /><Pick value={selectedQuiz} change={setSelectedQuiz} placeholder={tr("Select quiz", "اختر الاختبار")} options={quizzes.map((x) => ({ value: x.id, label: isAr ? x.title_ar : x.title_en }))} />{selectedQuestions.map((x) => <Item key={x.id} icon={<CircleHelp />} title={isAr ? x.text_ar : x.text_en} meta={`${x.type.replaceAll("_", " ")} · #${x.order}`} edit={() => openQuestion(x)} remove={() => remove("questions", x.id, isAr ? x.text_ar : x.text_en)} />)}</CardContent></Card></TabsContent>
-      <TabsContent value="resources" className="space-y-5"><Header title={tr("Lecture resources", "مواد المحاضرات")} help={tr("Attach image, PDF, or other public URLs to a lecture.", "أرفق روابط صور أو PDF أو روابط عامة بمحاضرة.")} action={tr("New resource", "مادة جديدة")} onClick={() => openResource()} disabled={!lectures.length} /><Grid>{resources.map((x) => <Item key={x.id} icon={x.type === "image" ? <FileImage /> : <FileText />} title={isAr ? x.title_ar : x.title_en} meta={`${lectureName(x.lecture_id)} · ${x.type.toUpperCase()}`} edit={() => openResource(x)} remove={() => remove("resources", x.id, isAr ? x.title_ar : x.title_en)} />)}</Grid></TabsContent>
-      <TabsContent value="qa" id="question-management" className="space-y-5"><div><h2 className="text-2xl font-bold">{tr("Student questions", "أسئلة الطلاب")}</h2><p className="mt-1 text-sm text-muted-foreground">{tr("Prioritize questions that are still waiting for a staff response.", "ابدأ بالأسئلة التي ما زالت تنتظر ردًا من الفريق.")}</p></div><Tabs defaultValue="unanswered" className="space-y-5"><TabsList className="grid h-auto w-full grid-cols-2 p-1"><TabsTrigger value="unanswered" className="min-h-12 gap-2">{tr("Unanswered", "غير مجابة")}<Badge variant="outline">{unansweredCommunity.length}</Badge></TabsTrigger><TabsTrigger value="answered" className="min-h-12 gap-2">{tr("Answered", "تمت الإجابة")}<Badge variant="secondary">{answeredCommunity.length}</Badge></TabsTrigger></TabsList><TabsContent value="unanswered" className="space-y-4">{unansweredCommunity.map(communityCard)}{!unansweredCommunity.length && <Empty text={tr("No unanswered questions. Everything is up to date.", "لا توجد أسئلة غير مجابة. تمت متابعة جميع الأسئلة.")} />}</TabsContent><TabsContent value="answered" className="space-y-4">{answeredCommunity.map(communityCard)}{!answeredCommunity.length && <Empty text={tr("No answered questions yet.", "لا توجد أسئلة تمت الإجابة عنها بعد.")} />}</TabsContent></Tabs></TabsContent>
-      {canManageUsers && <TabsContent value="users" className="space-y-5">
-        <div><h2 className="text-2xl font-bold">{tr("Administrative users", "المستخدمون الإداريون")}</h2><p className="mt-1 text-sm text-muted-foreground">{tr("Create accounts and manage every team member's access.", "أنشئ الحسابات وتحكّم في وصول كل عضو بالفريق.")}</p></div>
-        <div dir="ltr" className="grid items-start gap-6 lg:grid-cols-[minmax(290px,0.8fr)_minmax(0,1.35fr)]">
-          <Card dir={isAr ? "rtl" : "ltr"} className="shadow-none"><CardContent className="p-5 sm:p-6"><div className="mb-5"><div className="icon-tile mb-3"><UserPlus /></div><h3 className="text-lg font-bold">{tr("Add a user", "إضافة مستخدم")}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{tr("Create a developer, super admin, or mentor with immediate access.", "أنشئ مطورًا أو مشرفًا عامًا أو مرشدًا مع تفعيل الوصول مباشرة.")}</p></div><form onSubmit={createAdminUser} className="grid gap-5"><div className="space-y-2"><Label htmlFor="new-user-name">{tr("Full name", "الاسم الكامل")}</Label><Input id="new-user-name" value={userForm.full_name} onChange={(event) => setUserForm({ ...userForm, full_name: event.target.value })} autoComplete="name" required /></div><div className="space-y-2"><Label htmlFor="new-user-email">{tr("Email address", "البريد الإلكتروني")}</Label><Input id="new-user-email" type="email" value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} autoComplete="email" required /></div><div className="space-y-2"><Label htmlFor="new-user-password">{tr("Temporary password", "كلمة المرور المؤقتة")}</Label><Input id="new-user-password" type="password" minLength={8} value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} autoComplete="new-password" required /><Hint>{tr("At least 8 characters. Share it securely.", "8 أحرف على الأقل. شاركها بطريقة آمنة.")}</Hint></div><PickField label={tr("Role", "الدور")} value={userForm.role} change={(role) => setUserForm({ ...userForm, role: role as UserRole })} options={[{ value: "mentor", label: tr("Mentor", "مرشد") }, { value: "super_admin", label: tr("Super admin", "مشرف عام") }, { value: "dev", label: tr("Developer", "مطور") }]} /><Button type="submit" size="lg" className="min-h-11 w-full" disabled={creatingUser}>{creatingUser ? <Loader2 className="animate-spin" /> : <UserPlus />}{creatingUser ? tr("Creating user...", "جارٍ إنشاء المستخدم...") : tr("Create user", "إنشاء المستخدم")}</Button></form></CardContent></Card>
-          <Card dir={isAr ? "rtl" : "ltr"} className="min-w-0 shadow-none"><CardContent className="p-5 sm:p-6"><div className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><UsersIcon className="size-5 text-primary" /><h3 className="text-lg font-bold">{tr("User list", "قائمة المستخدمين")}</h3><Badge variant="secondary">{managedUsers.length}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{tr("Edit details, suspend access, or permanently delete an account.", "عدّل البيانات أو أوقف الوصول أو احذف الحساب نهائيًا.")}</p></div><Button type="button" variant="outline" className="min-h-11 shrink-0" onClick={loadManagedUsers} disabled={loadingUsers}>{loadingUsers && <Loader2 className="animate-spin" />}{tr("Refresh", "تحديث")}</Button></div><div className="mt-5 space-y-3" aria-live="polite">{loadingUsers && !managedUsers.length ? <div className="grid min-h-40 place-items-center"><Loader2 className="size-7 animate-spin text-primary" /><span className="sr-only">{tr("Loading users", "جارٍ تحميل المستخدمين")}</span></div> : managedUsers.map((user) => { const suspended = userIsSuspended(user), isCurrent = user.id === profile?.id, busy = userActionId === user.id; return <article key={user.id} className="rounded-xl border bg-muted/20 p-4"><div className="flex min-w-0 items-start gap-3"><span className="grid size-11 shrink-0 place-items-center rounded-full bg-secondary text-primary" aria-hidden="true"><UserIcon /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="break-words font-bold">{user.full_name || tr("Unnamed user", "مستخدم بدون اسم")}</p>{isCurrent && <Badge variant="outline">{tr("You", "أنت")}</Badge>}<Badge variant={suspended ? "destructive" : "secondary"}>{suspended ? tr("Suspended", "موقوف") : tr("Active", "نشط")}</Badge></div><p className="mt-1 break-all text-sm text-muted-foreground">{user.email}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{user.role.replace("_", " ")}</span><span className="inline-flex items-center gap-1"><ClockIcon />{tr("Joined", "انضم")} {new Date(user.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</span>{user.last_sign_in_at && <span>{tr("Last login", "آخر دخول")} {new Date(user.last_sign_in_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</span>}</div></div></div><div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"><Button type="button" variant="outline" className="min-h-11" onClick={() => openUserEditor(user)} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <Pencil />}{tr("Edit", "تعديل")}</Button><Button type="button" variant="outline" className="min-h-11" onClick={() => toggleManagedUser(user)} disabled={busy || isCurrent}>{suspended ? <ActivateIcon /> : <SuspendIcon />}{suspended ? tr("Restore", "تفعيل") : tr("Suspend", "إيقاف")}</Button><Button type="button" variant="outline" className="col-span-2 min-h-11 text-destructive hover:text-destructive sm:ms-auto" onClick={() => setDeletingUser(user)} disabled={busy || isCurrent}><Trash2 />{tr("Delete", "حذف")}</Button></div>{isCurrent && <p className="mt-3 text-xs leading-5 text-muted-foreground">{tr("You can edit your details, but you cannot suspend, delete, or change the role of your current account.", "يمكنك تعديل بياناتك، لكن لا يمكنك إيقاف حسابك الحالي أو حذفه أو تغيير دوره.")}</p>}</article> })}{!loadingUsers && !managedUsers.length && <Empty text={tr("No administrative users found.", "لم يتم العثور على مستخدمين إداريين.")} />}</div></CardContent></Card>
+  const openLecture = (x?: Lecture) => {
+    setLectureForm(
+      x
+        ? {
+            id: x.id,
+            course_id: x.course_id,
+            title_en: x.title_en,
+            title_ar: x.title_ar,
+            details_en: x.details_en ?? "",
+            details_ar: x.details_ar ?? "",
+            youtube_url: x.youtube_url,
+            order: x.order,
+          }
+        : { ...emptyLecture, course_id: courses[0]?.id ?? "", order: lectures.length + 1 }
+    )
+    setEditor("lecture")
+  }
+
+  const openQuiz = (x?: Quiz) => {
+    setQuizForm(
+      x
+        ? {
+            id: x.id,
+            course_id: x.course_id ?? "",
+            lecture_id: x.lecture_id ?? "",
+            title_en: x.title_en,
+            title_ar: x.title_ar,
+          }
+        : { ...emptyQuiz, course_id: courses[0]?.id ?? "" }
+    )
+    setEditor("quiz")
+  }
+
+  const openResource = (x?: Resource) => {
+    const lecture = lectures.find((l) => l.id === x?.lecture_id)
+    setResourceForm(
+      x
+        ? {
+            id: x.id,
+            course_id: lecture?.course_id ?? courses[0]?.id ?? "",
+            lecture_id: x.lecture_id,
+            title_en: x.title_en,
+            title_ar: x.title_ar,
+            url: x.url,
+            type: x.type,
+          }
+        : { ...emptyResource, course_id: courses[0]?.id ?? "" }
+    )
+    setEditor("resource")
+  }
+
+  const openQuestion = (x?: Question) => {
+    const currentQuestions = questions.filter((q) => q.quiz_id === selectedQuizId)
+    setQuestionForm(
+      x
+        ? {
+            id: x.id,
+            quiz_id: x.quiz_id,
+            text_en: x.text_en,
+            text_ar: x.text_ar,
+            type: x.type,
+            optionsText: x.options?.join("\n") ?? "",
+            correct_answer: x.correct_answer,
+            order: x.order,
+          }
+        : {
+            ...emptyQuestion,
+            quiz_id: selectedQuizId || quizzes[0]?.id || "",
+            order: currentQuestions.length + 1,
+          }
+    )
+    setEditor("question")
+  }
+
+  if (!ready) {
+    return (
+      <Layout title="Admin Hub — PharmaCore">
+        <div className="grid min-h-screen place-items-center">
+          <Loader2 className="size-8 animate-spin text-primary" />
         </div>
-      </TabsContent>}
-      {profile?.role === "dev" && <TabsContent value="content" className="space-y-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-2xl font-bold">{tr("Site content", "محتوى الموقع")}</h2><p className="mt-1 max-w-2xl text-sm text-muted-foreground">{tr("Edit the bilingual public-page copy. Brand assets and link-preview metadata are defined in the application code.", "عدّل النصوص العامة ثنائية اللغة. تُحدد ملفات الهوية وبيانات معاينة الروابط داخل كود التطبيق.")}</p></div><Button onClick={saveSiteContent} disabled={saving}>{saving && <Loader2 className="animate-spin" />}{saving ? labels.saving : tr("Save site content", "حفظ محتوى الموقع")}</Button></div>{contentGroups.map((group) => <Card key={group.title} className="shadow-none"><CardContent className="p-5 sm:p-6"><h3 className="text-lg font-bold">{group.title}</h3><div className="mt-5 space-y-5">{group.fields.map((field) => <ContentField key={field} field={field} content={siteContent} setContent={setSiteContent} />)}</div></CardContent></Card>)}</TabsContent>}
-    </Tabs></div>
+      </Layout>
+    )
+  }
 
-    <Dialog open={questionAlertOpen} onOpenChange={setQuestionAlertOpen}><DialogContent className="sm:max-w-md"><DialogHeader><div className="icon-tile mb-3"><MessageCircle className="size-5" /></div><DialogTitle>{tr("Questions are waiting for an answer", "هناك أسئلة تنتظر الإجابة")}</DialogTitle><DialogDescription>{tr(`${unansweredCommunity.length} student question${unansweredCommunity.length === 1 ? " is" : "s are"} currently unanswered.`, `يوجد ${unansweredCommunity.length} من أسئلة الطلاب دون إجابة حتى الآن.`)}</DialogDescription></DialogHeader><DialogFooter className="mt-4"><Button variant="outline" onClick={() => setQuestionAlertOpen(false)}>{tr("Review later", "المراجعة لاحقًا")}</Button><Button onClick={answerNow}><MessageCircle />{tr("Answer now", "الإجابة الآن")}</Button></DialogFooter></DialogContent></Dialog>
+  return (
+    <Layout title={`${tr("Administration & Analytics", "الإدارة والتحليلات")} — PharmaCore`}>
+      {/* Sticky Command Bar Header with Categorized Tabs */}
+      <AdminHeader
+        profile={profile}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        unansweredCount={unansweredCommunity.length}
+        canManageUsers={canManageUsers}
+        isDev={isDev}
+        onLogout={logout}
+      />
 
-    <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}><DialogContent className="sm:max-w-xl" dir={isAr ? "rtl" : "ltr"}>{editingUser && <form onSubmit={saveManagedUser}><DialogHeader><DialogTitle>{tr("Edit user", "تعديل المستخدم")}</DialogTitle><DialogDescription>{tr("Update the account profile, role, email, or set a new password.", "حدّث بيانات الحساب أو الدور أو البريد أو عيّن كلمة مرور جديدة.")}</DialogDescription></DialogHeader><div className="grid gap-5 py-6 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="edit-user-name">{tr("Full name", "الاسم الكامل")}</Label><Input id="edit-user-name" value={userEditForm.full_name} onChange={(event) => setUserEditForm({ ...userEditForm, full_name: event.target.value })} autoComplete="name" required /></div><div className="space-y-2"><Label htmlFor="edit-user-email">{tr("Email address", "البريد الإلكتروني")}</Label><Input id="edit-user-email" type="email" value={userEditForm.email} onChange={(event) => setUserEditForm({ ...userEditForm, email: event.target.value })} autoComplete="email" required /></div><div className="space-y-2"><Label htmlFor="edit-user-password">{tr("New password (optional)", "كلمة مرور جديدة (اختياري)")}</Label><Input id="edit-user-password" type="password" minLength={8} value={userEditForm.password} onChange={(event) => setUserEditForm({ ...userEditForm, password: event.target.value })} autoComplete="new-password" /><Hint>{tr("Leave blank to keep the current password.", "اتركها فارغة للإبقاء على كلمة المرور الحالية.")}</Hint></div><PickField label={tr("Role", "الدور")} value={userEditForm.role} change={(role) => setUserEditForm({ ...userEditForm, role: role as UserRole })} options={[{ value: "mentor", label: tr("Mentor", "مرشد") }, { value: "super_admin", label: tr("Super admin", "مشرف عام") }, { value: "dev", label: tr("Developer", "مطور") }]} disabled={editingUser.id === profile?.id} /></div><DialogFooter><Button type="button" variant="outline" className="min-h-11" onClick={() => setEditingUser(null)}>{labels.cancel}</Button><Button type="submit" className="min-h-11" disabled={userActionId === editingUser.id}>{userActionId === editingUser.id && <Loader2 className="animate-spin" />}{tr("Save changes", "حفظ التعديلات")}</Button></DialogFooter></form>}</DialogContent></Dialog>
+      {/* Main Workspace Area */}
+      <main className="page-shell py-4 sm:py-8 lg:py-10">
+        {notice && (
+          <Alert variant={notice.error ? "destructive" : "default"} className="mb-6">
+            <AlertDescription>{notice.text}</AlertDescription>
+          </Alert>
+        )}
 
-    <Dialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}><DialogContent className="sm:max-w-md" dir={isAr ? "rtl" : "ltr"}>{deletingUser && <><DialogHeader><div className="mb-3 grid size-11 place-items-center rounded-lg bg-destructive/10 text-destructive"><Trash2 /></div><DialogTitle>{tr("Delete this user permanently?", "حذف هذا المستخدم نهائيًا؟")}</DialogTitle><DialogDescription>{tr(`${deletingUser.full_name || deletingUser.email} will immediately lose access. This action cannot be undone.`, `سيفقد ${deletingUser.full_name || deletingUser.email} الوصول فورًا. لا يمكن التراجع عن هذا الإجراء.`)}</DialogDescription></DialogHeader><DialogFooter className="mt-4"><Button type="button" variant="outline" className="min-h-11" onClick={() => setDeletingUser(null)}>{labels.cancel}</Button><Button type="button" variant="destructive" className="min-h-11" onClick={deleteManagedUser} disabled={userActionId === deletingUser.id}>{userActionId === deletingUser.id ? <Loader2 className="animate-spin" /> : <Trash2 />}{tr("Delete permanently", "حذف نهائي")}</Button></DialogFooter></>}</DialogContent></Dialog>
+        {/* 1. Insights & Telemetry */}
+        {activeTab === "analytics" && (
+          <AnalyticsDashboard
+            isAr={isAr}
+            courses={courses}
+            lectures={lectures}
+            quizzes={quizzes}
+            questions={questions}
+            unansweredQuestionsCount={unansweredCommunity.length}
+          />
+        )}
 
-    <Editor open={editor === "course"} close={() => setEditor(null)} title={courseForm.id ? tr("Edit course", "تعديل المقرر") : tr("New course", "مقرر جديد")} description={tr("All media is provided as a URL; no upload is required.", "تُضاف كل الوسائط كرابط URL، دون رفع ملفات.")} submit={saveCourse} saving={saving} save={tr("Save course", "حفظ المقرر")} labels={labels}><BiInput prefix="ct" form={courseForm} set={setCourseForm} /><BiArea prefix="cd" form={courseForm} set={setCourseForm} fields={["description_en", "description_ar"]} labels={[tr("English description", "الوصف الإنجليزي"), tr("Arabic description", "الوصف العربي")]} /><BiArea prefix="co" form={courseForm} set={setCourseForm} fields={["objectives_en", "objectives_ar"]} labels={[tr("English objectives", "الأهداف بالإنجليزية"), tr("Arabic objectives", "الأهداف بالعربية")]} /><BiArea prefix="cp" form={courseForm} set={setCourseForm} fields={["prerequisites_en", "prerequisites_ar"]} labels={[tr("English prerequisites", "المتطلبات بالإنجليزية"), tr("Arabic prerequisites", "المتطلبات بالعربية")]} /><Field label={tr("Cover image URL", "رابط صورة الغلاف")}><Input type="url" value={courseForm.thumbnail_url} onChange={(e) => setCourseForm({ ...courseForm, thumbnail_url: e.target.value })} placeholder="https://example.com/cover.webp" /><Hint>{tr("Recommended: 1600 × 900 px (16:9), WebP/JPEG, under 500 KB.", "موصى به: 1600 × 900 بكسل (16:9)، WebP/JPEG، أقل من 500 كيلوبايت.")}</Hint></Field></Editor>
-    <Editor open={editor === "lecture"} close={() => setEditor(null)} title={lectureForm.id ? tr("Edit lecture", "تعديل المحاضرة") : tr("New lecture", "محاضرة جديدة")} description={tr("Choose the course this lecture belongs to.", "اختر المقرر الذي تنتمي إليه المحاضرة.")} submit={saveLecture} saving={saving} save={tr("Save lecture", "حفظ المحاضرة")} labels={labels}><PickField label={tr("Course", "المقرر")} value={lectureForm.course_id} change={(v) => setLectureForm({ ...lectureForm, course_id: v })} options={courses.map((x) => ({ value: x.id, label: isAr ? x.title_ar : x.title_en }))} /><BiInput prefix="lt" form={lectureForm} set={setLectureForm} /><BiArea prefix="ld" form={lectureForm} set={setLectureForm} fields={["details_en", "details_ar"]} labels={[tr("English details", "التفاصيل بالإنجليزية"), tr("Arabic details", "التفاصيل بالعربية")]} /><Field label={tr("YouTube URL", "رابط YouTube")}><Input type="url" required value={lectureForm.youtube_url} onChange={(e) => setLectureForm({ ...lectureForm, youtube_url: e.target.value })} placeholder="https://youtube.com/watch?v=..." /><Hint>{tr("Paste the public video URL, not embed code.", "الصق رابط الفيديو العام، وليس كود embed.")}</Hint></Field><Field label={tr("Order", "الترتيب")}><Input type="number" min="0" required value={lectureForm.order} onChange={(e) => setLectureForm({ ...lectureForm, order: +e.target.value })} /></Field></Editor>
-    <Editor open={editor === "quiz"} close={() => setEditor(null)} title={quizForm.id ? tr("Edit quiz", "تعديل الاختبار") : tr("New quiz", "اختبار جديد")} description={tr("Select course first, then its lecture.", "اختر المقرر أولًا ثم المحاضرة.")} submit={saveQuiz} saving={saving} save={tr("Save quiz", "حفظ الاختبار")} labels={labels}><PickField label={tr("Course", "المقرر")} value={quizForm.course_id} change={(v) => setQuizForm({ ...quizForm, course_id: v, lecture_id: "" })} options={courses.map((x) => ({ value: x.id, label: isAr ? x.title_ar : x.title_en }))} /><PickField label={tr("Lecture", "المحاضرة")} value={quizForm.lecture_id} change={(v) => setQuizForm({ ...quizForm, lecture_id: v })} options={quizLectures.map((x) => ({ value: x.id, label: isAr ? x.title_ar : x.title_en }))} disabled={!quizForm.course_id} /><BiInput prefix="qt" form={quizForm} set={setQuizForm} /></Editor>
-    <Editor open={editor === "resource"} close={() => setEditor(null)} title={resourceForm.id ? tr("Edit resource", "تعديل المادة") : tr("New resource", "مادة جديدة")} description={tr("Use a public URL only; images and PDFs are not uploaded.", "استخدم رابطًا عامًا فقط؛ الصور وPDF لا تُرفع.")} submit={saveResource} saving={saving} save={tr("Save resource", "حفظ المادة")} labels={labels}><PickField label={tr("Course", "المقرر")} value={resourceForm.course_id} change={(v) => setResourceForm({ ...resourceForm, course_id: v, lecture_id: "" })} options={courses.map((x) => ({ value: x.id, label: isAr ? x.title_ar : x.title_en }))} /><PickField label={tr("Lecture", "المحاضرة")} value={resourceForm.lecture_id} change={(v) => setResourceForm({ ...resourceForm, lecture_id: v })} options={resourceLectures.map((x) => ({ value: x.id, label: isAr ? x.title_ar : x.title_en }))} disabled={!resourceForm.course_id} /><BiInput prefix="rt" form={resourceForm} set={setResourceForm} /><PickField label={tr("Type", "النوع")} value={resourceForm.type} change={(v) => setResourceForm({ ...resourceForm, type: v as ResourceType })} options={[{ value: "pdf", label: "PDF" }, { value: "image", label: tr("Image", "صورة") }, { value: "other", label: tr("Other URL", "رابط آخر") }]} /><Field label={tr("Resource URL", "رابط المادة")}><Input type="url" required value={resourceForm.url} onChange={(e) => setResourceForm({ ...resourceForm, url: e.target.value })} placeholder={resourceForm.type === "pdf" ? "https://example.com/file.pdf" : "https://example.com/image.webp"} />{resourceForm.type === "image" && <Hint>{tr("Recommended: 1600 × 1200 px (4:3), WebP/JPEG, under 750 KB.", "موصى به: 1600 × 1200 بكسل (4:3)، WebP/JPEG، أقل من 750 كيلوبايت.")}</Hint>}{resourceForm.type === "pdf" && <Hint>{tr("Use a direct, publicly accessible .pdf URL.", "استخدم رابط PDF مباشرًا ومتاحًا للعامة.")}</Hint>}</Field></Editor>
-    <Editor open={editor === "question"} close={() => setEditor(null)} title={questionForm.id ? tr("Edit question", "تعديل السؤال") : tr("New question", "سؤال جديد")} submit={saveQuestion} saving={saving} save={tr("Save question", "حفظ السؤال")} labels={labels}><PickField label={tr("Quiz", "الاختبار")} value={questionForm.quiz_id} change={(v) => setQuestionForm({ ...questionForm, quiz_id: v })} options={quizzes.map((x) => ({ value: x.id, label: isAr ? x.title_ar : x.title_en }))} /><PickField label={tr("Type", "النوع")} value={questionForm.type} change={(v) => setQuestionForm({ ...questionForm, type: v as QuestionType, correct_answer: v === "true_false" ? "True" : "" })} options={[{ value: "multiple_choice", label: tr("Multiple choice", "اختيار من متعدد") }, { value: "true_false", label: tr("True / False", "صح / خطأ") }, { value: "short_text", label: tr("Short text", "إجابة قصيرة") }]} /><BiArea prefix="qx" form={questionForm} set={setQuestionForm} fields={["text_en", "text_ar"]} labels={[tr("Question in English", "السؤال بالإنجليزية"), tr("Question in Arabic", "السؤال بالعربية")]} />{questionForm.type === "multiple_choice" && <Field label={tr("Options — one per line", "الخيارات — كل خيار في سطر")}><Textarea required rows={5} value={questionForm.optionsText} onChange={(e) => setQuestionForm({ ...questionForm, optionsText: e.target.value })} /></Field>}{questionForm.type === "true_false" ? <PickField label={tr("Correct answer", "الإجابة الصحيحة")} value={questionForm.correct_answer} change={(v) => setQuestionForm({ ...questionForm, correct_answer: v })} options={[{ value: "True", label: tr("True", "صح") }, { value: "False", label: tr("False", "خطأ") }]} /> : <Field label={tr("Correct answer", "الإجابة الصحيحة")}><Input required value={questionForm.correct_answer} onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: e.target.value })} /></Field>}<Field label={tr("Order", "الترتيب")}><Input type="number" min="0" required value={questionForm.order} onChange={(e) => setQuestionForm({ ...questionForm, order: +e.target.value })} /></Field></Editor>
-  </Layout>
+        {/* 2. Curriculum & Media */}
+        {activeTab === "curriculum" && (
+          <CurriculumManager
+            isAr={isAr}
+            searchQuery={searchQuery}
+            courses={courses}
+            lectures={lectures}
+            quizzes={quizzes}
+            questions={questions}
+            resources={resources}
+            selectedQuizId={selectedQuizId}
+            setSelectedQuizId={setSelectedQuizId}
+            onOpenCourseEditor={openCourse}
+            onOpenLectureEditor={openLecture}
+            onOpenQuizEditor={openQuiz}
+            onOpenResourceEditor={openResource}
+            onOpenQuestionEditor={openQuestion}
+            onDeleteEntity={remove}
+          />
+        )}
+
+        {/* 3. Student Q&A */}
+        {activeTab === "qa" && (
+          <CommunityManager
+            isAr={isAr}
+            searchQuery={searchQuery}
+            community={community}
+            lectures={lectures}
+            profile={profile}
+            reply={reply}
+            setReply={setReply}
+            onSendReply={sendReply}
+          />
+        )}
+
+        {/* 4. Staff & Access */}
+        {activeTab === "users" && canManageUsers && (
+          <UserManager
+            isAr={isAr}
+            searchQuery={searchQuery}
+            profile={profile}
+            managedUsers={managedUsers}
+            loadingUsers={loadingUsers}
+            creatingUser={creatingUser}
+            userActionId={userActionId}
+            userForm={userForm}
+            setUserForm={setUserForm}
+            onLoadUsers={loadManagedUsers}
+            onCreateUser={createAdminUser}
+            onOpenEditUser={openUserEditor}
+            onToggleSuspendUser={toggleManagedUser}
+            onOpenDeleteUser={(u) => setDeletingUser(u)}
+          />
+        )}
+
+        {/* 5. Site Content CMS */}
+        {activeTab === "content" && isDev && (
+          <SiteContentManager
+            isAr={isAr}
+            siteContent={siteContent}
+            setSiteContent={setSiteContent}
+            saving={saving}
+            onSaveContent={saveSiteContent}
+          />
+        )}
+      </main>
+
+      {/* Reusable Modals & Dialogs */}
+      <AdminModals
+        isAr={isAr}
+        editor={editor}
+        setEditor={setEditor}
+        saving={saving}
+        courses={courses}
+        lectures={lectures}
+        quizzes={quizzes}
+        courseForm={courseForm}
+        setCourseForm={setCourseForm}
+        onSaveCourse={saveCourse}
+        lectureForm={lectureForm}
+        setLectureForm={setLectureForm}
+        onSaveLecture={saveLecture}
+        quizForm={quizForm}
+        setQuizForm={setQuizForm}
+        onSaveQuiz={saveQuiz}
+        resourceForm={resourceForm}
+        setResourceForm={setResourceForm}
+        onSaveResource={saveResource}
+        questionForm={questionForm}
+        setQuestionForm={setQuestionForm}
+        onSaveQuestion={saveQuestion}
+        editingUser={editingUser}
+        setEditingUser={setEditingUser}
+        userEditForm={userEditForm}
+        setUserEditForm={setUserEditForm}
+        onSaveUserEdit={saveManagedUser}
+        deletingUser={deletingUser}
+        setDeletingUser={setDeletingUser}
+        onConfirmDeleteUser={deleteManagedUser}
+        userActionId={userActionId}
+        currentUserId={profile?.id}
+        questionAlertOpen={questionAlertOpen}
+        setQuestionAlertOpen={setQuestionAlertOpen}
+        unansweredCount={unansweredCommunity.length}
+        onGoToQA={() => {
+          setActiveTab("qa")
+          setQuestionAlertOpen(false)
+        }}
+      />
+    </Layout>
+  )
 }
 
-function ContentField({ field, content, setContent }: { field: keyof SiteLocaleContent; content: SiteContent; setContent: React.Dispatch<React.SetStateAction<SiteContent>> }) {
-  const multiline = /body|description|subtitle|tagline/.test(field)
-  const update = (locale: SiteLocale, value: string) => setContent((current) => ({ ...current, [locale]: { ...current[locale], [field]: value } }))
-  return <fieldset className="grid gap-3 rounded-xl border bg-muted/20 p-4 md:grid-cols-2"><legend className="px-2 text-xs font-bold uppercase tracking-wider text-primary">{contentLabel(field)}</legend>{(["en", "ar"] as SiteLocale[]).map((locale) => <div className="space-y-2" key={locale}><Label htmlFor={`site-${field}-${locale}`}>{locale === "en" ? "English" : "العربية"}</Label>{multiline ? <Textarea id={`site-${field}-${locale}`} dir={locale === "ar" ? "rtl" : "ltr"} rows={3} value={content[locale][field]} onChange={(e) => update(locale, e.target.value)} /> : <Input id={`site-${field}-${locale}`} dir={locale === "ar" ? "rtl" : "ltr"} type={field === "footer_email" ? "email" : "text"} value={content[locale][field]} onChange={(e) => update(locale, e.target.value)} />}</div>)}</fieldset>
-}
-function Header({ title, help, action, onClick, disabled }: { title: string; help: string; action: string; onClick: () => void; disabled?: boolean }) { return <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-2xl font-bold">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{help}</p></div><Button onClick={onClick} disabled={disabled}><Plus />{action}</Button></div> }
-function Grid({ children }: { children: React.ReactNode }) { return <div className="grid gap-3 lg:grid-cols-2">{children}</div> }
-function Empty({ text }: { text: string }) { return <Alert><AlertDescription>{text}</AlertDescription></Alert> }
-function Item({ icon, title, meta, edit, remove }: { icon: React.ReactNode; title: string; meta: string; edit: () => void; remove: () => void }) { return <Card className="shadow-none"><CardContent className="flex items-center gap-3 p-4"><span className="icon-tile">{icon}</span><div className="min-w-0 flex-1"><p className="truncate font-bold">{title}</p><p className="mt-1 truncate text-xs text-muted-foreground">{meta}</p></div><Button variant="ghost" size="icon" onClick={edit} aria-label={`Edit ${title}`}><Pencil /></Button><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={remove} aria-label={`Delete ${title}`}><Trash2 /></Button></CardContent></Card> }
-function Editor({ open, close, title, description, submit, saving, save, labels, children }: { open: boolean; close: () => void; title: string; description?: string; submit: (e: React.FormEvent) => void; saving: boolean; save: string; labels: { cancel: string; saving: string }; children: React.ReactNode }) { return <Dialog open={open} onOpenChange={(v) => !v && close()}><DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl"><form onSubmit={submit}><DialogHeader><DialogTitle>{title}</DialogTitle>{description && <DialogDescription>{description}</DialogDescription>}</DialogHeader><div className="grid gap-5 py-6 sm:grid-cols-2">{children}</div><DialogFooter><Button type="button" variant="outline" onClick={close}>{labels.cancel}</Button><Button type="submit" disabled={saving}>{saving && <Loader2 className="animate-spin" />}{saving ? labels.saving : save}</Button></DialogFooter></form></DialogContent></Dialog> }
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2 sm:col-span-2"><Label>{label}</Label>{children}</div> }
-function Hint({ children }: { children: React.ReactNode }) { return <p className="text-xs leading-5 text-muted-foreground">{children}</p> }
-function Pick({ value, change, options, placeholder, disabled }: { value: string; change: (v: string) => void; options: { value: string; label: string }[]; placeholder: string; disabled?: boolean }) { return <Select value={value} onValueChange={change} required disabled={disabled}><SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.map((x) => <SelectItem key={x.value} value={x.value}>{x.label}</SelectItem>)}</SelectContent></Select> }
-function PickField({ label, value, change, options, disabled }: { label: string; value: string; change: (v: string) => void; options: { value: string; label: string }[]; disabled?: boolean }) { return <div className="space-y-2"><Label>{label}</Label><Pick value={value} change={change} options={options} placeholder={label} disabled={disabled} /></div> }
-function BiInput<T extends { title_en: string; title_ar: string }>({ prefix, form, set }: { prefix: string; form: T; set: (v: T) => void }) { return <><div className="space-y-2"><Label htmlFor={`${prefix}-en`}>English title</Label><Input id={`${prefix}-en`} required value={form.title_en} onChange={(e) => set({ ...form, title_en: e.target.value })} /></div><div className="space-y-2"><Label htmlFor={`${prefix}-ar`}>العنوان العربي</Label><Input id={`${prefix}-ar`} dir="rtl" required value={form.title_ar} onChange={(e) => set({ ...form, title_ar: e.target.value })} /></div></> }
-function BiArea<T>({ prefix, form, set, fields, labels }: { prefix: string; form: T; set: (v: T) => void; fields: [keyof T, keyof T]; labels: [string, string] }) { return <>{fields.map((field, i) => <div className="space-y-2" key={String(field)}><Label htmlFor={`${prefix}-${i}`}>{labels[i]}</Label><Textarea id={`${prefix}-${i}`} dir={i ? "rtl" : "ltr"} required value={String(form[field] ?? "")} onChange={(e) => set({ ...form, [field]: e.target.value })} /></div>)}</> }
-
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({ props: { siteContent: await loadSiteContent(), ...(await serverSideTranslations(locale ?? "en", ["common"])) } })
+export const getServerSideProps: GetServerSideProps = async ({ locale }) => ({
+  props: {
+    siteContent: await loadSiteContent(),
+    ...(await serverSideTranslations(locale ?? "en", ["common"])),
+  },
+})

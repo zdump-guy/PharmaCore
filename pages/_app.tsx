@@ -6,10 +6,26 @@ import { Analytics } from '@vercel/analytics/next';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { SiteContentProvider } from '@/components/SiteContentProvider';
 import { inter, tajawal } from '@/lib/fonts';
+import { initAnalytics, trackPageView } from '@/lib/analytics';
 import '@/styles/globals.css';
 
 function App({ Component, pageProps }: AppProps) {
-  const { locale } = useRouter();
+  const router = useRouter();
+  const { locale } = router;
+
+  useEffect(() => {
+    initAnalytics();
+    trackPageView(router.asPath);
+
+    const handleRouteChange = (url: string) => {
+      trackPageView(url);
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router]);
 
   useEffect(() => {
     const isArabic = locale === 'ar';
@@ -30,3 +46,4 @@ function App({ Component, pageProps }: AppProps) {
 }
 
 export default appWithTranslation(App);
+

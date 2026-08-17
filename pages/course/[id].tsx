@@ -1,6 +1,7 @@
 import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
+import { useEffect } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
 import { FiArrowLeft as ArrowLeft, FiArrowRight as ArrowRight, FiBookOpen as BookOpen, FiCheckCircle as CheckCircle2, FiClipboard as ClipboardCheck, FiLock as LockKeyhole, FiPlayCircle as PlayCircle } from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
+import { trackCourseView } from "@/lib/analytics"
 import type { Course, Lecture } from "@/types"
 
 interface CoursePageProps { course: Course | null; lectures: Lecture[]; siteContent: SiteContent }
@@ -21,7 +23,18 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
   const isAr = locale === "ar"
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
+  useEffect(() => {
+    if (course) {
+      trackCourseView({
+        courseId: course.id,
+        courseTitle: isAr ? course.title_ar : course.title_en,
+        locale: locale || "en",
+      })
+    }
+  }, [course, isAr, locale])
+
   if (!course) {
+
     return <Layout title="Course not found"><div className="page-shell section-space text-center"><BookOpen className="mx-auto size-12 text-muted-foreground" /><h1 className="mt-5 text-3xl font-bold">{isAr ? "المقرر غير موجود" : "Course not found"}</h1><Button className="mt-6" asChild><Link href="/#courses">{isAr ? "العودة للمقررات" : "Back to courses"}</Link></Button></div></Layout>
   }
 
