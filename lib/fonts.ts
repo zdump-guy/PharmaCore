@@ -11,4 +11,6 @@ export const tajawal = Tajawal({
   weight: ["400", "500", "700", "800"],
   variable: "--font-tajawal",
   display: "swap",
+  preload: false,
 })
+

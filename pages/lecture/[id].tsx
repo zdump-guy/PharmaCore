@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
 import { FiArrowLeft as ArrowLeft, FiArrowRight as ArrowRight, FiCheckCircle as CheckCircle2, FiDownload as Download, FiExternalLink as ExternalLink, FiImage as FileImage, FiFileText as FileText, FiHelpCircle as HelpCircle, FiMessageCircle as MessageCircle, FiPlayCircle as PlayCircle, FiSend as Send, FiShield as ShieldCheck, FiStar as Sparkles } from "react-icons/fi"
 import Layout from "@/components/Layout"
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
+import { trackLectureView, trackResourceClick, trackCommunityQuestionSubmit } from "@/lib/analytics"
 import type { CommunityQuestion, Lecture, Quiz, Resource } from "@/types"
 
 interface LecturePageProps { lecture: Lecture | null; resources: Resource[]; quizzes: Quiz[]; questions: CommunityQuestion[]; courseId: string | null; siteContent: SiteContent }
@@ -35,6 +36,11 @@ function QuestionForm({ lectureId, isAr, onAdded }: { lectureId: string; isAr: b
       if (!response.ok) throw new Error()
       const data = await response.json()
       onAdded(data.question)
+      trackCommunityQuestionSubmit({
+        lectureId,
+        authorName: name,
+        textLength: question.length,
+      })
       setName(""); setEmail(""); setQuestion(""); setStatus("success")
     } catch { setStatus("error") }
   }
@@ -59,12 +65,25 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
   const [questions, setQuestions] = useState(initialQuestions)
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
+  const title = lecture ? (isAr ? lecture.title_ar : lecture.title_en) : ""
+  const details = lecture ? ((isAr ? lecture.details_ar : lecture.details_en) ?? "") : ""
+
+  useEffect(() => {
+    if (lecture && courseId) {
+      trackLectureView({
+        lectureId: lecture.id,
+        courseId,
+        lectureTitle: title,
+        order: lecture.order,
+        locale: locale || "en",
+      })
+    }
+  }, [lecture, courseId, title, locale])
+
   if (!lecture) {
     return <Layout title="Lecture not found"><div className="page-shell section-space text-center"><PlayCircle className="mx-auto size-12 text-muted-foreground" /><h1 className="mt-5 text-3xl font-bold">{isAr ? "المحاضرة غير موجودة" : "Lecture not found"}</h1></div></Layout>
   }
 
-  const title = isAr ? lecture.title_ar : lecture.title_en
-  const details = (isAr ? lecture.details_ar : lecture.details_en) ?? ""
   const videoId = lecture.youtube_url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]{11})/)?.[1]
   const copy = isAr ? { back: "العودة إلى المقرر", lecture: "محاضرة", summary: "الملخص", outcomes: "بعد هذه المحاضرة ستتمكن من", resources: "المواد", quizzes: "الاختبارات", discussion: "الأسئلة", quiz: "اختبر فهمك", quizBody: "اختبار قصير يساعدك على تثبيت المفاهيم الأساسية.", startQuiz: "بدء الاختبار", noResources: "لا توجد مواد مرفقة حتى الآن.", noQuizzes: "لا توجد اختبارات مرتبطة بهذه المحاضرة حتى الآن.", mentor: "إجابة المرشد", ask: "لديك سؤال؟", askBody: "اكتب سؤالك بوضوح ليستفيد منه باقي الطلاب أيضًا.", questions: "أسئلة الطلاب" } : { back: "Back to course", lecture: "Lecture", summary: "Summary", outcomes: "After this lecture, you will be able to", resources: "Resources", quizzes: "Quizzes", discussion: "Discussion", quiz: "Check your understanding", quizBody: "A short checkpoint to reinforce the core ideas.", startQuiz: "Start quiz", noResources: "No resources are attached yet.", noQuizzes: "No quizzes are linked to this lecture yet.", mentor: "Mentor answer", ask: "Have a question?", askBody: "Ask clearly so other students can benefit from the answer too.", questions: "Student questions" }
 
@@ -85,7 +104,7 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <div className="min-w-0">
             <div className="aspect-video overflow-hidden rounded-2xl border bg-[#101819] shadow-sm">
-              {videoId ? <YouTubePlayer videoId={videoId} title={title} /> : <div className="grid h-full place-items-center text-center text-white"><div><PlayCircle className="mx-auto size-14 text-[#8BCDE1]" /><p className="mt-4 font-semibold">{isAr ? "سيُضاف فيديو المحاضرة قريبًا" : "Lecture video coming soon"}</p></div></div>}
+              {videoId ? <YouTubePlayer videoId={videoId} title={title} lectureId={lecture.id} lectureTitle={title} /> : <div className="grid h-full place-items-center text-center text-white"><div><PlayCircle className="mx-auto size-14 text-[#8BCDE1]" /><p className="mt-4 font-semibold">{isAr ? "سيُضاف فيديو المحاضرة قريبًا" : "Lecture video coming soon"}</p></div></div>}
             </div>
 
             <Tabs defaultValue="summary" className="mt-8">
@@ -100,10 +119,52 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
               </TabsContent>
               <TabsContent value="resources" className="mt-5 space-y-3">
                 {resources.length ? resources.map((resource) => {
-                  const ResourceIcon = resource.type === "image" ? FileImage : FileText
-                  return <a key={resource.id} href={resource.url} target="_blank" rel="noreferrer" className="flex min-h-16 items-center gap-4 rounded-xl border bg-card p-4 transition-colors hover:border-primary/45"><span className="icon-tile"><ResourceIcon className="size-5" /></span><span className="flex-1 font-semibold">{isAr ? resource.title_ar : resource.title_en}</span><ExternalLink className="size-4 text-muted-foreground" /></a>
+                  const isPdf = resource.type === "pdf" || resource.url.toLowerCase().includes(".pdf")
+                  const isImg = resource.type === "image" || resource.url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)$/) !== null
+                  const ResourceIcon = isImg ? FileImage : FileText
+                  const resTitle = isAr ? resource.title_ar : resource.title_en
+                  return (
+                    <a
+                      key={resource.id}
+                      href={resource.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => trackResourceClick({
+                        resourceId: resource.id,
+                        resourceTitle: resTitle,
+                        resourceType: resource.type,
+                        url: resource.url,
+                        lectureId: lecture.id,
+                      })}
+                      className="flex min-h-16 items-center justify-between gap-4 rounded-xl border bg-card p-4 transition-colors hover:border-primary/45 hover:bg-muted/20"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <span className={`grid size-11 place-items-center rounded-xl shrink-0 ${
+                          isPdf ? "bg-red-500/10 text-red-600 dark:text-red-400" : "bg-primary/10 text-primary"
+                        }`}>
+                          <ResourceIcon className="size-5" />
+                        </span>
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="font-bold text-sm text-foreground truncate">{resTitle}</p>
+                          <Badge variant="outline" className={`text-[10px] uppercase font-bold px-1.5 py-0 ${
+                            isPdf ? "border-red-500/30 text-red-600 dark:text-red-400" : "border-primary/30 text-primary"
+                          }`}>
+                            {isPdf ? "PDF Document" : isImg ? "Image / Diagram" : "Reference"}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-primary hidden sm:inline">
+                          {isPdf ? (isAr ? "تحميل / قراءة" : "View PDF") : (isAr ? "فتح المادة" : "Open")}
+                        </span>
+                        <ExternalLink className="size-4 text-muted-foreground" />
+                      </div>
+                    </a>
+                  )
                 }) : <Card className="shadow-none"><CardContent className="p-8 text-center text-muted-foreground"><Download className="mx-auto mb-3 size-8" />{copy.noResources}</CardContent></Card>}
               </TabsContent>
+
               <TabsContent value="quizzes" className="mt-5">
                 <div className="grid gap-4 sm:grid-cols-2">
                   {quizzes.map((quiz) => <Card key={quiz.id} className="border-primary/25 shadow-none"><CardHeader><div className="icon-tile"><Sparkles className="size-5" /></div><CardTitle className="pt-3 text-xl">{isAr ? quiz.title_ar : quiz.title_en}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{copy.quizBody}</p><Button className="mt-5 w-full" asChild><Link href={`/quiz/${quiz.id}`}>{copy.startQuiz}<ArrowRight className="rtl:rotate-180" /></Link></Button></CardContent></Card>)}
@@ -115,6 +176,7 @@ export default function LecturePage({ lecture, resources, quizzes, questions: in
               </TabsContent>
             </Tabs>
           </div>
+
 
           <aside className="min-w-0 space-y-4 xl:sticky xl:top-28 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pe-1 xl:self-start" dir={isAr ? "rtl" : "ltr"} aria-labelledby="student-questions-title">
             <div className="rounded-xl border bg-muted/50 p-4"><div className="flex items-center gap-3"><span className="icon-tile size-10"><MessageCircle className="size-5" /></span><h2 id="student-questions-title" className="text-xl font-bold">{copy.questions}</h2></div><p className="mt-3 text-sm leading-6 text-muted-foreground">{isAr ? "الأسئلة والإجابات ظاهرة لجميع الطلاب للحفاظ على المعرفة المشتركة." : "Questions and answers stay visible to every student, building shared knowledge."}</p></div>

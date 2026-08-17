@@ -96,3 +96,13 @@ export interface CommunityAnswer {
 export type Locale = 'en' | 'ar';
 
 export type Theme = 'light' | 'dark';
+
+export interface AnalyticsEventRecord {
+  id: string;
+  event_name: string;
+  properties: Record<string, unknown>;
+  distinct_id: string | null;
+  user_id: string | null;
+  url?: string | null;
+  created_at: string;
+}
