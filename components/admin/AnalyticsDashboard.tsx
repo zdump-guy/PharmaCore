@@ -710,25 +710,33 @@ export default function AnalyticsDashboard({
             <CardContent className="p-4 sm:p-6 space-y-3">
               {[
                 {
-                  label: tr("🌟 Mastery (90–100%)", "🌟 إتقان تام (٩٠–١٠٠٪)"),
+                  icon: Award,
+                  iconColor: "text-amber-500",
+                  label: tr("Mastery (90–100%)", "إتقان تام (٩٠–١٠٠٪)"),
                   count: data.scoreDistribution?.tier90_100 || 0,
                   pct: Math.round(((data.scoreDistribution?.tier90_100 || 0) / totalScoreSubmissions) * 100),
                   color: "bg-emerald-500",
                 },
                 {
-                  label: tr("🟢 Satisfactory (70–89%)", "🟢 نجاح جيد (٧٠–٨٩٪)"),
+                  icon: CheckCircle2,
+                  iconColor: "text-emerald-500",
+                  label: tr("Satisfactory (70–89%)", "نجاح جيد (٧٠–٨٩٪)"),
                   count: data.scoreDistribution?.tier70_89 || 0,
                   pct: Math.round(((data.scoreDistribution?.tier70_89 || 0) / totalScoreSubmissions) * 100),
                   color: "bg-primary",
                 },
                 {
-                  label: tr("🟡 Near Pass (50–69%)", "🟡 محاولة قريبة (٥٠–٦٩٪)"),
+                  icon: Clock,
+                  iconColor: "text-amber-500",
+                  label: tr("Near Pass (50–69%)", "محاولة قريبة (٥٠–٦٩٪)"),
                   count: data.scoreDistribution?.tier50_69 || 0,
                   pct: Math.round(((data.scoreDistribution?.tier50_69 || 0) / totalScoreSubmissions) * 100),
                   color: "bg-amber-500",
                 },
                 {
-                  label: tr("🔴 Needs Review (< 50%)", "🔴 بحاجة لإعادة مراجعة (< ٥٠٪)"),
+                  icon: AlertTriangle,
+                  iconColor: "text-destructive",
+                  label: tr("Needs Review (< 50%)", "بحاجة لإعادة مراجعة (< ٥٠٪)"),
                   count: data.scoreDistribution?.tier0_49 || 0,
                   pct: Math.round(((data.scoreDistribution?.tier0_49 || 0) / totalScoreSubmissions) * 100),
                   color: "bg-destructive",

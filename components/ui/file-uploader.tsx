@@ -1,5 +1,6 @@
 import { useState } from "react"
 import {
+  FiAlertTriangle as AlertTriangle,
   FiCheck as Check,
   FiExternalLink as ExternalLink,
   FiFileText as FileText,
@@ -379,7 +380,7 @@ export default function FileUploader({
       {uploadError && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div className="flex items-start gap-2">
-            <span className="font-bold shrink-0">⚠️</span>
+            <AlertTriangle className="size-4 text-destructive shrink-0 mt-0.5" />
             <span>{uploadError}</span>
           </div>
           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">

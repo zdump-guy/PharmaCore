@@ -1,14 +1,27 @@
 // ─── Database Entity Types ───────────────────────────────────────────────────
 
-export type UserRole = 'dev' | 'super_admin' | 'mentor';
+export type UserRole = 'dev' | 'super_admin' | 'mentor' | 'student';
+
+export type StudentStatus = 'active' | 'pending' | 'suspended' | 'needs_setup';
 
 export interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone_number?: string | null;
+  university?: string | null;
+  faculty?: string | null;
+  start_year?: number | null;
+  predicted_end_year?: number | null;
+  status?: StudentStatus;
+  must_change_password?: boolean;
   role: UserRole;
   created_at: string;
 }
+
+export type CourseAccessPolicy = 'open' | 'students_only' | 'enrolled_only';
 
 export interface Course {
   id: string;
@@ -22,6 +35,8 @@ export interface Course {
   prerequisites_ar: string | null;
   thumbnail_url: string | null;
   mentor_id: string | null;
+  is_locked?: boolean;
+  access_policy?: CourseAccessPolicy;
   created_at: string;
   mentor?: UserProfile;
 }
@@ -91,6 +106,29 @@ export interface CommunityAnswer {
   responder?: UserProfile;
 }
 
+// ─── University & Faculty Directory Types ────────────────────────────────────
+
+export interface University {
+  id: string;
+  name_en: string;
+  name_ar: string;
+}
+
+export interface Faculty {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  duration_years: number; // e.g. 5 for PharmD
+}
+
+export type SignupMode = 'approval_required' | 'open_registration' | 'admin_provisioned';
+
+export interface EnrollmentSettings {
+  signup_mode: SignupMode;
+  universities: University[];
+  faculties: Faculty[];
+}
+
 // ─── UI / Utility Types ───────────────────────────────────────────────────────
 
 export type Locale = 'en' | 'ar';
@@ -101,8 +139,7 @@ export interface AnalyticsEventRecord {
   id: string;
   event_name: string;
   properties: Record<string, unknown>;
-  distinct_id: string | null;
-  user_id: string | null;
-  url?: string | null;
+  distinct_id?: string;
+  user_id?: string | null;
   created_at: string;
 }

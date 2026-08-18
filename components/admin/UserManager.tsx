@@ -74,12 +74,13 @@ export default function UserManager({
   const userIsSuspended = (user: ManagedUser) =>
     !!user.banned_until && new Date(user.banned_until).getTime() > Date.now()
 
-  const mentorsCount = managedUsers.filter((u) => u.role === "mentor").length
-  const superAdminsCount = managedUsers.filter((u) => u.role === "super_admin").length
-  const devsCount = managedUsers.filter((u) => u.role === "dev").length
-  const suspendedCount = managedUsers.filter(userIsSuspended).length
+  const staffUsers = managedUsers.filter((u) => ["dev", "super_admin", "mentor"].includes(u.role))
+  const mentorsCount = staffUsers.filter((u) => u.role === "mentor").length
+  const superAdminsCount = staffUsers.filter((u) => u.role === "super_admin").length
+  const devsCount = staffUsers.filter((u) => u.role === "dev").length
+  const suspendedCount = staffUsers.filter(userIsSuspended).length
 
-  const filteredUsers = managedUsers.filter((u) => {
+  const filteredUsers = staffUsers.filter((u) => {
     if (!effectiveSearch) return true
     return (
       (u.full_name || "").toLowerCase().includes(effectiveSearch) ||
