@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import type { UserRole } from "@/types"
 
 const updateSchema = z.object({
   userId: z.string().uuid(),
@@ -45,18 +46,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (authError || profileError) return res.status(500).json({ error: authError?.message ?? profileError?.message })
 
     const profileMap = new Map((profiles ?? []).map((profile) => [profile.id, profile]))
-    const users = authData.users.map((user) => {
-      const profile = profileMap.get(user.id)
-      return {
-        id: user.id,
-        email: profile?.email ?? user.email ?? "",
-        full_name: profile?.full_name ?? user.user_metadata?.full_name ?? null,
-        role: profile?.role ?? "mentor",
-        created_at: profile?.created_at ?? user.created_at,
-        last_sign_in_at: user.last_sign_in_at ?? null,
-        banned_until: user.banned_until ?? null,
-      }
-    })
+    const users = authData.users
+      .map((user) => {
+        const profile = profileMap.get(user.id)
+        return {
+          id: user.id,
+          email: profile?.email ?? user.email ?? "",
+          full_name: profile?.full_name ?? user.user_metadata?.full_name ?? null,
+          role: (profile?.role ?? user.user_metadata?.role ?? "student") as UserRole,
+          created_at: profile?.created_at ?? user.created_at,
+          last_sign_in_at: user.last_sign_in_at ?? null,
+          banned_until: user.banned_until ?? null,
+        }
+      })
+      .filter((u) => ["dev", "super_admin", "mentor"].includes(u.role))
     return res.status(200).json({ users })
   }
 

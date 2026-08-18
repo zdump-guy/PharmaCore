@@ -306,7 +306,7 @@ export default function SiteContentManager({
         </AccordionItem>
 
         {/* ─── 2. GENERAL BILINGUAL CONTENT ACCORDIONS ────────────────── */}
-        {contentGroups.map((group) => (
+        {contentGroups.map((group: { title: string; fields: Array<keyof SiteLocaleContent> }) => (
           <AccordionItem
             key={group.title}
             value={group.title}
@@ -327,7 +327,7 @@ export default function SiteContentManager({
             </AccordionTrigger>
 
             <AccordionContent className="pt-2 pb-5 sm:pb-6 space-y-4 sm:space-y-6">
-              {group.fields.map((field) => {
+              {group.fields.map((field: keyof SiteLocaleContent) => {
                 const multiline = /body|description|subtitle|tagline/.test(field)
                 const isEmail = field === "footer_email"
                 const enVal = siteContent.en[field] || ""

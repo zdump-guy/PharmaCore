@@ -7,12 +7,14 @@ import {
   FiEdit2 as Pencil,
   FiExternalLink as ExternalLink,
   FiFileText as FileText,
-  FiFilter as Filter,
+  FiGlobe as Globe,
   FiHelpCircle as HelpCircle,
   FiImage as FileImage,
   FiLink as LinkIcon,
+  FiLock as Lock,
   FiPlus as Plus,
   FiSearch as Search,
+  FiShield as Shield,
   FiTrash2 as Trash2,
   FiVideo as FileVideo,
   FiX as X,
@@ -35,6 +37,7 @@ interface CurriculumManagerProps {
   resources: Resource[]
   selectedQuizId: string
   setSelectedQuizId: (id: string) => void
+  activeSubTab?: SubTab
   onOpenCourseEditor: (course?: Course) => void
   onOpenLectureEditor: (lecture?: Lecture) => void
   onOpenQuizEditor: (quiz?: Quiz) => void
@@ -59,6 +62,7 @@ export default function CurriculumManager({
   resources,
   selectedQuizId,
   setSelectedQuizId,
+  activeSubTab: controlledSubTab,
   onOpenCourseEditor,
   onOpenLectureEditor,
   onOpenQuizEditor,
@@ -66,7 +70,7 @@ export default function CurriculumManager({
   onOpenQuestionEditor,
   onDeleteEntity,
 }: CurriculumManagerProps) {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>("courses")
+  const activeSubTab = controlledSubTab || "courses"
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all")
   const [localSearch, setLocalSearch] = useState("")
 
@@ -129,112 +133,9 @@ export default function CurriculumManager({
     )
   })
 
-  const subTabItems: { id: SubTab; label: string; icon: React.ReactNode; count: number }[] = [
-    {
-      id: "courses",
-      label: tr("Courses", "المقررات"),
-      icon: <BookOpen className="size-4 shrink-0" />,
-      count: courses.length,
-    },
-    {
-      id: "lectures",
-      label: tr("Lectures", "المحاضرات"),
-      icon: <FileVideo className="size-4 shrink-0" />,
-      count: lectures.length,
-    },
-    {
-      id: "quizzes",
-      label: tr("Quizzes", "الاختبارات"),
-      icon: <ClipboardCheck className="size-4 shrink-0" />,
-      count: quizzes.length,
-    },
-    {
-      id: "resources",
-      label: tr("Resources", "المواد"),
-      icon: <FileText className="size-4 shrink-0" />,
-      count: resources.length,
-    },
-  ]
-
   return (
-    <div className="space-y-5" dir={isAr ? "rtl" : "ltr"}>
-      {/* ─── 1. SUB-TABS SEGMENTED SELECTOR ─────────────────────────────────── */}
-      <div className="rounded-2xl border bg-card p-3 sm:p-4 shadow-xs space-y-3">
-        {/* Responsive Grid on Mobile (2x2) and Horizontal Bar on Desktop */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {subTabItems.map((tab) => {
-            const isActive = activeSubTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSubTab(tab.id)}
-                className={`flex items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all min-h-[44px] ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20"
-                    : "bg-muted/40 hover:bg-muted text-foreground/80 hover:text-foreground"
-                }`}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  {tab.icon}
-                  <span className="truncate">{tab.label}</span>
-                </div>
-                <Badge
-                  variant={isActive ? "secondary" : "outline"}
-                  className={`h-5 min-w-5 px-1.5 text-[11px] font-mono leading-none justify-center shrink-0 ${
-                    isActive ? "bg-primary-foreground text-primary font-bold" : ""
-                  }`}
-                >
-                  {tab.count}
-                </Badge>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Filter & Search Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t">
-          {activeSubTab !== "courses" && (
-            <div className="flex items-center gap-2 flex-1">
-              <Filter className="size-3.5 text-muted-foreground shrink-0 hidden sm:inline" />
-              <Select value={selectedCourseFilter} onValueChange={setSelectedCourseFilter}>
-                <SelectTrigger className="h-9 w-full sm:w-[220px] text-xs">
-                  <SelectValue placeholder={tr("Filter by course", "تصفية حسب المقرر")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{tr("All Courses (All)", "جميع المقررات (الكل)")}</SelectItem>
-                  {courses.map((course) => (
-                    <SelectItem key={course.id} value={course.id}>
-                      {isAr ? course.title_ar : course.title_en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Search Box */}
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder={tr("Filter within section...", "بحث وتصفية...")}
-              className="h-9 ps-8 pe-8 text-xs w-full"
-            />
-            {localSearch && (
-              <button
-                onClick={() => setLocalSearch("")}
-                className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
-              >
-                <X className="size-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ─── 2. COURSES TAB ────────────────────────────────────────────── */}
+    <div className="space-y-6" dir={isAr ? "rtl" : "ltr"}>
+      {/* ─── 1. COURSES VIEW ────────────────────────────────────────────── */}
       {activeSubTab === "courses" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
@@ -242,7 +143,7 @@ export default function CurriculumManager({
               <div className="flex items-center gap-2">
                 <BookOpen className="size-5 text-primary" />
                 <h3 className="text-lg sm:text-xl font-bold tracking-tight">{tr("Course Catalog", "دليل المقررات التعليمية")}</h3>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {filteredCourses.length} {tr("courses", "مقرر")}
                 </Badge>
               </div>
@@ -254,13 +155,34 @@ export default function CurriculumManager({
               </p>
             </div>
 
-            <Button
-              onClick={() => onOpenCourseEditor()}
-              className="gap-1.5 font-bold min-h-[40px] w-full sm:w-auto shrink-0"
-            >
-              <Plus className="size-4" />
-              {tr("New Course", "إضافة مقرر جديد")}
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <div className="relative w-full sm:w-60">
+                <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  placeholder={tr("Search courses...", "بحث في المقررات...")}
+                  className="h-9 ps-8 pe-8 text-xs bg-background"
+                />
+                {localSearch && (
+                  <button
+                    onClick={() => setLocalSearch("")}
+                    className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <Button
+                onClick={() => onOpenCourseEditor()}
+                className="gap-1.5 font-bold min-h-[36px] w-full sm:w-auto shrink-0 shadow-xs"
+              >
+                <Plus className="size-4" />
+                <span>{tr("New Course", "إضافة مقرر جديد")}</span>
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -309,6 +231,22 @@ export default function CurriculumManager({
                           <ClipboardCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
                           {courseQuizzes.length} {tr("Quizzes", "اختبار")}
                         </Badge>
+                        {course.is_locked || course.access_policy === "students_only" ? (
+                          <Badge variant="secondary" className="text-[10px] gap-1 border-amber-500/30 text-amber-700 dark:text-amber-300 font-bold">
+                            <Lock className="size-3 text-amber-600 dark:text-amber-400" />
+                            <span>{tr("Students Only", "للطلاب فقط")}</span>
+                          </Badge>
+                        ) : course.access_policy === "enrolled_only" ? (
+                          <Badge variant="secondary" className="text-[10px] gap-1 border-purple-500/30 text-purple-700 dark:text-purple-300 font-bold">
+                            <Shield className="size-3 text-purple-600 dark:text-purple-400" />
+                            <span>{tr("Cohort Only", "مجموعات محددة")}</span>
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px] gap-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold">
+                            <Globe className="size-3 text-emerald-600 dark:text-emerald-400" />
+                            <span>{tr("Open Access", "وصول مفتوح")}</span>
+                          </Badge>
+                        )}
                       </div>
                     </CardContent>
                   </div>
@@ -356,7 +294,7 @@ export default function CurriculumManager({
         </div>
       )}
 
-      {/* ─── 3. LECTURES TAB ───────────────────────────────────────────── */}
+      {/* ─── 2. LECTURES VIEW ───────────────────────────────────────────── */}
       {activeSubTab === "lectures" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
@@ -364,7 +302,7 @@ export default function CurriculumManager({
               <div className="flex items-center gap-2">
                 <FileVideo className="size-5 text-primary" />
                 <h3 className="text-lg sm:text-xl font-bold tracking-tight">{tr("Lecture Videos", "محاضرات الفيديو")}</h3>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {filteredLectures.length} {tr("lectures", "محاضرة")}
                 </Badge>
               </div>
@@ -376,14 +314,49 @@ export default function CurriculumManager({
               </p>
             </div>
 
-            <Button
-              onClick={() => onOpenLectureEditor()}
-              disabled={!courses.length}
-              className="gap-1.5 font-bold min-h-[40px] w-full sm:w-auto shrink-0"
-            >
-              <Plus className="size-4" />
-              {tr("New Lecture", "إضافة محاضرة")}
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <Select value={selectedCourseFilter} onValueChange={setSelectedCourseFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-xs bg-background">
+                  <SelectValue placeholder={tr("Filter by course", "تصفية حسب المقرر")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tr("All Courses", "جميع المقررات")}</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {isAr ? course.title_ar : course.title_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative w-full sm:w-52">
+                <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  placeholder={tr("Search lectures...", "بحث في المحاضرات...")}
+                  className="h-9 ps-8 pe-8 text-xs bg-background"
+                />
+                {localSearch && (
+                  <button
+                    onClick={() => setLocalSearch("")}
+                    className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <Button
+                onClick={() => onOpenLectureEditor()}
+                disabled={!courses.length}
+                className="gap-1.5 font-bold min-h-[36px] w-full sm:w-auto shrink-0 shadow-xs"
+              >
+                <Plus className="size-4" />
+                <span>{tr("New Lecture", "إضافة محاضرة")}</span>
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -491,7 +464,7 @@ export default function CurriculumManager({
         </div>
       )}
 
-      {/* ─── 4. QUIZZES & QUESTIONS TAB ────────────────────────────────── */}
+      {/* ─── 3. QUIZZES & QUESTIONS VIEW ────────────────────────────────── */}
       {activeSubTab === "quizzes" && (
         <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
@@ -499,7 +472,7 @@ export default function CurriculumManager({
               <div className="flex items-center gap-2">
                 <ClipboardCheck className="size-5 text-primary" />
                 <h3 className="text-lg sm:text-xl font-bold tracking-tight">{tr("Assessments & Quizzes", "الاختبارات والتقييمات")}</h3>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {filteredQuizzes.length} {tr("quizzes", "اختبار")}
                 </Badge>
               </div>
@@ -511,14 +484,49 @@ export default function CurriculumManager({
               </p>
             </div>
 
-            <Button
-              onClick={() => onOpenQuizEditor()}
-              disabled={!lectures.length}
-              className="gap-1.5 font-bold min-h-[40px] w-full sm:w-auto shrink-0"
-            >
-              <Plus className="size-4" />
-              {tr("New Quiz", "إضافة اختبار")}
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <Select value={selectedCourseFilter} onValueChange={setSelectedCourseFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-xs bg-background">
+                  <SelectValue placeholder={tr("Filter by course", "تصفية حسب المقرر")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tr("All Courses", "جميع المقررات")}</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {isAr ? course.title_ar : course.title_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative w-full sm:w-52">
+                <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  placeholder={tr("Search quizzes...", "بحث في الاختبارات...")}
+                  className="h-9 ps-8 pe-8 text-xs bg-background"
+                />
+                {localSearch && (
+                  <button
+                    onClick={() => setLocalSearch("")}
+                    className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <Button
+                onClick={() => onOpenQuizEditor()}
+                disabled={!lectures.length}
+                className="gap-1.5 font-bold min-h-[36px] w-full sm:w-auto shrink-0 shadow-xs"
+              >
+                <Plus className="size-4" />
+                <span>{tr("New Quiz", "إضافة اختبار")}</span>
+              </Button>
+            </div>
           </div>
 
           {/* Quiz Cards Grid */}
@@ -729,7 +737,7 @@ export default function CurriculumManager({
         </div>
       )}
 
-      {/* ─── 5. RESOURCES TAB ──────────────────────────────────────────── */}
+      {/* ─── 4. RESOURCES VIEW ──────────────────────────────────────────── */}
       {activeSubTab === "resources" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
@@ -737,7 +745,7 @@ export default function CurriculumManager({
               <div className="flex items-center gap-2">
                 <FileText className="size-5 text-primary" />
                 <h3 className="text-lg sm:text-xl font-bold tracking-tight">{tr("Lecture Resources", "مواد ومرفقات المحاضرات")}</h3>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {filteredResources.length} {tr("files", "ملف")}
                 </Badge>
               </div>
@@ -749,14 +757,49 @@ export default function CurriculumManager({
               </p>
             </div>
 
-            <Button
-              onClick={() => onOpenResourceEditor()}
-              disabled={!lectures.length}
-              className="gap-1.5 font-bold min-h-[40px] w-full sm:w-auto shrink-0"
-            >
-              <Plus className="size-4" />
-              {tr("New Resource", "إضافة مادة")}
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <Select value={selectedCourseFilter} onValueChange={setSelectedCourseFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-xs bg-background">
+                  <SelectValue placeholder={tr("Filter by course", "تصفية حسب المقرر")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tr("All Courses", "جميع المقررات")}</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {isAr ? course.title_ar : course.title_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative w-full sm:w-52">
+                <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  placeholder={tr("Search resources...", "بحث في المواد...")}
+                  className="h-9 ps-8 pe-8 text-xs bg-background"
+                />
+                {localSearch && (
+                  <button
+                    onClick={() => setLocalSearch("")}
+                    className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <Button
+                onClick={() => onOpenResourceEditor()}
+                disabled={!lectures.length}
+                className="gap-1.5 font-bold min-h-[36px] w-full sm:w-auto shrink-0 shadow-xs"
+              >
+                <Plus className="size-4" />
+                <span>{tr("New Resource", "إضافة مادة")}</span>
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

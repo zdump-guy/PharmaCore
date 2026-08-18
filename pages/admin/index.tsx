@@ -4,12 +4,15 @@ import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
 import { FiLoader as Loader2 } from "react-icons/fi"
 import Layout from "@/components/Layout"
-import AdminHeader from "@/components/admin/AdminHeader"
+import AdminSidebar from "@/components/admin/AdminSidebar"
+import AdminTopNav from "@/components/admin/AdminTopNav"
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard"
 import CurriculumManager from "@/components/admin/CurriculumManager"
 import CommunityManager from "@/components/admin/CommunityManager"
 import UserManager, { type ManagedUser, type UserForm } from "@/components/admin/UserManager"
 import SiteContentManager from "@/components/admin/SiteContentManager"
+import StudentManager from "@/components/admin/StudentManager"
+import DeveloperConsole, { type DevSubTab } from "@/components/admin/DeveloperConsole"
 import AdminModals, {
   type CourseForm,
   type LectureForm,
@@ -29,6 +32,7 @@ import { trackAdminAction, resetUser } from "@/lib/analytics"
 import type {
   CommunityQuestion,
   Course,
+  EnrollmentSettings,
   Lecture,
   Question,
   Quiz,
@@ -49,6 +53,8 @@ const emptyCourse: CourseForm = {
   prerequisites_en: "",
   prerequisites_ar: "",
   thumbnail_url: "",
+  is_locked: false,
+  access_policy: "open",
 }
 
 const emptyLecture: LectureForm = {
@@ -141,8 +147,41 @@ export default function AdminPage() {
   const [selectedQuizId, setSelectedQuizId] = useState("")
   const [reply, setReply] = useState<Record<string, string>>({})
   const [siteContent, setSiteContent] = useState<SiteContent>(defaultSiteContent)
-  const [activeTab, setActiveTab] = useState("analytics")
+  
+  // Navigation State
+  const [activePage, setActivePage] = useState<string>("analytics")
+  const [activeCurriculumSubTab, setActiveCurriculumSubTab] = useState<"courses" | "lectures" | "quizzes" | "resources">("courses")
+  const [activeStudentSubTab, setActiveStudentSubTab] = useState<"roster" | "pending" | "controller" | "directories" | "provision">("roster")
+  const [activeDevSubTab, setActiveDevSubTab] = useState<DevSubTab>("logs")
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false)
+
+  const handleSelectNav = (page: string, subpage?: string) => {
+    setActivePage(page)
+    if (page === "curriculum" && subpage) {
+      setActiveCurriculumSubTab(subpage as typeof activeCurriculumSubTab)
+    }
+    if (page === "students" && subpage) {
+      setActiveStudentSubTab(subpage as typeof activeStudentSubTab)
+    }
+    if (page === "dev" && subpage) {
+      setActiveDevSubTab(subpage as DevSubTab)
+    }
+  }
+
+  const currentSubpage =
+    activePage === "curriculum"
+      ? activeCurriculumSubTab
+      : activePage === "students"
+      ? activeStudentSubTab
+      : activePage === "dev"
+      ? activeDevSubTab
+      : undefined
+
   const [questionAlertOpen, setQuestionAlertOpen] = useState(false)
+
+  const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [pendingStudentsCount, setPendingStudentsCount] = useState(0)
 
   // Users management
   const [userForm, setUserForm] = useState<UserForm>(emptyUser)
@@ -157,15 +196,27 @@ export default function AdminPage() {
   useEffect(() => {
     const client = supabase
     if (!client) {
-      router.replace("/login")
+      router.replace("/admin/login")
       return
     }
 
     client.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
-        router.replace("/login")
+        router.replace("/admin/login")
         return
       }
+
+      setSessionToken(session.access_token)
+
+      // Query pending students count
+      try {
+        const { count } = await client
+          .from("users")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "student")
+          .eq("status", "pending")
+        if (count !== null) setPendingStudentsCount(count)
+      } catch {}
 
       const data = await Promise.all([
         client.from("users").select("*").eq("id", session.user.id).single(),
@@ -182,6 +233,12 @@ export default function AdminPage() {
       ])
 
       if (data[0].data) {
+        if (!["dev", "super_admin", "mentor"].includes(data[0].data.role)) {
+          // If student or unauthorized role attempts to open admin panel, redirect to admin login
+          router.replace("/admin/login")
+          return
+        }
+
         setProfile(data[0].data)
         if (["dev", "super_admin"].includes(data[0].data.role)) {
           setLoadingUsers(true)
@@ -197,6 +254,9 @@ export default function AdminPage() {
             setLoadingUsers(false)
           }
         }
+      } else {
+        router.replace("/admin/login")
+        return
       }
 
       if (data[1].data) setCourses(data[1].data)
@@ -237,7 +297,13 @@ export default function AdminPage() {
     if (!supabase) return
     setSaving(true)
     const { id, ...form } = courseForm
-    const payload = { ...form, thumbnail_url: form.thumbnail_url || null, mentor_id: null }
+    const payload = {
+      ...form,
+      thumbnail_url: form.thumbnail_url || null,
+      mentor_id: null,
+      is_locked: form.is_locked ?? false,
+      access_policy: form.access_policy || (form.is_locked ? "students_only" : "open"),
+    }
     const res = id
       ? await supabase.from("courses").update(payload).eq("id", id).select().single()
       : await supabase.from("courses").insert([payload]).select().single()
@@ -456,19 +522,23 @@ export default function AdminPage() {
     result(error, tr("Reply posted successfully.", "تم نشر الإجابة بنجاح."))
   }
 
-  async function saveSiteContent() {
+  async function saveSiteContent(overrideContent?: SiteContent) {
     if (!supabase || profile?.role !== "dev") return
     setSaving(true)
+    const contentToSave = overrideContent || siteContent
     const { error } = await supabase
       .from("site_content")
       .upsert({
         id: "main",
-        content: siteContent,
+        content: contentToSave,
         updated_by: profile.id,
         updated_at: new Date().toISOString(),
       })
 
     if (!error) {
+      if (overrideContent) {
+        setSiteContent(overrideContent)
+      }
       trackAdminAction({ action: "content_updated", entityType: "site_content" })
     }
     result(
@@ -481,7 +551,7 @@ export default function AdminPage() {
   async function logout() {
     resetUser()
     if (supabase) await supabase.auth.signOut()
-    await router.push("/login")
+    await router.push("/admin/login")
   }
 
   // ─── User Management Handlers ───────────────────────────────────────────────
@@ -653,6 +723,8 @@ export default function AdminPage() {
             prerequisites_en: x.prerequisites_en ?? "",
             prerequisites_ar: x.prerequisites_ar ?? "",
             thumbnail_url: x.thumbnail_url ?? "",
+            is_locked: x.is_locked,
+            access_policy: x.access_policy || (x.is_locked ? "students_only" : "open"),
           }
         : emptyCourse
     )
@@ -733,6 +805,30 @@ export default function AdminPage() {
     setEditor("question")
   }
 
+  async function handleUpdateEnrollmentSettings(newSettings: EnrollmentSettings) {
+    if (!sessionToken) return
+    try {
+      const res = await fetch("/api/admin/settings/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ enrollment_settings: newSettings }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSiteContent((prev) => ({
+          ...prev,
+          enrollment_settings: data.enrollment_settings,
+        }))
+        setNotice({ text: tr("Enrollment settings updated successfully.", "تم تحديث إعدادات التسجيل بنجاح.") })
+      }
+    } catch (err) {
+      console.error("Failed to update enrollment settings:", err)
+    }
+  }
+
   if (!ready) {
     return (
       <Layout title="Admin Hub — PharmaCore">
@@ -744,106 +840,171 @@ export default function AdminPage() {
   }
 
   return (
-    <Layout title={`${tr("Administration & Analytics", "الإدارة والتحليلات")} — PharmaCore`}>
-      {/* Sticky Command Bar Header with Categorized Tabs */}
-      <AdminHeader
-        profile={profile}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        unansweredCount={unansweredCommunity.length}
-        canManageUsers={canManageUsers}
-        isDev={isDev}
-        onLogout={logout}
-      />
+    <Layout title={`${tr("Administration Hub", "لوحة الإدارة والتحليلات")} — PharmaCore`}>
+      <div className="flex min-h-screen bg-muted/20">
+        {/* Left / Right Collapsible Categorized Sidebar */}
+        <AdminSidebar
+          isAr={isAr}
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          mobileOpen={mobileSidebarOpen}
+          setMobileOpen={setMobileSidebarOpen}
+          activePage={activePage}
+          activeSubpage={currentSubpage}
+          onSelectNav={handleSelectNav}
+          profile={profile}
+          unansweredCount={unansweredCommunity.length}
+          pendingStudentsCount={pendingStudentsCount}
+          canManageUsers={canManageUsers}
+          isDev={isDev}
+          onLogout={logout}
+        />
 
-      {/* Main Workspace Area */}
-      <main className="page-shell py-4 sm:py-8 lg:py-10">
-        {notice && (
-          <Alert variant={notice.error ? "destructive" : "default"} className="mb-6">
-            <AlertDescription>{notice.text}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* 1. Insights & Telemetry */}
-        {activeTab === "analytics" && (
-          <AnalyticsDashboard
+        {/* Content Container (Offset with sidebar width) */}
+        <div
+          className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+            isAr
+              ? sidebarCollapsed
+                ? "lg:mr-20"
+                : "lg:mr-64 xl:mr-72"
+              : sidebarCollapsed
+              ? "lg:ml-20"
+              : "lg:ml-64 xl:ml-72"
+          }`}
+          dir={isAr ? "rtl" : "ltr"}
+        >
+          {/* Top Command Bar & Breadcrumbs */}
+          <AdminTopNav
             isAr={isAr}
-            courses={courses}
-            lectures={lectures}
-            quizzes={quizzes}
-            questions={questions}
-            unansweredQuestionsCount={unansweredCommunity.length}
-          />
-        )}
-
-        {/* 2. Curriculum & Media */}
-        {activeTab === "curriculum" && (
-          <CurriculumManager
-            isAr={isAr}
+            onToggleMobile={() => setMobileSidebarOpen(true)}
+            activePage={activePage}
+            activeSubpage={currentSubpage}
             searchQuery={searchQuery}
-            courses={courses}
-            lectures={lectures}
-            quizzes={quizzes}
-            questions={questions}
-            resources={resources}
-            selectedQuizId={selectedQuizId}
-            setSelectedQuizId={setSelectedQuizId}
-            onOpenCourseEditor={openCourse}
-            onOpenLectureEditor={openLecture}
-            onOpenQuizEditor={openQuiz}
-            onOpenResourceEditor={openResource}
-            onOpenQuestionEditor={openQuestion}
-            onDeleteEntity={remove}
+            setSearchQuery={setSearchQuery}
+            unansweredCount={unansweredCommunity.length}
+            onGoToQA={() => handleSelectNav("qa")}
           />
-        )}
 
-        {/* 3. Student Q&A */}
-        {activeTab === "qa" && (
-          <CommunityManager
-            isAr={isAr}
-            searchQuery={searchQuery}
-            community={community}
-            lectures={lectures}
-            profile={profile}
-            reply={reply}
-            setReply={setReply}
-            onSendReply={sendReply}
-          />
-        )}
+          {/* Main Workspace Canvas */}
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+            {notice && (
+              <Alert variant={notice.error ? "destructive" : "default"} className="mb-6">
+                <AlertDescription>{notice.text}</AlertDescription>
+              </Alert>
+            )}
 
-        {/* 4. Staff & Access */}
-        {activeTab === "users" && canManageUsers && (
-          <UserManager
-            isAr={isAr}
-            searchQuery={searchQuery}
-            profile={profile}
-            managedUsers={managedUsers}
-            loadingUsers={loadingUsers}
-            creatingUser={creatingUser}
-            userActionId={userActionId}
-            userForm={userForm}
-            setUserForm={setUserForm}
-            onLoadUsers={loadManagedUsers}
-            onCreateUser={createAdminUser}
-            onOpenEditUser={openUserEditor}
-            onToggleSuspendUser={toggleManagedUser}
-            onOpenDeleteUser={(u) => setDeletingUser(u)}
-          />
-        )}
+            {/* 1. Insights & Telemetry */}
+            {activePage === "analytics" && (
+              <AnalyticsDashboard
+                isAr={isAr}
+                courses={courses}
+                lectures={lectures}
+                quizzes={quizzes}
+                questions={questions}
+                unansweredQuestionsCount={unansweredCommunity.length}
+              />
+            )}
 
-        {/* 5. Site Content CMS */}
-        {activeTab === "content" && isDev && (
-          <SiteContentManager
-            isAr={isAr}
-            siteContent={siteContent}
-            setSiteContent={setSiteContent}
-            saving={saving}
-            onSaveContent={saveSiteContent}
-          />
-        )}
-      </main>
+            {/* 2. Academic Curriculum */}
+            {activePage === "curriculum" && (
+              <CurriculumManager
+                isAr={isAr}
+                searchQuery={searchQuery}
+                courses={courses}
+                lectures={lectures}
+                quizzes={quizzes}
+                questions={questions}
+                resources={resources}
+                selectedQuizId={selectedQuizId}
+                setSelectedQuizId={setSelectedQuizId}
+                activeSubTab={activeCurriculumSubTab}
+                onOpenCourseEditor={openCourse}
+                onOpenLectureEditor={openLecture}
+                onOpenQuizEditor={openQuiz}
+                onOpenResourceEditor={openResource}
+                onOpenQuestionEditor={openQuestion}
+                onDeleteEntity={remove}
+              />
+            )}
+
+            {/* 3. Community Q&A */}
+            {activePage === "qa" && (
+              <CommunityManager
+                isAr={isAr}
+                searchQuery={searchQuery}
+                community={community}
+                lectures={lectures}
+                profile={profile}
+                reply={reply}
+                setReply={setReply}
+                onSendReply={sendReply}
+              />
+            )}
+
+            {/* 4. Student Affairs & Signup Controller */}
+            {activePage === "students" && (
+              <StudentManager
+                isAr={isAr}
+                token={sessionToken}
+                subTab={activeStudentSubTab}
+                enrollmentSettings={
+                  siteContent.enrollment_settings || {
+                    signup_mode: "approval_required",
+                    universities: [],
+                    faculties: [],
+                  }
+                }
+                onUpdateEnrollmentSettings={handleUpdateEnrollmentSettings}
+              />
+            )}
+
+            {/* 5. Staff & Faculty Governance */}
+            {activePage === "users" && canManageUsers && (
+              <UserManager
+                isAr={isAr}
+                searchQuery={searchQuery}
+                profile={profile}
+                managedUsers={managedUsers}
+                loadingUsers={loadingUsers}
+                creatingUser={creatingUser}
+                userActionId={userActionId}
+                userForm={userForm}
+                setUserForm={setUserForm}
+                onLoadUsers={loadManagedUsers}
+                onCreateUser={createAdminUser}
+                onOpenEditUser={openUserEditor}
+                onToggleSuspendUser={toggleManagedUser}
+                onOpenDeleteUser={(u) => setDeletingUser(u)}
+              />
+            )}
+
+            {/* 6. Site CMS & Content */}
+            {activePage === "content" && isDev && (
+              <SiteContentManager
+                isAr={isAr}
+                siteContent={siteContent}
+                setSiteContent={setSiteContent}
+                saving={saving}
+                onSaveContent={saveSiteContent}
+              />
+            )}
+
+            {/* 7. Developer Console */}
+            {activePage === "dev" && isDev && (
+              <DeveloperConsole
+                isAr={isAr}
+                subTab={activeDevSubTab}
+                siteContent={siteContent}
+                onSaveSiteContent={saveSiteContent}
+                courses={courses}
+                lectures={lectures}
+                quizzes={quizzes}
+                questions={questions}
+              />
+            )}
+          </main>
+        </div>
+      </div>
 
       {/* Reusable Modals & Dialogs */}
       <AdminModals
@@ -883,7 +1044,7 @@ export default function AdminPage() {
         setQuestionAlertOpen={setQuestionAlertOpen}
         unansweredCount={unansweredCommunity.length}
         onGoToQA={() => {
-          setActiveTab("qa")
+          handleSelectNav("qa")
           setQuestionAlertOpen(false)
         }}
       />

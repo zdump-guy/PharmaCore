@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/router"
 import {
@@ -7,11 +7,15 @@ import {
   FiGlobe as Languages,
   FiHome as HomeIcon,
   FiInfo as InfoIcon,
+  FiLogIn as LogIn,
+  FiLogOut as LogOut,
   FiMenu as Menu,
   FiMoon as Moon,
   FiShield as ShieldCheck,
   FiSun as Sun,
+  FiUser as UserIcon,
 } from "react-icons/fi"
+import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import BrandMark from "@/components/BrandMark"
 import { useTheme } from "@/components/ThemeProvider"
 import { Button } from "@/components/ui/button"
@@ -23,21 +27,25 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { trackLocaleSwitch, trackThemeToggle } from "@/lib/analytics"
+import { supabase } from "@/lib/supabaseClient"
+import { trackLocaleSwitch, trackThemeToggle, resetUser } from "@/lib/analytics"
+
+interface AuthUser {
+  id: string
+  email: string
+  fullName: string
+  role: string
+}
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const router = useRouter()
   const { locale, pathname, asPath, query } = router
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const isAr = locale === "ar"
   const [activeSection, setActiveSection] = useState<"home" | "about" | "courses">("home")
-
-  // Nav order matches page layout: 1. Home, 2. About, 3. Courses
-  const nav = [
-    { href: "/", label: isAr ? "الرئيسية" : "Home", icon: HomeIcon, sectionId: "home" as const },
-    { href: "/#about", label: isAr ? "عن المنصة" : "About", icon: InfoIcon, sectionId: "about" as const },
-    { href: "/#courses", label: isAr ? "المقررات" : "Courses", icon: BookOpen, sectionId: "courses" as const },
-  ]
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
 
   // Track active section on scroll when on homepage
   useEffect(() => {
@@ -65,6 +73,75 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [pathname])
 
+  // Real-time Supabase Auth state listener
+  useEffect(() => {
+    if (!supabase) return
+
+    async function loadUser() {
+      const {
+        data: { session },
+      } = await supabase!.auth.getSession()
+
+      if (session?.user) {
+        const { data: profile } = await supabase!
+          .from("users")
+          .select("full_name, role")
+          .eq("id", session.user.id)
+          .single()
+
+        setAuthUser({
+          id: session.user.id,
+          email: session.user.email || "",
+          fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
+          role: profile?.role || session.user.user_metadata?.role || "student",
+        })
+      } else {
+        setAuthUser(null)
+      }
+    }
+
+    loadUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase!
+          .from("users")
+          .select("full_name, role")
+          .eq("id", session.user.id)
+          .single()
+
+        setAuthUser({
+          id: session.user.id,
+          email: session.user.email || "",
+          fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
+          role: profile?.role || session.user.user_metadata?.role || "student",
+        })
+      } else {
+        setAuthUser(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [userMenuOpen])
+
   const switchLocale = () => {
     const nextLocale = isAr ? "en" : "ar"
     trackLocaleSwitch({ fromLocale: locale || "en", toLocale: nextLocale })
@@ -75,6 +152,15 @@ export default function Navbar() {
     const nextTheme = theme === "dark" ? "light" : "dark"
     trackThemeToggle({ theme: nextTheme })
     toggleTheme()
+  }
+
+  const handleSignOut = async () => {
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
+    resetUser()
+    setAuthUser(null)
+    router.push("/")
   }
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, sectionId: "home" | "about" | "courses") => {
@@ -94,6 +180,12 @@ export default function Navbar() {
     }
   }
 
+  const nav = [
+    { href: "/", label: isAr ? "الرئيسية" : "Home", icon: HomeIcon, sectionId: "home" as const },
+    { href: "/#about", label: isAr ? "عن المنصة" : "About", icon: InfoIcon, sectionId: "about" as const },
+    { href: "/#courses", label: isAr ? "المقررات" : "Courses", icon: BookOpen, sectionId: "courses" as const },
+  ]
+
   const isNavActive = (sectionId: "home" | "about" | "courses", href: string) => {
     if (pathname === "/") {
       return activeSection === sectionId
@@ -102,6 +194,7 @@ export default function Navbar() {
   }
 
   const tr = (en: string, ar: string) => (isAr ? ar : en)
+  const isStaff = authUser && ["dev", "super_admin", "mentor"].includes(authUser.role)
 
   return (
     <header className="sticky top-0 z-40 px-2 pt-2 sm:px-5 sm:pt-3">
@@ -122,7 +215,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop Navigation Links (Home -> About -> Courses) */}
+        {/* Desktop Navigation Links */}
         <div className="hidden items-center gap-1 rounded-full bg-muted/35 p-1 md:flex">
           {nav.map((item) => {
             const active = isNavActive(item.sectionId, item.href)
@@ -148,8 +241,8 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* Controls & Mobile Hamburger */}
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5 md:justify-self-end">
+        {/* Controls & User Profile & Mobile Hamburger */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:justify-self-end">
           {/* Desktop Language Switcher */}
           <Button
             variant="ghost"
@@ -181,7 +274,94 @@ export default function Navbar() {
             {theme === "dark" ? <Sun /> : <Moon />}
           </Button>
 
-          {/* Mobile Drawer (Slides from trailing side of navbar) */}
+          {/* User Profile / Sign In Button */}
+          {authUser ? (
+            <div className="relative" ref={userMenuRef}>
+              <Button
+                variant="outline"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="h-10 rounded-full ps-2 pe-3 gap-2 border-primary/30 bg-card/60 hover:bg-card shadow-xs"
+                aria-expanded={userMenuOpen}
+              >
+                <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs">
+                  {isStaff ? <ShieldCheck className="size-3.5" /> : <GraduationCap className="size-3.5" />}
+                </span>
+                <span className="hidden sm:inline max-w-[110px] truncate text-xs font-bold">
+                  {authUser.fullName}
+                </span>
+              </Button>
+
+              {userMenuOpen && (
+                <div
+                  className={`absolute mt-2 w-56 rounded-2xl border bg-card/95 backdrop-blur-xl p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 ${
+                    isAr ? "start-0" : "end-0"
+                  }`}
+                  dir={isAr ? "rtl" : "ltr"}
+                >
+                  <div className="px-2.5 py-2 border-b mb-1">
+                    <p className="text-sm font-bold leading-none truncate">{authUser.fullName}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-1">{authUser.email}</p>
+                    <span className="mt-1.5 inline-block text-[10px] font-semibold text-primary uppercase tracking-wider">
+                      {isStaff ? tr("Staff / Mentor", "كادر تدريسي / إدارة") : tr("Student Member", "حساب طالب")}
+                    </span>
+                  </div>
+
+                  <Link
+                    href="/profile"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground"
+                  >
+                    <UserIcon className="size-4 text-primary" />
+                    <span>{tr("My Profile & Progress", "ملفي الأكاديمي والتقدم")}</span>
+                  </Link>
+
+                  <Link
+                    href="/courses"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground"
+                  >
+                    <BookOpen className="size-4 text-primary" />
+                    <span>{tr("Browse Courses", "استعراض المقررات")}</span>
+                  </Link>
+
+                  {isStaff && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground border-t mt-1 pt-2"
+                    >
+                      <ShieldCheck className="size-4 text-primary" />
+                      <span>{tr("Admin Dashboard", "لوحة الإدارة")}</span>
+                    </Link>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      handleSignOut()
+                    }}
+                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer border-t mt-1 pt-2"
+                  >
+                    <LogOut className="size-4" />
+                    <span>{tr("Sign Out", "تسجيل الخروج")}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              className="h-9 sm:h-10 rounded-full px-3.5 sm:px-4 text-xs font-bold gap-1.5 shadow-xs"
+              asChild
+            >
+              <Link href="/login">
+                <LogIn className="size-3.5" />
+                <span>{tr("Sign In", "تسجيل الدخول")}</span>
+              </Link>
+            </Button>
+          )}
+
+          {/* Mobile Drawer */}
           <Sheet>
             <SheetTrigger asChild>
               <Button
@@ -215,8 +395,30 @@ export default function Navbar() {
                   </SheetTitle>
                 </SheetHeader>
 
-                {/* Navigation Items List in Correct Page Order */}
-                <div className="space-y-2 pt-2">
+                {/* User Status Card if Logged In */}
+                {authUser && (
+                  <div className="rounded-2xl border bg-primary/5 p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-bold text-xs">
+                        {authUser.fullName.charAt(0)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold truncate">{authUser.fullName}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{authUser.email}</p>
+                      </div>
+                    </div>
+                    {isStaff ? (
+                      <Button size="sm" variant="outline" className="text-xs h-7 px-2" asChild>
+                        <Link href="/admin">
+                          <ShieldCheck className="size-3" />
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* Navigation Items List */}
+                <div className="space-y-2 pt-1">
                   {nav.map((item) => {
                     const active = isNavActive(item.sectionId, item.href)
                     const Icon = item.icon
@@ -225,7 +427,7 @@ export default function Navbar() {
                         <Link
                           href={item.href}
                           onClick={(e) => handleNavClick(e, item.href, item.sectionId)}
-                          className={`group flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-sm font-bold transition-all min-h-[52px] ${
+                          className={`group flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all min-h-[48px] ${
                             active
                               ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                               : "bg-muted/40 hover:bg-muted text-foreground/85 hover:text-foreground"
@@ -253,26 +455,72 @@ export default function Navbar() {
                       </SheetClose>
                     )
                   })}
+
+                  {authUser && (
+                    <>
+                      <SheetClose asChild>
+                        <Link
+                          href="/profile"
+                          className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-muted/40 hover:bg-muted text-foreground transition-all min-h-[48px]"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground">
+                              <UserIcon className="size-4" />
+                            </span>
+                            <span>{tr("My Profile & Progress", "ملفي الأكاديمي والتقدم")}</span>
+                          </div>
+                          <ChevronRight className={`size-4 ${isAr ? "rotate-180" : ""}`} />
+                        </Link>
+                      </SheetClose>
+
+                      <button
+                        onClick={handleSignOut}
+                        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-all min-h-[48px]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="grid size-8 place-items-center rounded-xl bg-rose-500 text-white">
+                            <LogOut className="size-4" />
+                          </span>
+                          <span>{tr("Sign Out", "تسجيل الخروج")}</span>
+                        </div>
+                      </button>
+                    </>
+                  )}
+
+                  {!authUser && (
+                    <SheetClose asChild>
+                      <Link
+                        href="/login"
+                        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-primary/10 text-primary hover:bg-primary/15 transition-all min-h-[48px]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground">
+                            <LogIn className="size-4" />
+                          </span>
+                          <span>{tr("Sign In / Register", "تسجيل الدخول / إنشاء حساب")}</span>
+                        </div>
+                        <ChevronRight className={`size-4 ${isAr ? "rotate-180" : ""}`} />
+                      </Link>
+                    </SheetClose>
+                  )}
                 </div>
               </div>
 
               {/* Drawer Bottom Controls & Status */}
               <div className="space-y-4 pt-6 border-t">
                 <div className="grid grid-cols-2 gap-2">
-                  {/* Language Toggle Button */}
                   <Button
                     variant="outline"
-                    className="min-h-[46px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/30 hover:bg-muted/60"
+                    className="min-h-[44px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/30 hover:bg-muted/60"
                     onClick={switchLocale}
                   >
                     <Languages className="size-4 text-primary" />
                     <span>{isAr ? "English" : "العربية"}</span>
                   </Button>
 
-                  {/* Theme Toggle Button */}
                   <Button
                     variant="outline"
-                    className="min-h-[46px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/30 hover:bg-muted/60"
+                    className="min-h-[44px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/30 hover:bg-muted/60"
                     onClick={handleToggleTheme}
                   >
                     {theme === "dark" ? (
@@ -289,11 +537,17 @@ export default function Navbar() {
                   </Button>
                 </div>
 
-                {/* Educator Reviewed Trust Pill */}
-                <div className="flex items-center justify-center gap-2 rounded-xl bg-primary/5 border border-primary/15 py-2 px-3 text-[11px] font-semibold text-primary">
-                  <ShieldCheck className="size-3.5 shrink-0" />
-                  <span>{tr("Educator-guided curriculum", "محتوى معتمد بإشراف متخصصين")}</span>
-                </div>
+                {authUser && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full rounded-2xl h-10 gap-2 font-bold"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="size-4" />
+                    <span>{tr("Sign Out", "تسجيل الخروج")}</span>
+                  </Button>
+                )}
               </div>
             </SheetContent>
           </Sheet>

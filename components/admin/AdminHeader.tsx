@@ -29,6 +29,7 @@ interface AdminHeaderProps {
   searchQuery: string
   setSearchQuery: (query: string) => void
   unansweredCount: number
+  pendingStudentsCount?: number
   canManageUsers: boolean
   isDev: boolean
   onLogout: () => void
@@ -41,6 +42,7 @@ export default function AdminHeader({
   searchQuery,
   setSearchQuery,
   unansweredCount,
+  pendingStudentsCount = 0,
   canManageUsers,
   isDev,
   onLogout,
@@ -234,11 +236,20 @@ export default function AdminHeader({
             badgeVariant="destructive"
           />
 
+          <NavTabButton
+            active={activeTab === "students"}
+            onClick={() => setActiveTab("students")}
+            icon={<UsersIcon className="size-3.5" />}
+            label={tr("Students", "الطلاب")}
+            badge={pendingStudentsCount > 0 ? pendingStudentsCount : undefined}
+            badgeVariant="destructive"
+          />
+
           {canManageUsers && (
             <NavTabButton
               active={activeTab === "users"}
               onClick={() => setActiveTab("users")}
-              icon={<UsersIcon className="size-3.5" />}
+              icon={<ShieldCheck className="size-3.5" />}
               label={tr("Staff", "المستخدمون")}
             />
           )}

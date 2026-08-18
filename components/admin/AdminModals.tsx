@@ -1,6 +1,9 @@
 import {
+  FiGlobe as Globe,
   FiLoader as Loader2,
+  FiLock as Lock,
   FiMessageCircle as MessageCircle,
+  FiShield as Shield,
   FiTrash2 as Trash2,
 } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
@@ -24,6 +27,8 @@ export type CourseForm = {
   prerequisites_en: string
   prerequisites_ar: string
   thumbnail_url: string
+  is_locked?: boolean
+  access_policy?: "open" | "students_only" | "enrolled_only"
 }
 
 export type LectureForm = {
@@ -140,8 +145,8 @@ export default function AdminModals({
   return (
     <>
       {/* ─── 1. COURSE MODAL ─────────────────────────────────────────── */}
-      <Dialog open={editor === "course"} onOpenChange={(v) => !v && setEditor(null)}>
-        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+      <Dialog open={editor === "course"} onOpenChange={(open) => !open && setEditor(null)}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           <form onSubmit={onSaveCourse}>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl font-extrabold">
@@ -214,6 +219,45 @@ export default function AdminModals({
                   hint={tr("Direct upload to Uploadthing CDN (JPG, PNG, WebP up to 4MB)", "رفع مباشر وتخزين فوري بصيغة JPG أو PNG أو WebP حتى 4 ميجابايت")}
                 />
               </div>
+
+              {/* Course Access & Gating Policy */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-bold">{tr("Course Access Policy & Gating", "سياسة الوصول وصلاحيات المشاهدة")}</Label>
+                <Select
+                  value={courseForm.access_policy || (courseForm.is_locked ? "students_only" : "open")}
+                  onValueChange={(val: "open" | "students_only" | "enrolled_only") =>
+                    setCourseForm((prev) => ({
+                      ...prev,
+                      access_policy: val,
+                      is_locked: val !== "open",
+                    }))
+                  }
+                >
+                  <SelectTrigger className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">
+                      <div className="flex items-center gap-2">
+                        <Globe className="size-3.5 text-emerald-500 shrink-0" />
+                        <span>{tr("Open Access (Free for all visitors without login)", "وصول مفتوح (متاح لجميع الزوار دون تسجيل دخول)")}</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="students_only">
+                      <div className="flex items-center gap-2">
+                        <Lock className="size-3.5 text-amber-500 shrink-0" />
+                        <span>{tr("Registered Students Only (Requires student login for lectures)", "للطلاب المسجلين فقط (يلزم تسجيل الدخول لحضور المحاضرات)")}</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="enrolled_only">
+                      <div className="flex items-center gap-2">
+                        <Shield className="size-3.5 text-indigo-500 shrink-0" />
+                        <span>{tr("Enrolled Cohort Only (Requires specific course enrollment)", "مجموعات محددة فقط (يلزم اشتراك معتمد في هذا المقرر)")}</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
 
@@ -232,7 +276,7 @@ export default function AdminModals({
 
       {/* ─── 2. LECTURE MODAL ────────────────────────────────────────── */}
       <Dialog open={editor === "lecture"} onOpenChange={(v) => !v && setEditor(null)}>
-        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           <form onSubmit={onSaveLecture}>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl font-extrabold">
@@ -582,7 +626,7 @@ export default function AdminModals({
 
       {/* ─── 5. QUESTION MODAL ───────────────────────────────────────── */}
       <Dialog open={editor === "question"} onOpenChange={(v) => !v && setEditor(null)}>
-        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           <form onSubmit={onSaveQuestion}>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl font-extrabold">
