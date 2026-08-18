@@ -219,7 +219,7 @@ export default function AdminPage() {
       } catch {}
 
       const data = await Promise.all([
-        client.from("users").select("*").eq("id", session.user.id).single(),
+        client.from("users").select("*").eq("id", session.user.id).maybeSingle(),
         client.from("courses").select("*").order("created_at", { ascending: false }),
         client.from("lectures").select("*").order("order"),
         client.from("quizzes").select("*").order("created_at", { ascending: false }),

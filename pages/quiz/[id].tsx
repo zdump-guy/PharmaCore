@@ -350,13 +350,13 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
 
   if (supabase) {
     try {
-      const { data: quizData } = await supabase.from("quizzes").select("*").eq("id", id).single()
+      const { data: quizData } = await supabase.from("quizzes").select("*").eq("id", id).maybeSingle()
       if (quizData) {
         quiz = quizData
         const courseId = quizData.course_id
 
         if (courseId) {
-          const { data: courseData } = await supabase.from("courses").select("is_locked, access_policy").eq("id", courseId).single()
+          const { data: courseData } = await supabase.from("courses").select("is_locked, access_policy").eq("id", courseId).maybeSingle()
           if (courseData) {
             isLocked = Boolean(
               courseData.is_locked ||

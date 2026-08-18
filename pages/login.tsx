@@ -202,7 +202,7 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
           .from("users")
           .select("*")
           .eq("id", data.user.id)
-          .single()
+          .maybeSingle()
 
         if (profile?.status === "pending") {
           await supabase.auth.signOut()

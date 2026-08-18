@@ -19,7 +19,7 @@ async function authorize(req: NextApiRequest) {
     .eq("id", user.id)
     .single()
   if (!profile || !["dev", "super_admin", "mentor"].includes(profile.role)) {
-    return { error: "Forbidden", status: 203 } as const
+    return { error: "Forbidden", status: 403 } as const
   }
 
   return { user, profile, status: 200 } as const

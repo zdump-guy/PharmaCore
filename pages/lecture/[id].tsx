@@ -533,13 +533,13 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
 
   if (supabase) {
     try {
-      const { data: lectureData } = await supabase.from("lectures").select("*").eq("id", id).single()
+      const { data: lectureData } = await supabase.from("lectures").select("*").eq("id", id).maybeSingle()
       if (lectureData) {
         lecture = lectureData
         courseId = lectureData.course_id
 
         if (courseId) {
-          const { data: courseData } = await supabase.from("courses").select("*").eq("id", courseId).single()
+          const { data: courseData } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle()
           if (courseData) {
             course = courseData
             isLocked = Boolean(

@@ -87,7 +87,7 @@ export default function Navbar() {
           .from("users")
           .select("full_name, role")
           .eq("id", session.user.id)
-          .single()
+          .maybeSingle()
 
         setAuthUser({
           id: session.user.id,
@@ -110,7 +110,7 @@ export default function Navbar() {
           .from("users")
           .select("full_name, role")
           .eq("id", session.user.id)
-          .single()
+          .maybeSingle()
 
         setAuthUser({
           id: session.user.id,

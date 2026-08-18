@@ -310,7 +310,7 @@ export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ 
 
   if (supabase) {
     try {
-      const { data: courseData } = await supabase.from("courses").select("*").eq("id", id).single()
+      const { data: courseData } = await supabase.from("courses").select("*").eq("id", id).maybeSingle()
       if (courseData) course = courseData
 
       const { data: lecturesData } = await supabase
