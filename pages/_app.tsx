@@ -1,5 +1,5 @@
 import type { AppProps } from "next/app"
-import { appWithTranslation } from "next-i18next"
+import { appWithTranslation } from "next-i18next/pages"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 import { Analytics } from "@vercel/analytics/next"

@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
-import { serverSideTranslations } from "next-i18next/serverSideTranslations"
+import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import { FiLoader as Loader2 } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import AdminSidebar from "@/components/admin/AdminSidebar"

@@ -2,7 +2,7 @@ import type { GetServerSideProps } from "next"
 import { useState } from "react"
 import { useRouter } from "next/router"
 import Link from "next/link"
-import { serverSideTranslations } from "next-i18next/serverSideTranslations"
+import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import {
   FiArrowLeft as ArrowLeft,
   FiArrowRight as ArrowRight,

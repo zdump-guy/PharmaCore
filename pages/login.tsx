@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next"
 import { useState, useRef } from "react"
 import { useRouter } from "next/router"
-import { serverSideTranslations } from "next-i18next/serverSideTranslations"
+import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import {
   FiArrowRight as ArrowRight,
   FiCheckCircle as CheckCircle2,

@@ -1,7 +1,7 @@
 import type { GetStaticProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { serverSideTranslations } from "next-i18next/serverSideTranslations"
+import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import { FiArrowUpRight as ArrowUpRight, FiBookOpen as BookOpenCheck, FiCheckCircle as CheckCircle2, FiMessageCircle as MessageCircle, FiPlayCircle as PlayCircle, FiShield as ShieldCheck } from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"

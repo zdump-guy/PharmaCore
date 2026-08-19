@@ -145,7 +145,6 @@ export default function DeveloperConsole({
 
   useEffect(() => {
     runPingTest()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Filtered Events
