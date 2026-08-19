@@ -50,6 +50,8 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
   const [password, setPassword] = useState("")
   const [signInStatus, setSignInStatus] = useState<"idle" | "submitting" | "error" | "pending_approval">("idle")
   const [signInError, setSignInError] = useState("")
+  const [signInTurnstileToken, setSignInTurnstileToken] = useState("")
+  const signInTurnstileRef = useRef<TurnstileRef>(null)
 
   // ─── Sign Up State ────────────────────────────────────────────────────────
   const [firstName, setFirstName] = useState("")
@@ -185,14 +187,38 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
     }
 
     try {
+      const cleanEmail = email.trim().toLowerCase()
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
+        options: signInTurnstileToken ? { captchaToken: signInTurnstileToken } : undefined,
       })
 
       if (error) {
+        signInTurnstileRef.current?.reset()
+        setSignInTurnstileToken("")
+        let displayMsg = error.message
+        if (
+          error.message.includes("Invalid login credentials") ||
+          error.message.includes("invalid_grant")
+        ) {
+          displayMsg = isAr
+            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى التحقق وإعادة المحاولة."
+            : "Invalid email or password. Please verify your credentials."
+        } else if (
+          error.message.includes("captcha") ||
+          error.message.includes("captcha_failed")
+        ) {
+          displayMsg = isAr
+            ? "فشل التحقق الأمني من النشاط التلقائي. يرجى إعادة المحاولة."
+            : "Security bot verification failed. Please try again."
+        } else if (error.message.includes("Email not confirmed")) {
+          displayMsg = isAr
+            ? "البريد الإلكتروني غير مؤكد بعد. يرجى مراجعة بريدك الإلكتروني لتأكيده."
+            : "Email is not confirmed yet. Please verify your email address."
+        }
         setSignInStatus("error")
-        setSignInError(error.message)
+        setSignInError(displayMsg)
         return
       }
 
@@ -441,6 +467,15 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                       <AlertDescription className="text-xs mt-1">{copy.pendingError}</AlertDescription>
                     </Alert>
                   )}
+
+                  {/* Background Cloudflare Turnstile bot verification for Sign In */}
+                  <Turnstile
+                    ref={signInTurnstileRef}
+                    action="student_signin"
+                    size="invisible"
+                    onVerify={(token) => setSignInTurnstileToken(token)}
+                    onExpire={() => setSignInTurnstileToken("")}
+                  />
 
                   <Button type="submit" size="lg" className="btn-nowrap w-full mt-2" disabled={signInStatus === "submitting"}>
                     {signInStatus === "submitting" ? <Loader2 className="animate-spin shrink-0" /> : <LockKeyhole className="shrink-0" />}

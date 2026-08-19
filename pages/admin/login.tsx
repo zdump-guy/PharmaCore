@@ -1,5 +1,5 @@
 import type { GetServerSideProps } from "next"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/router"
 import Link from "next/link"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
@@ -18,6 +18,7 @@ import {
   FiHome as HomeIcon,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
+import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { useTheme } from "@/components/ThemeProvider"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -38,6 +39,8 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileRef>(null)
 
   const switchLocale = () => {
     const nextLocale = isAr ? "en" : "ar"
@@ -62,12 +65,46 @@ export default function AdminLoginPage() {
     setErrorMsg("")
 
     try {
+      const cleanEmail = email.trim().toLowerCase()
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
+        options: turnstileToken ? { captchaToken: turnstileToken } : undefined,
       })
 
       if (error) {
+        turnstileRef.current?.reset()
+        setTurnstileToken("")
+        if (
+          error.message.includes("Invalid login credentials") ||
+          error.message.includes("invalid_grant")
+        ) {
+          throw new Error(
+            tr(
+              "Invalid email or password. Please verify your credentials and try again.",
+              "البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى التحقق وإعادة المحاولة."
+            )
+          )
+        }
+        if (
+          error.message.includes("captcha") ||
+          error.message.includes("captcha_failed")
+        ) {
+          throw new Error(
+            tr(
+              "Security verification failed. Please try again.",
+              "فشل التحقق الأمني من النشاط التلقائي. يرجى إعادة المحاولة."
+            )
+          )
+        }
+        if (error.message.includes("Email not confirmed")) {
+          throw new Error(
+            tr(
+              "Email address is not confirmed yet. Please check your inbox.",
+              "البريد الإلكتروني غير مؤكد بعد. يرجى التحقق من بريدك."
+            )
+          )
+        }
         throw new Error(error.message)
       }
 
@@ -244,6 +281,14 @@ export default function AdminLoginPage() {
                     />
                   </div>
                 </div>
+
+                <Turnstile
+                  ref={turnstileRef}
+                  action="admin_login"
+                  size="invisible"
+                  onVerify={(token) => setTurnstileToken(token)}
+                  onExpire={() => setTurnstileToken("")}
+                />
 
                 <Button
                   type="submit"
