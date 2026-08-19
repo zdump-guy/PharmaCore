@@ -8,9 +8,30 @@
 BEGIN;
 
 -- ------------------------------------------------------------------------------
--- 1. FIX RLS on public.analytics_events
--- Issue: WITH CHECK (true) on INSERT triggers the "RLS Policy Always True" warning.
--- Fix: Enforce basic non-empty constraint checks on the event payload.
+-- 1. Helper function: get_user_role() with SECURITY DEFINER to bypass RLS recursion
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS TEXT AS $$
+  SELECT role FROM public.users WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION public.get_user_role() TO anon, authenticated, service_role;
+
+-- ------------------------------------------------------------------------------
+-- 2. FIX RLS on public.users (Eliminate Infinite Recursion Error 42P17)
+-- ------------------------------------------------------------------------------
+GRANT SELECT ON public.users TO authenticated, anon;
+
+DROP POLICY IF EXISTS "Users read own profile" ON public.users;
+CREATE POLICY "Users read own profile" ON public.users
+  FOR SELECT USING (id = auth.uid());
+
+DROP POLICY IF EXISTS "Admins read all users" ON public.users;
+CREATE POLICY "Admins read all users" ON public.users
+  FOR SELECT USING (public.get_user_role() IN ('dev', 'super_admin', 'mentor'));
+
+-- ------------------------------------------------------------------------------
+-- 3. FIX RLS on public.analytics_events
 -- ------------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Allow public insert on analytics_events" ON public.analytics_events;
 CREATE POLICY "Allow public insert on analytics_events"
@@ -22,11 +43,7 @@ CREATE POLICY "Allow public insert on analytics_events"
   );
 
 -- ------------------------------------------------------------------------------
--- 2. FIX RLS on public.course_enrollments
--- Issue: Policy "Service role and admins manage all enrollments" using FOR ALL USING (true)
---        allows unrestricted access across anon/authenticated roles.
--- Fix: Restrict ALL/UPDATE/DELETE to staff roles (dev, super_admin, mentor),
---      allow users to view their own enrollments, and allow students to request enrollments.
+-- 4. FIX RLS on public.course_enrollments
 -- ------------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Service role and admins manage all enrollments" ON public.course_enrollments;
 DROP POLICY IF EXISTS "Users can view own course enrollments" ON public.course_enrollments;
@@ -38,23 +55,11 @@ CREATE POLICY "Users can view own course enrollments"
   ON public.course_enrollments FOR SELECT
   USING (auth.uid() = user_id);
 
--- (b) Admins and mentors have full management access
+-- (b) Admins and mentors have full management access (non-recursive)
 CREATE POLICY "Admins manage all enrollments"
   ON public.course_enrollments FOR ALL
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('dev', 'super_admin', 'mentor')
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE users.id = auth.uid()
-      AND users.role IN ('dev', 'super_admin', 'mentor')
-    )
-  );
+  USING (public.get_user_role() IN ('dev', 'super_admin', 'mentor'))
+  WITH CHECK (public.get_user_role() IN ('dev', 'super_admin', 'mentor'));
 
 -- (c) Authenticated students can request an enrollment for themselves with 'pending' status
 CREATE POLICY "Students can request enrollment"
@@ -64,34 +69,7 @@ CREATE POLICY "Students can request enrollment"
   );
 
 -- ------------------------------------------------------------------------------
--- 3. FIX permissions & grants on public.users and helper functions
--- (a) Ensure authenticated and anon roles can SELECT user profiles (governed by RLS)
--- ------------------------------------------------------------------------------
-GRANT SELECT ON public.users TO authenticated;
-GRANT SELECT (id, full_name, role) ON public.users TO anon;
-
-DROP POLICY IF EXISTS "Users read own profile" ON public.users;
-CREATE POLICY "Users read own profile" ON public.users
-  FOR SELECT USING (id = auth.uid());
-
-DROP POLICY IF EXISTS "Admins read all users" ON public.users;
-CREATE POLICY "Admins read all users" ON public.users
-  FOR SELECT USING (
-    (auth.uid() = id) OR
-    EXISTS (
-      SELECT 1 FROM public.users u
-      WHERE u.id = auth.uid()
-      AND u.role IN ('dev', 'super_admin')
-    )
-  );
-
--- (b) Allow authenticated users to execute get_user_role() for RLS policy evaluation,
---     while blocking anonymous public execution from the REST API.
-GRANT EXECUTE ON FUNCTION public.get_user_role() TO authenticated, service_role;
-REVOKE EXECUTE ON FUNCTION public.get_user_role() FROM anon, PUBLIC;
-
--- ------------------------------------------------------------------------------
--- 4. FIX SECURITY DEFINER permissions on public.handle_new_user()
+-- 5. FIX SECURITY DEFINER permissions on public.handle_new_user()
 -- Revoke direct REST RPC execution from public/anon/authenticated clients.
 -- (The Auth trigger on auth.users will continue to execute automatically).
 -- ------------------------------------------------------------------------------
