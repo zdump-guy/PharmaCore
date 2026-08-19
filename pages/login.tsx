@@ -472,7 +472,8 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                   <Turnstile
                     ref={signInTurnstileRef}
                     action="student_signin"
-                    size="invisible"
+                    size="flexible"
+                    appearance="interaction-only"
                     onVerify={(token) => setSignInTurnstileToken(token)}
                     onExpire={() => setSignInTurnstileToken("")}
                   />
@@ -670,7 +671,8 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                     <Turnstile
                       ref={turnstileRef}
                       action="student_signup"
-                      size="invisible"
+                      size="flexible"
+                      appearance="interaction-only"
                       onVerify={(token) => setTurnstileToken(token)}
                       onExpire={() => setTurnstileToken("")}
                     />

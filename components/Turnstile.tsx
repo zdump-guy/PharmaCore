@@ -24,6 +24,10 @@ declare global {
   }
 }
 
+export type TurnstileSize = "normal" | "flexible" | "compact"
+export type TurnstileAppearance = "always" | "execute" | "interaction-only"
+export type TurnstileTheme = "auto" | "light" | "dark"
+
 interface TurnstileRenderParams {
   sitekey: string
   callback: (token: string) => void
@@ -31,11 +35,11 @@ interface TurnstileRenderParams {
   "expired-callback"?: () => void
   action?: string
   cData?: string
-  theme?: "auto" | "light" | "dark"
-  size?: "normal" | "flexible" | "compact" | "invisible"
+  theme?: TurnstileTheme
+  size?: TurnstileSize
   retry?: "auto" | "never"
   "refresh-expired"?: "auto" | "manual" | "never"
-  appearance?: "always" | "execute" | "interaction-only"
+  appearance?: TurnstileAppearance
 }
 
 export interface TurnstileRef {
@@ -48,9 +52,9 @@ export interface TurnstileProps {
   siteKey?: string
   action?: string
   cData?: string
-  theme?: "auto" | "light" | "dark"
-  size?: "normal" | "flexible" | "compact" | "invisible"
-  appearance?: "always" | "execute" | "interaction-only"
+  theme?: TurnstileTheme
+  size?: TurnstileSize | "invisible"
+  appearance?: TurnstileAppearance
   onVerify: (token: string) => void
   onError?: (error?: unknown) => void
   onExpire?: () => void
@@ -107,8 +111,8 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
       action,
       cData,
       theme = "auto",
-      size = "invisible",
-      appearance = "always",
+      size = "flexible",
+      appearance = "interaction-only",
       onVerify,
       onError,
       onExpire,
@@ -124,6 +128,17 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
       siteKey ||
       process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY ||
       TURNSTILE_TEST_SITE_KEY
+
+    // Normalize size: Turnstile strictly requires "normal" | "flexible" | "compact"
+    const resolvedSize: TurnstileSize =
+      size === "compact"
+        ? "compact"
+        : size === "normal"
+        ? "normal"
+        : "flexible"
+
+    const resolvedAppearance: TurnstileAppearance =
+      size === "invisible" ? "interaction-only" : appearance || "interaction-only"
 
     // Stable callback refs
     const onVerifyRef = useRef(onVerify)
@@ -146,8 +161,8 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
           action,
           cData,
           theme,
-          size,
-          appearance,
+          size: resolvedSize,
+          appearance: resolvedAppearance,
           callback: (token: string) => {
             onVerifyRef.current?.(token)
           },
@@ -162,7 +177,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
       } catch (err) {
         console.warn("Turnstile render warning:", err)
       }
-    }, [resolvedSiteKey, action, cData, theme, size, appearance])
+    }, [resolvedSiteKey, action, cData, theme, resolvedSize, resolvedAppearance])
 
     useImperativeHandle(ref, () => ({
       reset: () => {
@@ -208,8 +223,8 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
     return (
       <div
         ref={containerRef}
-        className={className || (size === "invisible" ? "hidden" : "my-2")}
-        aria-hidden={size === "invisible" ? "true" : undefined}
+        className={className || "my-1 flex justify-center"}
+        style={{ minHeight: resolvedAppearance === "interaction-only" ? 0 : 65 }}
       />
     )
   }

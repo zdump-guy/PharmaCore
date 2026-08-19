@@ -343,7 +343,8 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                     <Turnstile
                       ref={turnstileRef}
                       action="course_enroll"
-                      size="invisible"
+                      size="flexible"
+                      appearance="interaction-only"
                       onVerify={(token) => setTurnstileToken(token)}
                       onExpire={() => setTurnstileToken("")}
                     />

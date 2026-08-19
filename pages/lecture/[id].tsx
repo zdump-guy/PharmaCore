@@ -141,7 +141,8 @@ function QuestionForm({
       <Turnstile
         ref={turnstileRef}
         action="question_submit"
-        size="invisible"
+        size="flexible"
+        appearance="interaction-only"
         onVerify={(token) => setTurnstileToken(token)}
         onExpire={() => setTurnstileToken("")}
       />

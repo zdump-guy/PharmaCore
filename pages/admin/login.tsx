@@ -285,7 +285,8 @@ export default function AdminLoginPage() {
                 <Turnstile
                   ref={turnstileRef}
                   action="admin_login"
-                  size="invisible"
+                  size="flexible"
+                  appearance="interaction-only"
                   onVerify={(token) => setTurnstileToken(token)}
                   onExpire={() => setTurnstileToken("")}
                 />
