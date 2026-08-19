@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import {
+  FiBookOpen as BookOpen,
   FiCheck as Check,
   FiCheckCircle as CheckCircle2,
   FiClock as Clock,
@@ -10,6 +11,7 @@ import {
   FiPlus as Plus,
   FiRefreshCw as RefreshCw,
   FiSearch as Search,
+  FiShield as Shield,
   FiTrash2 as Trash2,
   FiUserCheck as UserCheck,
   FiUserPlus as UserPlus,
@@ -26,11 +28,33 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import type { UserProfile, University, Faculty, EnrollmentSettings, SignupMode } from "@/types"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import type { UserProfile, University, Faculty, EnrollmentSettings, SignupMode, Course } from "@/types"
+
+export interface CourseEnrollmentItem {
+  id: string
+  user_id: string
+  course_id: string
+  status: "active" | "pending" | "completed"
+  enrolled_at: string
+  user?: {
+    id?: string
+    email?: string
+    full_name?: string
+    university?: string
+    faculty?: string
+  }
+  course?: {
+    id?: string
+    title_en?: string
+    title_ar?: string
+  }
+}
 
 interface StudentManagerProps {
   isAr: boolean
   token: string | null
+  courses?: Course[]
   enrollmentSettings: EnrollmentSettings
   subTab?: "roster" | "pending" | "controller" | "directories" | "provision"
   onUpdateEnrollmentSettings: (newSettings: EnrollmentSettings) => Promise<void>
@@ -39,6 +63,7 @@ interface StudentManagerProps {
 export default function StudentManager({
   isAr,
   token,
+  courses = [],
   enrollmentSettings,
   subTab: controlledSubTab,
   onUpdateEnrollmentSettings,
@@ -92,6 +117,12 @@ export default function StudentManager({
   const [newFacDuration, setNewFacDuration] = useState<number>(5)
   const [savingSettings, setSavingSettings] = useState(false)
 
+  // Student specific course access modal
+  const [managingStudent, setManagingStudent] = useState<UserProfile | null>(null)
+  const [studentEnrolledCourseIds, setStudentEnrolledCourseIds] = useState<string[]>([])
+  const [loadingStudentCourses, setLoadingStudentCourses] = useState(false)
+  const [savingStudentCourses, setSavingStudentCourses] = useState(false)
+
   const tr = (en: string, ar: string) => (isAr ? ar : en)
 
   // Fetch student roster
@@ -122,6 +153,59 @@ export default function StudentManager({
   useEffect(() => {
     fetchStudents()
   }, [fetchStudents])
+
+  // Student specific course access modal
+  const handleOpenStudentCourses = async (student: UserProfile) => {
+    setManagingStudent(student)
+    setLoadingStudentCourses(true)
+    try {
+      const res = await fetch(`/api/admin/students/enrollments?studentId=${student.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const enrolledIds = (data.enrollments || []).map((e: { course_id: string }) => e.course_id)
+        setStudentEnrolledCourseIds(enrolledIds)
+      } else {
+        setStudentEnrolledCourseIds([])
+      }
+    } catch (err) {
+      console.error(err)
+      setStudentEnrolledCourseIds([])
+    } finally {
+      setLoadingStudentCourses(false)
+    }
+  }
+
+  const handleToggleCourseForStudent = async (courseId: string, currentlyEnrolled: boolean) => {
+    if (!token || !managingStudent) return
+    setSavingStudentCourses(true)
+    try {
+      if (currentlyEnrolled) {
+        const res = await fetch("/api/admin/students/enrollments", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ studentId: managingStudent.id, courseId }),
+        })
+        if (res.ok) {
+          setStudentEnrolledCourseIds((prev) => prev.filter((id) => id !== courseId))
+        }
+      } else {
+        const res = await fetch("/api/admin/students/enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ studentId: managingStudent.id, courseId, status: "active" }),
+        })
+        if (res.ok) {
+          setStudentEnrolledCourseIds((prev) => [...prev, courseId])
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSavingStudentCourses(false)
+    }
+  }
 
   // Actions
   const handleApprove = async (id: string) => {
@@ -469,48 +553,48 @@ export default function StudentManager({
 
       {/* ─── TOP STATS BAR ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
-        <Card className="shadow-none">
-          <CardContent className="p-4 sm:p-5">
+        <Card className="card-equal shadow-none">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase">{tr("Total Students", "إجمالي الطلاب")}</span>
-              <Users className="size-4 text-primary" />
+              <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Total Students", "إجمالي الطلاب")}</span>
+              <Users className="size-4 text-primary shrink-0" />
             </div>
             <p className="mt-2 text-2xl sm:text-3xl font-black">{stats.total}</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
-          <CardContent className="p-4 sm:p-5">
+        <Card className="card-equal shadow-none">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase">{tr("Active Students", "الطلاب النشطون")}</span>
-              <UserCheck className="size-4 text-emerald-600" />
+              <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Active Students", "الطلاب النشطون")}</span>
+              <UserCheck className="size-4 text-emerald-600 shrink-0" />
             </div>
             <p className="mt-2 text-2xl sm:text-3xl font-black text-emerald-600">{stats.active}</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
-          <CardContent className="p-4 sm:p-5">
+        <Card className="card-equal shadow-none">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase">{tr("Pending Review", "بانتظار الاعتماد")}</span>
-              <Clock className="size-4 text-amber-600" />
+              <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Pending Review", "بانتظار الاعتماد")}</span>
+              <Clock className="size-4 text-amber-600 shrink-0" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <p className="text-2xl sm:text-3xl font-black text-amber-600">{stats.pending}</p>
               {stats.pending > 0 && (
-                <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-600">
-                  {tr("Action needed", "يتطلب إجراء")}
+                <Badge variant="outline" className="badge-nowrap text-[10px] border-amber-500/30 text-amber-600 shrink-0">
+                  <span>{tr("Action needed", "يتطلب إجراء")}</span>
                 </Badge>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
-          <CardContent className="p-4 sm:p-5">
+        <Card className="card-equal shadow-none">
+          <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase">{tr("Current Mode", "نظام التسجيل")}</span>
-              <LockKeyhole className="size-4 text-indigo-600" />
+              <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Current Mode", "نظام التسجيل")}</span>
+              <LockKeyhole className="size-4 text-indigo-600 shrink-0" />
             </div>
             <p className="mt-2 text-sm sm:text-base font-bold truncate capitalize">
               {enrollmentSettings.signup_mode === "approval_required"
@@ -767,6 +851,17 @@ export default function StudentManager({
 
                             <Button
                               size="sm"
+                              variant="outline"
+                              className="h-8 px-2.5 text-xs font-bold gap-1 text-primary border-primary/30 hover:bg-primary/5"
+                              onClick={() => handleOpenStudentCourses(student)}
+                              title={tr("Manage Course Enrollments", "إدارة تسجيل المقررات")}
+                            >
+                              <BookOpen className="size-3" />
+                              <span className="hidden sm:inline">{tr("Courses", "المقررات")}</span>
+                            </Button>
+
+                            <Button
+                              size="sm"
                               variant="ghost"
                               className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10"
                               disabled={isLoading}
@@ -829,7 +924,7 @@ export default function StudentManager({
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
               {pendingStudents.map((student) => {
                 const fullName = student.full_name || `${student.first_name || ""} ${student.last_name || ""}`.trim()
                 const isLoading = actionLoadingId === student.id
@@ -904,7 +999,7 @@ export default function StudentManager({
 
       {/* ─── 3. SIGNUP CONTROLLER ──────────────────────────────────── */}
       {subTab === "controller" && (
-        <div className="space-y-6 max-w-3xl">
+        <div className="space-y-6 max-w-5xl">
           <div className="bg-card border rounded-2xl p-4 shadow-xs">
             <div className="flex items-center gap-2">
               <LockKeyhole className="size-5 text-primary" />
@@ -1202,7 +1297,7 @@ export default function StudentManager({
 
       {/* ─── 5. BATCH & SINGLE PROVISIONING ────────────────────────── */}
       {subTab === "provision" && (
-        <div className="space-y-6 max-w-3xl">
+        <div className="space-y-6 max-w-5xl">
           <div className="bg-card border rounded-2xl p-4 shadow-xs">
             <div className="flex items-center gap-2">
               <UserPlus className="size-5 text-primary" />
@@ -1614,6 +1709,99 @@ export default function StudentManager({
           )}
         </div>
       )}
+
+      {/* ─── 6. STUDENT COURSE ACCESS DIALOG ─────────────────────────── */}
+      <Dialog open={!!managingStudent} onOpenChange={(open) => !open && setManagingStudent(null)}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+          {managingStudent && (
+            <div>
+              <DialogHeader>
+                <div className="flex items-center gap-2 text-primary font-bold text-xs">
+                  <Shield className="size-4" />
+                  <span>{tr("Student Course Access", "صلاحيات تسجيل المقررات")}</span>
+                </div>
+                <DialogTitle className="text-lg sm:text-xl font-extrabold truncate mt-1">
+                  {managingStudent.full_name || managingStudent.email}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {tr(
+                    "Enable or revoke this student's access to specific curriculum courses.",
+                    "تفعيل أو إلغاء وصول هذا الطالب للمقررات الدراسية المحددة."
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-4 space-y-3">
+                {loadingStudentCourses ? (
+                  <div className="grid min-h-32 place-items-center">
+                    <Loader2 className="size-6 animate-spin text-primary opacity-70" />
+                  </div>
+                ) : !courses.length ? (
+                  <p className="text-xs text-muted-foreground text-center py-6">
+                    {tr("No courses available in curriculum.", "لا توجد مقررات مضافة في النظام.")}
+                  </p>
+                ) : (
+                  <div className="space-y-2.5 max-h-[50vh] overflow-y-auto custom-scrollbar pe-1">
+                    {courses.map((course) => {
+                      const isEnrolled = studentEnrolledCourseIds.includes(course.id)
+                      const title = isAr ? course.title_ar || course.title_en : course.title_en
+
+                      return (
+                        <div
+                          key={course.id}
+                          className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                            isEnrolled ? "bg-primary/5 border-primary/40 shadow-2xs" : "bg-card hover:bg-muted/30"
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-bold truncate">{title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {course.access_policy === "enrolled_only" ? (
+                                <Badge variant="secondary" className="text-[10px] border-purple-500/30 text-purple-700 dark:text-purple-300">
+                                  {tr("Cohort Gated", "مغلق للتسجيل فقط")}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                                  {tr("Open / Public", "عام")}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant={isEnrolled ? "default" : "outline"}
+                            disabled={savingStudentCourses}
+                            onClick={() => handleToggleCourseForStudent(course.id, isEnrolled)}
+                            className={`h-8 px-3 text-xs font-bold gap-1.5 shrink-0 ${
+                              isEnrolled ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
+                            }`}
+                          >
+                            {savingStudentCourses ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : isEnrolled ? (
+                              <Check className="size-3" />
+                            ) : (
+                              <Plus className="size-3" />
+                            )}
+                            <span>{isEnrolled ? tr("Enrolled", "مسجل") : tr("Enroll", "تسجيل")}</span>
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="pt-2 border-t">
+                <Button variant="outline" onClick={() => setManagingStudent(null)} className="w-full sm:w-auto text-xs h-9">
+                  {tr("Close", "إغلاق")}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

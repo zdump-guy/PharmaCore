@@ -78,24 +78,28 @@ export default function Navbar() {
     if (!supabase) return
 
     async function loadUser() {
-      const {
-        data: { session },
-      } = await supabase!.auth.getSession()
+      try {
+        const {
+          data: { session },
+        } = await supabase!.auth.getSession()
 
-      if (session?.user) {
-        const { data: profile } = await supabase!
-          .from("users")
-          .select("full_name, role")
-          .eq("id", session.user.id)
-          .maybeSingle()
+        if (session?.user) {
+          const { data: profile } = await supabase!
+            .from("users")
+            .select("full_name, role")
+            .eq("id", session.user.id)
+            .maybeSingle()
 
-        setAuthUser({
-          id: session.user.id,
-          email: session.user.email || "",
-          fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
-          role: profile?.role || session.user.user_metadata?.role || "student",
-        })
-      } else {
+          setAuthUser({
+            id: session.user.id,
+            email: session.user.email || "",
+            fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
+            role: profile?.role || session.user.user_metadata?.role || "student",
+          })
+        } else {
+          setAuthUser(null)
+        }
+      } catch {
         setAuthUser(null)
       }
     }
@@ -105,20 +109,24 @@ export default function Navbar() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const { data: profile } = await supabase!
-          .from("users")
-          .select("full_name, role")
-          .eq("id", session.user.id)
-          .maybeSingle()
+      try {
+        if (session?.user) {
+          const { data: profile } = await supabase!
+            .from("users")
+            .select("full_name, role")
+            .eq("id", session.user.id)
+            .maybeSingle()
 
-        setAuthUser({
-          id: session.user.id,
-          email: session.user.email || "",
-          fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
-          role: profile?.role || session.user.user_metadata?.role || "student",
-        })
-      } else {
+          setAuthUser({
+            id: session.user.id,
+            email: session.user.email || "",
+            fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
+            role: profile?.role || session.user.user_metadata?.role || "student",
+          })
+        } else {
+          setAuthUser(null)
+        }
+      } catch {
         setAuthUser(null)
       }
     })
@@ -210,20 +218,20 @@ export default function Navbar() {
           aria-label={isAr ? "فارما كور - الرئيسية" : "PharmaCore home"}
         >
           <BrandMark className="size-9 sm:size-10" />
-          <span className="hidden truncate text-sm font-extrabold tracking-tight min-[360px]:inline sm:text-lg">
+          <span className="hidden text-sm font-extrabold tracking-tight min-[360px]:inline sm:text-lg whitespace-nowrap shrink-0">
             Pharma<span className="text-primary">Core</span>
           </span>
         </Link>
 
         {/* Desktop Navigation Links */}
-        <div className="hidden items-center gap-1 rounded-full bg-muted/35 p-1 md:flex">
+        <div className="hidden items-center gap-1 rounded-full bg-muted/35 p-1 md:flex shrink-0">
           {nav.map((item) => {
             const active = isNavActive(item.sectionId, item.href)
             return (
               <Button
                 key={item.href}
                 variant="ghost"
-                className={`h-11 rounded-full px-5 text-sm transition-all focus-visible:ring-ring ${
+                className={`h-11 rounded-full px-5 text-sm transition-all focus-visible:ring-ring whitespace-nowrap shrink-0 ${
                   active
                     ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground font-bold"
                     : "text-foreground/70 hover:bg-accent/45 hover:text-foreground"
@@ -276,17 +284,17 @@ export default function Navbar() {
 
           {/* User Profile / Sign In Button */}
           {authUser ? (
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative shrink-0" ref={userMenuRef}>
               <Button
                 variant="outline"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="h-10 rounded-full ps-2 pe-3 gap-2 border-primary/30 bg-card/60 hover:bg-card shadow-xs"
+                className="h-10 rounded-full ps-2 pe-3 gap-2 border-primary/30 bg-card/60 hover:bg-card shadow-xs shrink-0 whitespace-nowrap"
                 aria-expanded={userMenuOpen}
               >
-                <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs">
+                <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs shrink-0">
                   {isStaff ? <ShieldCheck className="size-3.5" /> : <GraduationCap className="size-3.5" />}
                 </span>
-                <span className="hidden sm:inline max-w-[110px] truncate text-xs font-bold">
+                <span className="hidden sm:inline max-w-[120px] truncate text-xs font-bold">
                   {authUser.fullName}
                 </span>
               </Button>
@@ -309,18 +317,18 @@ export default function Navbar() {
                   <Link
                     href="/profile"
                     onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground"
+                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground whitespace-nowrap"
                   >
-                    <UserIcon className="size-4 text-primary" />
+                    <UserIcon className="size-4 text-primary shrink-0" />
                     <span>{tr("My Profile & Progress", "ملفي الأكاديمي والتقدم")}</span>
                   </Link>
 
                   <Link
-                    href="/courses"
+                    href="/#courses"
                     onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground"
+                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground whitespace-nowrap"
                   >
-                    <BookOpen className="size-4 text-primary" />
+                    <BookOpen className="size-4 text-primary shrink-0" />
                     <span>{tr("Browse Courses", "استعراض المقررات")}</span>
                   </Link>
 
@@ -328,9 +336,9 @@ export default function Navbar() {
                     <Link
                       href="/admin"
                       onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground border-t mt-1 pt-2"
+                      className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground border-t mt-1 pt-2 whitespace-nowrap"
                     >
-                      <ShieldCheck className="size-4 text-primary" />
+                      <ShieldCheck className="size-4 text-primary shrink-0" />
                       <span>{tr("Admin Dashboard", "لوحة الإدارة")}</span>
                     </Link>
                   )}
@@ -340,9 +348,9 @@ export default function Navbar() {
                       setUserMenuOpen(false)
                       handleSignOut()
                     }}
-                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer border-t mt-1 pt-2"
+                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer border-t mt-1 pt-2 whitespace-nowrap"
                   >
-                    <LogOut className="size-4" />
+                    <LogOut className="size-4 shrink-0" />
                     <span>{tr("Sign Out", "تسجيل الخروج")}</span>
                   </button>
                 </div>
@@ -351,11 +359,11 @@ export default function Navbar() {
           ) : (
             <Button
               size="sm"
-              className="h-9 sm:h-10 rounded-full px-3.5 sm:px-4 text-xs font-bold gap-1.5 shadow-xs"
+              className="h-9 sm:h-10 rounded-full px-3.5 sm:px-4 text-xs font-bold gap-1.5 shadow-xs whitespace-nowrap shrink-0"
               asChild
             >
               <Link href="/login">
-                <LogIn className="size-3.5" />
+                <LogIn className="size-3.5 shrink-0" />
                 <span>{tr("Sign In", "تسجيل الدخول")}</span>
               </Link>
             </Button>

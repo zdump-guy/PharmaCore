@@ -1,12 +1,13 @@
 import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
 import {
   FiArrowLeft as ArrowLeft,
   FiArrowRight as ArrowRight,
   FiCheckCircle as CheckCircle2,
+  FiClock as Clock,
   FiDownload as Download,
   FiImage as FileImage,
   FiFileText as FileText,
@@ -20,6 +21,7 @@ import {
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import YouTubePlayer from "@/components/YouTubePlayer"
+import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -57,6 +59,8 @@ function QuestionForm({
   const [email, setEmail] = useState("")
   const [question, setQuestion] = useState("")
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileRef>(null)
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -71,9 +75,13 @@ function QuestionForm({
           authorName: name,
           authorEmail: email,
           text: question,
+          turnstileToken,
         }),
       })
-      if (!response.ok) throw new Error()
+      if (!response.ok) {
+        turnstileRef.current?.reset()
+        throw new Error()
+      }
       const data = await response.json()
       onAdded(data.question)
       trackCommunityQuestionSubmit({
@@ -85,7 +93,9 @@ function QuestionForm({
       setEmail("")
       setQuestion("")
       setStatus("success")
+      turnstileRef.current?.reset()
     } catch {
+      turnstileRef.current?.reset()
       setStatus("error")
     }
   }
@@ -126,6 +136,16 @@ function QuestionForm({
           required
         />
       </div>
+
+      {/* Background Cloudflare Turnstile bot verification */}
+      <Turnstile
+        ref={turnstileRef}
+        action="question_submit"
+        size="invisible"
+        onVerify={(token) => setTurnstileToken(token)}
+        onExpire={() => setTurnstileToken("")}
+      />
+
       <Button type="submit" disabled={status === "submitting"}>
         <Send />
         {status === "submitting" ? (isAr ? "جارٍ الإرسال..." : "Sending...") : isAr ? "إرسال السؤال" : "Submit question"}
@@ -153,35 +173,96 @@ export default function LecturePage({
   quizzes,
   questions: initialQuestions,
   courseId,
+  course,
   isLocked,
 }: LecturePageProps) {
   const { locale } = useRouter()
   const isAr = locale === "ar"
   const [questions, setQuestions] = useState(initialQuestions)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [isEnrolled, setIsEnrolled] = useState(false)
+  const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
+  const [enrollMsg, setEnrollMsg] = useState<string | null>(null)
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
-  // Check auth session
+  // Check auth session & enrollment
   useEffect(() => {
     if (!supabase) return
 
-    async function checkAuth() {
+    async function checkAuthAndEnrollment() {
       const {
         data: { session },
       } = await supabase!.auth.getSession()
-      setIsAuthenticated(Boolean(session?.user))
+      const isAuth = Boolean(session?.user)
+      setIsAuthenticated(isAuth)
+      setSessionToken(session?.access_token || null)
+
+      if (session?.user && session?.access_token && courseId) {
+        try {
+          const res = await fetch(`/api/courses/${courseId}/enroll`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+          if (res.ok) {
+            const data = await res.json()
+            setIsEnrolled(Boolean(data.isEnrolled))
+            setEnrollmentStatus(data.status || null)
+          }
+        } catch {
+          // Continue
+        }
+      }
     }
 
-    checkAuth()
+    checkAuthAndEnrollment()
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(Boolean(session?.user))
+      setSessionToken(session?.access_token || null)
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [courseId])
+
+  const handleQuickEnroll = async () => {
+    if (!sessionToken || !courseId) return
+    setEnrolling(true)
+    setEnrollMsg(null)
+    try {
+      const res = await fetch(`/api/courses/${courseId}/enroll`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        if (data.status === "active") {
+          setIsEnrolled(true)
+          setEnrollmentStatus("active")
+          setEnrollMsg(isAr ? "تم الاشتراك بنجاح! يمكنك الآن مشاهدة المحاضرة." : "Enrolled successfully! You can now watch the lecture.")
+        } else if (data.status === "pending") {
+          setIsEnrolled(false)
+          setEnrollmentStatus("pending")
+          setEnrollMsg(
+            isAr
+              ? "تم إرسال طلب انضمامك وهو الآن قيد مراجعة واعتماد الإدارة."
+              : "Enrollment request submitted! It is now pending admin review."
+          )
+        }
+      } else {
+        setEnrollMsg(data.error || (isAr ? "تعذر إتمام التسجيل" : "Failed to enroll"))
+      }
+    } catch {
+      setEnrollMsg(isAr ? "حدث خطأ أثناء الاشتراك" : "Error during enrollment")
+    } finally {
+      setEnrolling(false)
+    }
+  }
 
   const title = lecture ? (isAr ? lecture.title_ar : lecture.title_en) : ""
   const details = lecture ? ((isAr ? lecture.details_ar : lecture.details_en) ?? "") : ""
@@ -210,7 +291,10 @@ export default function LecturePage({
   }
 
   const videoId = lecture.youtube_url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]{11})/)?.[1]
-  const isGated = isLocked && !isAuthenticated
+  const isEnrolledOnly = course?.access_policy === "enrolled_only"
+  const isGatedAuth = isLocked && !isAuthenticated
+  const isGatedEnrollment = isEnrolledOnly && isAuthenticated && !isEnrolled
+  const isGated = isGatedAuth || isGatedEnrollment
 
   const copy = isAr
     ? {
@@ -231,6 +315,9 @@ export default function LecturePage({
         questions: "أسئلة الطلاب",
         lockedTitle: "هذه المحاضرة مخصصة للطلاب المسجلين",
         lockedDesc: "سجل الدخول أو أنشئ حساب طالب مجاني للوصول إلى فيديو المحاضرة والملخصات والاختبارات.",
+        enrollTitle: "يلزم الاشتراك في المقرر لمشاهدة المحاضرة",
+        enrollDesc: "هذا المقرر متاح لمجموعات محددة. انقر على زر الاشتراك أدناه للانضمام وبدء المشاهدة فورًا.",
+        enrollCta: "اشترك في هذا المقرر مجانًا",
         signInCta: "تسجيل الدخول / إنشاء حساب",
       }
     : {
@@ -251,42 +338,50 @@ export default function LecturePage({
         questions: "Student questions",
         lockedTitle: "This lecture is reserved for registered students",
         lockedDesc: "Sign in or create a free student account to unlock the full video breakdown, clinical notes, and interactive quizzes.",
+        enrollTitle: "Course Enrollment Required",
+        enrollDesc: "This course is restricted to enrolled students. Click below to enroll for free and start watching immediately.",
+        enrollCta: "Enroll in Course (Free)",
         signInCta: "Sign In / Register Free",
       }
 
   return (
     <Layout title={`${title} — PharmaCore`} description={details}>
       <section className="border-b bg-muted/40">
-        <div className="page-shell py-8 lg:py-12">
+        <div className="page-shell py-6 sm:py-8 lg:py-12">
           {courseId && (
-            <Button variant="ghost" className="-ms-4 mb-6" asChild>
+            <Button variant="ghost" className="-ms-4 mb-4 sm:mb-6" asChild>
               <Link href={`/course/${courseId}`}>
-                <DirectionArrow />
-                {copy.back}
+                <DirectionArrow className="size-4" />
+                <span>{copy.back}</span>
               </Link>
             </Button>
           )}
-          <div className="max-w-4xl">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="gap-2 bg-card">
-                <PlayCircle className="size-3.5" />
-                {copy.lecture} {lecture.order}
+          <div className="max-w-4xl min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="badge-nowrap gap-2 bg-card">
+                <PlayCircle className="size-3.5 shrink-0" />
+                <span>{copy.lecture} {lecture.order}</span>
               </Badge>
-              {isLocked && (
-                <Badge variant="secondary" className="gap-1 border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold text-xs">
-                  <LockKeyhole className="size-3" />
-                  {isAr ? "مقرر مقيد" : "Members Only"}
+              {isEnrolledOnly ? (
+                <Badge variant="secondary" className="badge-nowrap gap-1 border-purple-500/30 bg-purple-500/10 text-purple-800 dark:text-purple-300 font-bold text-xs">
+                  <LockKeyhole className="size-3 shrink-0" />
+                  <span>{isAr ? "مجموعات محددة" : "Cohort Only"}</span>
                 </Badge>
-              )}
+              ) : isLocked ? (
+                <Badge variant="secondary" className="badge-nowrap gap-1 border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold text-xs">
+                  <LockKeyhole className="size-3 shrink-0" />
+                  <span>{isAr ? "مقرر مقيد" : "Members Only"}</span>
+                </Badge>
+              ) : null}
             </div>
 
-            <h1 className="mt-5 text-balance text-4xl font-extrabold leading-tight sm:text-5xl">{title}</h1>
-            <p className="body-lead mt-5">{details}</p>
+            <h1 className="mt-4 sm:mt-5 text-balance text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl break-words">{title}</h1>
+            <p className="body-lead mt-3 sm:mt-5 break-words">{details}</p>
           </div>
         </div>
       </section>
 
-      <div className="page-shell py-8 lg:py-12">
+      <div className="page-shell py-6 sm:py-8 lg:py-12">
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <div className="min-w-0">
             {/* Video Player or Gated Banner */}
@@ -297,20 +392,59 @@ export default function LecturePage({
                     <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
                       <LockKeyhole className="size-8" />
                     </div>
-                    <h3 className="text-2xl font-bold">{copy.lockedTitle}</h3>
-                    <p className="text-sm text-slate-300 leading-relaxed">{copy.lockedDesc}</p>
-                    <Button size="lg" className="mt-2 font-bold gap-2" asChild>
-                      <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
-                        <LogIn className="size-4" />
-                        {copy.signInCta}
-                      </Link>
-                    </Button>
+                    <h3 className="text-xl sm:text-2xl font-bold">
+                      {enrollmentStatus === "pending"
+                        ? isAr
+                          ? "طلب الانضمام قيد المراجعة"
+                          : "Enrollment Request Pending Review"
+                        : isGatedEnrollment
+                        ? copy.enrollTitle
+                        : copy.lockedTitle}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      {enrollmentStatus === "pending"
+                        ? isAr
+                          ? "تم إرسال طلب انضمامك إلى هذا المقرر بنجاح. سيتم فتح المحاضرة تلقائيًا فور اعتماد الطلب من قبل الإدارة."
+                          : "Your enrollment request has been submitted and is awaiting administrator approval. Access will be unlocked upon review."
+                        : isGatedEnrollment
+                        ? copy.enrollDesc
+                        : copy.lockedDesc}
+                    </p>
+                    
+                    {enrollmentStatus === "pending" ? (
+                      <div className="inline-flex items-center gap-2 rounded-xl bg-amber-500/20 border border-amber-500/40 px-4 py-2 text-xs font-bold text-amber-300">
+                        <Clock className="size-4 animate-spin shrink-0" />
+                        <span>{isAr ? "بانتظار موافقة الإدارة" : "Awaiting Administrator Approval"}</span>
+                      </div>
+                    ) : isGatedEnrollment ? (
+                      <div className="space-y-2">
+                        <Button
+                          onClick={handleQuickEnroll}
+                          disabled={enrolling}
+                          size="lg"
+                          className="btn-nowrap bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2"
+                        >
+                          <ShieldCheck className="size-4 shrink-0" />
+                          <span>{enrolling ? (isAr ? "جارٍ الإرسال..." : "Submitting...") : copy.enrollCta}</span>
+                        </Button>
+                        {enrollMsg && (
+                          <p className="text-xs font-bold text-purple-300">{enrollMsg}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <Button size="lg" className="btn-nowrap bg-primary hover:bg-primary/90 text-primary-foreground font-bold" asChild>
+                        <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
+                          <LogIn className="size-4 shrink-0" />
+                          <span>{copy.signInCta}</span>
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : videoId ? (
                 <YouTubePlayer videoId={videoId} title={title} lectureId={lecture.id} lectureTitle={title} />
               ) : (
-                <div className="grid h-full place-items-center text-center text-white">
+                <div className="grid h-full place-items-center text-center p-6 text-muted-foreground">
                   <div>
                     <PlayCircle className="mx-auto size-14 text-[#8BCDE1]" />
                     <p className="mt-4 font-semibold">
@@ -323,11 +457,11 @@ export default function LecturePage({
 
             {/* Tabs for Summary, Resources, Quizzes, Discussion */}
             <Tabs defaultValue="summary" className="mt-8">
-              <TabsList className="grid h-auto w-full grid-cols-4 bg-muted p-1">
-                <TabsTrigger value="summary" className="min-h-11">{copy.summary}</TabsTrigger>
-                <TabsTrigger value="resources" className="min-h-11">{copy.resources}</TabsTrigger>
-                <TabsTrigger value="quizzes" className="min-h-11">{copy.quizzes}</TabsTrigger>
-                <TabsTrigger value="discussion" className="min-h-11">{copy.discussion}</TabsTrigger>
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4 bg-muted p-1 gap-1">
+                <TabsTrigger value="summary" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.summary}</TabsTrigger>
+                <TabsTrigger value="resources" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.resources}</TabsTrigger>
+                <TabsTrigger value="quizzes" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.quizzes}</TabsTrigger>
+                <TabsTrigger value="discussion" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.discussion}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="summary" className="mt-5">
@@ -374,15 +508,15 @@ export default function LecturePage({
                         className="flex items-center justify-between rounded-xl border bg-card p-4 transition-colors hover:border-primary/45"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="grid size-10 place-items-center rounded-lg bg-secondary text-primary">
+                          <span className="grid size-10 place-items-center rounded-lg bg-secondary text-primary shrink-0">
                             <ResourceIcon className="size-5" />
                           </span>
-                          <div>
-                            <p className="font-bold">{resTitle}</p>
+                          <div className="min-w-0">
+                            <p className="font-bold truncate">{resTitle}</p>
                             <p className="text-xs text-muted-foreground uppercase">{resource.type}</p>
                           </div>
                         </div>
-                        <Download className="size-5 text-muted-foreground" />
+                        <Download className="size-5 text-muted-foreground shrink-0" />
                       </a>
                     )
                   })
@@ -411,16 +545,16 @@ export default function LecturePage({
                 ) : quizzes.length ? (
                   quizzes.map((quiz) => (
                     <Card key={quiz.id} className="shadow-none">
-                      <CardContent className="flex items-center justify-between p-6">
-                        <div>
-                          <Badge variant="outline" className="mb-2">
-                            <HelpCircle className="size-3" />
-                            {copy.quiz}
+                      <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 sm:p-6">
+                        <div className="min-w-0">
+                          <Badge variant="outline" className="badge-nowrap mb-2">
+                            <HelpCircle className="size-3 shrink-0" />
+                            <span>{copy.quiz}</span>
                           </Badge>
                           <h3 className="text-lg font-bold">{isAr ? quiz.title_ar : quiz.title_en}</h3>
                           <p className="mt-1 text-sm text-muted-foreground">{copy.quizBody}</p>
                         </div>
-                        <Button asChild>
+                        <Button className="btn-nowrap self-start sm:self-center" asChild>
                           <Link href={`/quiz/${quiz.id}`}>{copy.startQuiz}</Link>
                         </Button>
                       </CardContent>

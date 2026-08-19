@@ -116,19 +116,19 @@ export default function CommunityManager({
 
             <Badge
               variant={isUnanswered ? "outline" : "secondary"}
-              className={`self-start text-xs font-semibold gap-1 ${
+              className={`badge-nowrap self-start text-xs font-semibold gap-1 shrink-0 ${
                 isUnanswered ? "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10" : ""
               }`}
             >
               {isUnanswered ? (
                 <>
-                  <HelpCircle className="size-3" />
-                  {tr("Awaiting Answer", "بانتظار الإجابة")}
+                  <HelpCircle className="size-3 shrink-0" />
+                  <span>{tr("Awaiting Answer", "بانتظار الإجابة")}</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
-                  {tr("Answered", "تمت الإجابة")}
+                  <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>{tr("Answered", "تمت الإجابة")}</span>
                 </>
               )}
             </Badge>
@@ -179,10 +179,10 @@ export default function CommunityManager({
               size="sm"
               onClick={() => onSendReply(question.id)}
               disabled={!replyText.trim()}
-              className="gap-1.5 font-bold shrink-0 text-xs min-h-[40px] sm:min-h-[36px] w-full sm:w-auto"
+              className="btn-nowrap gap-1.5 font-bold shrink-0 text-xs min-h-[40px] sm:min-h-[36px] w-full sm:w-auto"
             >
-              <Send className="size-3.5 rtl:rotate-180" />
-              {tr("Send Answer", "إرسال الإجابة")}
+              <Send className="size-3.5 rtl:rotate-180 shrink-0" />
+              <span>{tr("Send Answer", "إرسال الإجابة")}</span>
             </Button>
           </div>
         </CardContent>
@@ -223,19 +223,19 @@ export default function CommunityManager({
       {/* Tabs: Unanswered vs Answered */}
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="space-y-4">
         <TabsList className="grid grid-cols-2 h-10 w-full sm:w-80 p-1 bg-muted/60">
-          <TabsTrigger value="unanswered" className="text-xs font-bold gap-2 min-h-[34px]">
+          <TabsTrigger value="unanswered" className="badge-nowrap text-xs font-bold gap-2 min-h-[34px]">
             <span>{tr("Unanswered", "غير مجابة")}</span>
             <Badge
               variant={unanswered.length > 0 ? "destructive" : "secondary"}
-              className="h-4 px-1.5 text-[10px]"
+              className="badge-nowrap h-4 px-1.5 text-[10px] shrink-0"
             >
               {unanswered.length}
             </Badge>
           </TabsTrigger>
 
-          <TabsTrigger value="answered" className="text-xs font-bold gap-2 min-h-[34px]">
+          <TabsTrigger value="answered" className="badge-nowrap text-xs font-bold gap-2 min-h-[34px]">
             <span>{tr("Answered", "تمت الإجابة")}</span>
-            <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+            <Badge variant="secondary" className="badge-nowrap h-4 px-1.5 text-[10px] shrink-0">
               {answered.length}
             </Badge>
           </TabsTrigger>

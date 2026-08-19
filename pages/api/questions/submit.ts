@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { verifyTurnstileToken, extractClientIp } from '@/lib/turnstile';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -7,6 +8,7 @@ const schema = z.object({
   authorName: z.string().min(1).max(100),
   authorEmail: z.string().email(),
   text: z.string().min(5).max(2000),
+  turnstileToken: z.string().optional().nullable(),
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,7 +21,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
   }
 
-  const { lectureId, authorName, authorEmail, text } = parsed.data;
+  const { lectureId, authorName, authorEmail, text, turnstileToken } = parsed.data;
+
+  // Cloudflare Turnstile Spam & Bot Verification
+  const clientIp = extractClientIp(req);
+  const turnstileResult = await verifyTurnstileToken({
+    token: turnstileToken,
+    remoteIp: clientIp,
+    expectedAction: 'question_submit',
+  });
+
+  if (!turnstileResult.success) {
+    return res.status(403).json({
+      error: 'Bot verification failed. Please try submitting again.',
+      error_ar: 'فشل التحقق الأمني من النشاط التلقائي. يرجى المحاولة مرة أخرى.',
+    });
+  }
 
   if (!supabaseAdmin) {
     return res.status(503).json({ error: 'Supabase is not configured' });

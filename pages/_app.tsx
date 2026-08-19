@@ -26,12 +26,16 @@ function AppContent({ Component, pageProps }: { Component: AppProps["Component"]
           data: { session },
         } = await supabase!.auth.getSession()
         if (session?.user) {
-          const { data: profile } = await supabase!
+          const userMetaRole = session.user.user_metadata?.role
+          if (userMetaRole && ["dev", "super_admin", "mentor"].includes(userMetaRole)) {
+            setIsStaffUser(true)
+          }
+          const { data: profile, error } = await supabase!
             .from("users")
             .select("role")
             .eq("id", session.user.id)
             .maybeSingle()
-          if (profile && ["dev", "super_admin", "mentor"].includes(profile.role)) {
+          if (!error && profile && ["dev", "super_admin", "mentor"].includes(profile.role)) {
             setIsStaffUser(true)
           }
         }

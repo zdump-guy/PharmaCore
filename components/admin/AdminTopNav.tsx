@@ -105,6 +105,7 @@ export default function AdminTopNav({
 
   const subpageTitles: Record<string, { en: string; ar: string }> = {
     courses: { en: "Courses Library", ar: "المقررات الدراسية" },
+    enrollments: { en: "Course Enrollments", ar: "تسجيلات المقررات والطلبات" },
     lectures: { en: "Video Lectures", ar: "محاضرات الفيديو" },
     quizzes: { en: "Quizzes & MCQs", ar: "الاختبارات والأسئلة" },
     resources: { en: "Resources & Documents", ar: "المراجع والملفات" },
@@ -142,18 +143,18 @@ export default function AdminTopNav({
         </Button>
 
         {/* Dynamic Breadcrumbs */}
-        <nav className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground truncate">
-          <span className="hidden sm:inline hover:text-foreground transition-colors">
+        <nav className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground min-w-0 max-w-[220px] sm:max-w-md lg:max-w-xl truncate">
+          <span className="hidden sm:inline hover:text-foreground transition-colors shrink-0 whitespace-nowrap">
             {isAr ? currentMeta.category_ar : currentMeta.category_en}
           </span>
           <BreadcrumbArrow className="hidden sm:inline size-3 shrink-0 text-muted-foreground/50" />
-          <span className={`${currentSubMeta ? "text-muted-foreground" : "font-bold text-foreground"} truncate`}>
+          <span className={`${currentSubMeta ? "text-muted-foreground" : "font-bold text-foreground"} truncate whitespace-nowrap`}>
             {isAr ? currentMeta.ar : currentMeta.en}
           </span>
           {currentSubMeta && (
             <>
               <BreadcrumbArrow className="size-3 shrink-0 text-muted-foreground/50" />
-              <span className="font-extrabold text-foreground truncate">
+              <span className="font-extrabold text-foreground truncate whitespace-nowrap">
                 {isAr ? currentSubMeta.ar : currentSubMeta.en}
               </span>
             </>
@@ -162,11 +163,11 @@ export default function AdminTopNav({
       </div>
 
       {/* Right: Search + Quick Site View + Notification + Toggles */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Global Filter/Search (Curriculum & Users & QA) */}
         {["curriculum", "users", "qa"].includes(activePage) && (
-          <div className="relative hidden md:block w-48 lg:w-64">
-            <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative hidden md:block w-40 lg:w-56">
+            <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground shrink-0" />
             <Input
               type="search"
               placeholder={tr("Filter items...", "بحث وتصفية...")}
@@ -190,10 +191,10 @@ export default function AdminTopNav({
           variant="outline"
           size="sm"
           asChild
-          className="hidden sm:inline-flex h-8 px-2.5 text-xs font-bold gap-1.5 border-primary/20 bg-card hover:bg-muted"
+          className="btn-nowrap hidden sm:inline-flex h-8 px-2.5 text-xs font-bold gap-1.5 border-primary/20 bg-card hover:bg-muted shrink-0"
         >
           <Link href="/" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="size-3.5 text-primary" />
+            <ExternalLink className="size-3.5 text-primary shrink-0" />
             <span>{tr("Public Site", "الموقع العام")}</span>
           </Link>
         </Button>
@@ -204,9 +205,9 @@ export default function AdminTopNav({
             variant="ghost"
             size="sm"
             onClick={onGoToQA}
-            className="h-8 px-2 text-xs font-bold gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20"
+            className="btn-nowrap h-8 px-2 text-xs font-bold gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 shrink-0"
           >
-            <HelpCircle className="size-3.5 animate-pulse" />
+            <HelpCircle className="size-3.5 animate-pulse shrink-0" />
             <span>{unansweredCount}</span>
           </Button>
         )}
@@ -216,9 +217,9 @@ export default function AdminTopNav({
           variant="ghost"
           size="sm"
           onClick={switchLocale}
-          className="h-8 px-2 text-xs font-bold gap-1"
+          className="btn-nowrap h-8 px-2 text-xs font-bold gap-1 shrink-0"
         >
-          <Languages className="size-3.5" />
+          <Languages className="size-3.5 shrink-0" />
           <span>{isAr ? "English" : "العربية"}</span>
         </Button>
 
@@ -227,7 +228,7 @@ export default function AdminTopNav({
           variant="ghost"
           size="icon"
           onClick={handleToggleTheme}
-          className="size-8"
+          className="size-8 shrink-0"
           aria-label="Toggle theme"
         >
           {theme === "dark" ? <Sun className="size-3.5 text-amber-500" /> : <Moon className="size-3.5 text-primary" />}

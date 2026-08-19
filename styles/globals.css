@@ -120,10 +120,18 @@
   h3,
   h4 {
     @apply font-display tracking-[-0.025em] text-foreground;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   p {
     @apply leading-7;
+    overflow-wrap: break-word;
+  }
+
+  /* Prevent flex/grid item blowout on mobile */
+  img, svg, video, canvas, audio, iframe, embed, object {
+    max-width: 100%;
   }
 
   ::selection {
@@ -173,8 +181,28 @@
     @apply transition-[transform,border-color,background-color] duration-200 ease-out hover:-translate-y-1 hover:border-primary/45;
   }
 
+  .card-equal {
+    @apply h-full flex flex-col justify-between;
+  }
+
   .icon-tile {
     @apply grid size-11 shrink-0 place-items-center rounded-xl border border-primary/20 bg-secondary text-primary;
+  }
+
+  .badge-nowrap {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap shrink-0;
+  }
+
+  .btn-nowrap {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap shrink-0;
+  }
+
+  .stat-pill {
+    @apply inline-flex items-center gap-1 whitespace-nowrap shrink-0 font-mono text-xs;
+  }
+
+  .table-container {
+    @apply w-full overflow-x-auto rounded-2xl border bg-card shadow-sm;
   }
 
   .prose-measure {

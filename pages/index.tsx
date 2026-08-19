@@ -33,16 +33,23 @@ export default function Home({ courses, siteContent }: HomeProps) {
         <div className="clinical-grid pointer-events-none absolute inset-0 opacity-70" aria-hidden="true" />
         <div className="page-shell relative flex min-h-[620px] items-center py-16 lg:py-24">
           <div className="max-w-4xl animate-fade-up">
-            <Badge variant="outline" className="mb-6 min-h-8 gap-2 border-primary/25 bg-card px-3 text-primary"><ShieldCheck className="size-3.5" />{copy.hero_eyebrow}</Badge>
+            <Badge variant="outline" className="badge-nowrap mb-6 min-h-8 gap-2 border-primary/25 bg-card px-3 text-primary">
+              <ShieldCheck className="size-3.5 shrink-0" />
+              <span>{copy.hero_eyebrow}</span>
+            </Badge>
             <h1 className="display-title">{copy.hero_title_a}{" "}<span className="block text-primary">{copy.hero_title_b}</span></h1>
             <p className="body-lead mt-7">{copy.hero_subtitle}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" asChild><a href="#courses">{copy.hero_primary_cta}<ArrowUpRight /></a></Button>
-              <Button size="lg" variant="outline" asChild><a href="#about"><PlayCircle />{copy.hero_secondary_cta}</a></Button>
+              <Button size="lg" className="btn-nowrap" asChild>
+                <a href="#courses">{copy.hero_primary_cta}<ArrowUpRight className="shrink-0" /></a>
+              </Button>
+              <Button size="lg" variant="outline" className="btn-nowrap" asChild>
+                <a href="#about"><PlayCircle className="shrink-0" />{copy.hero_secondary_cta}</a>
+              </Button>
             </div>
-            <div className="mt-8 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:gap-6">
-              <span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-primary" />{copy.hero_note_one}</span>
-              <span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-primary" />{copy.hero_note_two}</span>
+            <div className="mt-8 flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:gap-6 flex-wrap">
+              <span className="inline-flex items-center gap-2 whitespace-nowrap"><CheckCircle2 className="size-4 text-primary shrink-0" />{copy.hero_note_one}</span>
+              <span className="inline-flex items-center gap-2 whitespace-nowrap"><CheckCircle2 className="size-4 text-primary shrink-0" />{copy.hero_note_two}</span>
             </div>
           </div>
 
@@ -59,11 +66,13 @@ export default function Home({ courses, siteContent }: HomeProps) {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {features.map(({ Icon, title, body, className }) => (
-                <Card key={title} className={`card-interactive shadow-none ${className}`}>
-                  <CardContent className="p-6 sm:p-7">
-                    <div className="icon-tile"><Icon className="size-5" /></div>
-                    <h3 className="mt-5 text-xl font-bold">{title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+                <Card key={title} className={`card-interactive card-equal shadow-none ${className}`}>
+                  <CardContent className="p-6 sm:p-7 flex flex-col justify-between h-full">
+                    <div>
+                      <div className="icon-tile"><Icon className="size-5" /></div>
+                      <h3 className="mt-5 text-xl font-bold">{title}</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -81,7 +90,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
               <h2 className="section-title mt-5">{copy.courses_title}</h2>
               <p className="body-lead mt-4">{copy.courses_body}</p>
             </div>
-            <Badge variant="secondary" className="w-fit px-3 py-2">{courses.length} {isAr ? "مقررات" : "courses"}</Badge>
+            <Badge variant="secondary" className="badge-nowrap px-3 py-2">{courses.length} {isAr ? "مقررات" : "courses"}</Badge>
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {courses.map((course, index) => {
@@ -90,8 +99,8 @@ export default function Home({ courses, siteContent }: HomeProps) {
               const coverUrl = getDirectImageUrl(course.thumbnail_url)
               return (
                 <Link href={`/course/${course.id}`} key={course.id} className="group rounded-xl focus-visible:ring-2 block h-full">
-                  <Card className="card-interactive h-full flex flex-col justify-between overflow-hidden shadow-none">
-                    <div className="relative flex h-40 items-end border-b bg-secondary/65 bg-cover bg-center p-6 shrink-0" style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined} role={coverUrl ? "img" : undefined} aria-label={coverUrl ? `${title} cover` : undefined}>
+                  <Card className="card-interactive card-equal overflow-hidden shadow-none">
+                    <div className="relative flex h-44 items-end border-b bg-secondary/65 bg-cover bg-center p-6 shrink-0" style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined} role={coverUrl ? "img" : undefined} aria-label={coverUrl ? `${title} cover` : undefined}>
                       {coverUrl && <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" aria-hidden="true" />}
                       <div className="relative flex w-full items-end justify-between">
                         <div className="icon-tile size-14 bg-card"><GraduationCap className="size-6" /></div>
@@ -100,13 +109,13 @@ export default function Home({ courses, siteContent }: HomeProps) {
                     </div>
                     <CardContent className="p-6 flex flex-col flex-1 justify-between">
                       <div>
-                        <Badge variant="outline">{copy.course_badge}</Badge>
+                        <Badge variant="outline" className="badge-nowrap">{copy.course_badge}</Badge>
                         <h3 className="mt-4 text-xl font-bold leading-snug">{title}</h3>
                         <p className="mt-3 line-clamp-3 text-sm text-muted-foreground leading-relaxed">{description}</p>
                       </div>
                       <div className="mt-6 flex min-h-11 items-center justify-between border-t pt-4 text-sm font-bold text-primary">
-                        <span>{copy.course_view}</span>
-                        <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:rotate-[-90deg]" />
+                        <span className="whitespace-nowrap">{copy.course_view}</span>
+                        <ArrowUpRight className="size-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:rotate-[-90deg]" />
                       </div>
                     </CardContent>
                   </Card>

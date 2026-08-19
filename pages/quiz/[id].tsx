@@ -217,14 +217,14 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
               {copy.back}
             </Link>
           </Button>
-          <Badge variant="outline" className="gap-2 bg-card">
-            <ClipboardCheck className="size-3.5" />
-            {copy.label}
+          <Badge variant="outline" className="badge-nowrap gap-2 bg-card">
+            <ClipboardCheck className="size-3.5 shrink-0" />
+            <span>{copy.label}</span>
           </Badge>
           <h1 className="mt-4 text-balance text-3xl font-extrabold sm:text-4xl">{title}</h1>
           <p className="body-lead mt-3">{copy.helper}</p>
           <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
-            <span>
+            <span className="whitespace-nowrap">
               {copy.answered} {answeredCount} {copy.of} {questions.length}
             </span>
           </div>
@@ -235,8 +235,8 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
       <section className="page-shell max-w-4xl section-space">
         {submitted && (
           <Alert className="mb-8 border-primary/40 bg-secondary/80 p-6">
-            <CheckCircle2 className="size-6 text-primary" />
-            <div className="ms-3">
+            <CheckCircle2 className="size-6 text-primary shrink-0" />
+            <div className="ms-3 min-w-0">
               <AlertTitle className="text-xl font-bold">
                 {copy.result}: {score}/{questions.length} ({percent}%)
               </AlertTitle>
@@ -262,14 +262,14 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
                 )}
               >
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="outline" className="badge-nowrap">
                       {index + 1} {copy.of} {questions.length}
                     </Badge>
                     {submitted && (
-                      <span className={cn("flex items-center gap-1 text-xs font-bold", isCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
-                        {isCorrect ? <Check className="size-3.5" /> : <X className="size-3.5" />}
-                        {isCorrect ? copy.correct : copy.incorrect}
+                      <span className={cn("badge-nowrap flex items-center gap-1 text-xs font-bold shrink-0", isCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
+                        {isCorrect ? <Check className="size-3.5 shrink-0" /> : <X className="size-3.5 shrink-0" />}
+                        <span>{isCorrect ? copy.correct : copy.incorrect}</span>
                       </span>
                     )}
                   </div>
@@ -300,10 +300,10 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
                             disabled={submitted}
                             onClick={() => setAnswer(question.id, option)}
                           >
-                            <span className="me-2 text-xs font-mono opacity-60">
-                              {options.indexOf(option) + 1}.
+                            <span className="me-2.5 grid size-6 shrink-0 place-items-center rounded-md bg-muted/60 text-xs font-mono font-bold">
+                              {options.indexOf(option) + 1}
                             </span>
-                            {option}
+                            <span className="flex-1">{option}</span>
                           </Button>
                         )
                       })}
@@ -322,18 +322,18 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
         </div>
 
         <div className="sticky bottom-4 z-20 mt-8 flex flex-col gap-3 rounded-2xl border bg-background/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground whitespace-nowrap">
             {answeredCount < questions.length ? copy.complete : `${questions.length} / ${questions.length}`}
           </p>
           {submitted ? (
-            <Button size="lg" variant="outline" onClick={reset}>
-              <RotateCcw />
-              {copy.retry}
+            <Button size="lg" variant="outline" className="btn-nowrap" onClick={reset}>
+              <RotateCcw className="size-4 shrink-0" />
+              <span>{copy.retry}</span>
             </Button>
           ) : (
-            <Button size="lg" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}>
-              <Send />
-              {copy.submit}
+            <Button size="lg" className="btn-nowrap" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}>
+              <Send className="size-4 shrink-0" />
+              <span>{copy.submit}</span>
             </Button>
           )}
         </div>

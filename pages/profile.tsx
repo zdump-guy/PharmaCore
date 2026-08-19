@@ -1,4 +1,5 @@
 import type { GetServerSideProps } from "next"
+import Link from "next/link"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
@@ -14,6 +15,7 @@ import {
   FiLock as Lock,
   FiLogOut as LogOut,
   FiMail as Mail,
+  FiPlayCircle as PlayCircle,
   FiSave as Save,
   FiUser as UserIcon,
   FiZap as Zap,
@@ -29,7 +31,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { resetUser } from "@/lib/analytics"
-import type { UserProfile } from "@/types"
+import { Progress } from "@/components/ui/progress"
+import type { UserProfile, EnrolledCourseProgress } from "@/types"
 
 interface ProfilePageProps {
   siteContent: SiteContent
@@ -62,6 +65,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     streakDays: 1,
     coursesEnrolled: 0,
   })
+  const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourseProgress[]>([])
 
   // Form State
   const [firstName, setFirstName] = useState("")
@@ -84,7 +88,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
   const universitiesList = siteContent.enrollment_settings?.universities || []
   const facultiesList = siteContent.enrollment_settings?.faculties || []
 
-  // Load Session & Profile
+  // Load Session, Profile & Real Course Enrollments
   useEffect(() => {
     if (!supabase) {
       setLoading(false)
@@ -103,20 +107,28 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           return
         }
 
-        const res = await fetch("/api/profile", {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        })
+        const [profileRes, enrollmentsRes] = await Promise.all([
+          fetch("/api/profile", {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+          fetch("/api/students/enrollments", {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+        ])
 
-        if (!res.ok) {
+        if (!profileRes.ok) {
           throw new Error("Could not load student profile.")
         }
 
-        const data = await res.json()
+        const data = await profileRes.json()
         const userProf = data.profile as UserProfile
         setProfile(userProf)
         if (data.metrics) setMetrics(data.metrics)
+
+        if (enrollmentsRes.ok) {
+          const enrollData = await enrollmentsRes.json()
+          setEnrolledCourses(enrollData.enrollments || [])
+        }
 
         // Populate fields
         setFirstName(userProf.first_name || userProf.full_name?.split(" ")[0] || "")
@@ -283,11 +295,11 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                     {profile?.full_name || tr("Student Learner", "طالب صيدلي")}
                   </h1>
                   <Badge
-                    className={
+                    className={`badge-nowrap ${
                       profile?.status === "active"
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500/30"
                         : "bg-amber-500/15 text-amber-600 font-bold"
-                    }
+                    }`}
                   >
                     {profile?.status === "active"
                       ? tr("Active Student", "طالب مفعل")
@@ -296,14 +308,14 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                       : tr("Enrolled", "مسجل")}
                   </Badge>
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
-                  <Mail className="size-3.5" />
-                  <span>{profile?.email}</span>
+                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 truncate">
+                  <Mail className="size-3.5 shrink-0" />
+                  <span className="truncate">{profile?.email}</span>
                 </p>
                 {(profile?.university || profile?.faculty) && (
                   <p className="text-xs text-primary font-bold flex items-center gap-1.5 pt-0.5">
-                    <GraduationCap className="size-4" />
-                    <span>
+                    <GraduationCap className="size-4 shrink-0" />
+                    <span className="truncate">
                       {[profile.faculty, profile.university].filter(Boolean).join(" • ")}
                     </span>
                   </p>
@@ -312,14 +324,14 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
             </div>
 
             {/* Quick Actions */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSignOut}
-                className="gap-2 font-bold text-xs rounded-xl shadow-xs"
+                className="btn-nowrap gap-2 font-bold text-xs rounded-xl shadow-xs"
               >
-                <LogOut className="size-3.5 text-muted-foreground" />
+                <LogOut className="size-3.5 text-muted-foreground shrink-0" />
                 <span>{tr("Sign Out", "تسجيل الخروج")}</span>
               </Button>
             </div>
@@ -328,89 +340,89 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
         {/* ─── Metric Highlight Cards ───────────────────────────────────────── */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <Card className="shadow-none">
+          <Card className="card-interactive card-equal shadow-none">
             <CardContent className="p-4 sm:p-5 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase">{tr("Study Hours", "ساعات التعلم")}</span>
-                <Clock className="size-4 text-primary" />
+                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Study Hours", "ساعات التعلم")}</span>
+                <Clock className="size-4 text-primary shrink-0" />
               </div>
               <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.hoursStudied}h</p>
-              <p className="text-[11px] text-muted-foreground">{tr("Watched video lectures", "مشاهدة شروحات الفيديو")}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Watched video lectures", "مشاهدة شروحات الفيديو")}</p>
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
+          <Card className="card-interactive card-equal shadow-none">
             <CardContent className="p-4 sm:p-5 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase">{tr("Videos Watched", "المحاضرات المكتملة")}</span>
-                <BookOpen className="size-4 text-blue-500" />
+                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Videos Watched", "المحاضرات المكتملة")}</span>
+                <BookOpen className="size-4 text-blue-500 shrink-0" />
               </div>
               <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.videosWatched}</p>
-              <p className="text-[11px] text-muted-foreground">{tr("Completed lecture sessions", "محاضرة تم اجتيازها")}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Completed lecture sessions", "محاضرة تم اجتيازها")}</p>
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
+          <Card className="card-interactive card-equal shadow-none">
             <CardContent className="p-4 sm:p-5 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase">{tr("Quizzes Solved", "الاختبارات")}</span>
-                <Award className="size-4 text-emerald-500" />
+                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Quizzes Solved", "الاختبارات")}</span>
+                <Award className="size-4 text-emerald-500 shrink-0" />
               </div>
               <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.quizzesTaken}</p>
-              <p className="text-[11px] text-muted-foreground">{tr("Self-assessment tests", "اختبارات تقييم ذاتي")}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Self-assessment tests", "اختبارات تقييم ذاتي")}</p>
             </CardContent>
           </Card>
 
-          <Card className="shadow-none">
+          <Card className="card-interactive card-equal shadow-none">
             <CardContent className="p-4 sm:p-5 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase">{tr("Study Streak", "المواظبة")}</span>
-                <Zap className="size-4 text-amber-500" />
+                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Study Streak", "المواظبة")}</span>
+                <Zap className="size-4 text-amber-500 shrink-0" />
               </div>
               <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.streakDays} {tr("Days", "أيام")}</p>
-              <p className="text-[11px] text-muted-foreground">{tr("Consecutive active days", "أيام متتالية من التعلم")}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Consecutive active days", "أيام متتالية من التعلم")}</p>
             </CardContent>
           </Card>
         </div>
 
         {/* ─── Profile Tabs Navigation ──────────────────────────────────────── */}
-        <div className="flex items-center gap-2 border-b pb-2">
+        <div className="flex items-center gap-2 border-b pb-2 overflow-x-auto w-full">
           <button
             type="button"
             onClick={() => setActiveTab("info")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === "info"
                 ? "bg-primary text-primary-foreground shadow-2xs"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            <UserIcon className="size-4" />
+            <UserIcon className="size-4 shrink-0" />
             <span>{tr("Personal & Academic Info", "البيانات الشخصية والأكاديمية")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("learning")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === "learning"
                 ? "bg-primary text-primary-foreground shadow-2xs"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            <Activity className="size-4" />
+            <Activity className="size-4 shrink-0" />
             <span>{tr("Learning Activity", "سجل التقدم الدراسي")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("security")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === "security"
                 ? "bg-primary text-primary-foreground shadow-2xs"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            <Lock className="size-4" />
+            <Lock className="size-4 shrink-0" />
             <span>{tr("Security & Password", "الأمان وتغيير كلمة المرور")}</span>
           </button>
         </div>
@@ -575,55 +587,147 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           </form>
         )}
 
-        {/* ─── 2. LEARNING ACTIVITY TAB ─────────────────────────────────────── */}
+        {/* ─── 2. LEARNING ACTIVITY & ENROLLED COURSES TAB ──────────────────── */}
         {activeTab === "learning" && (
-          <div className="space-y-6 max-w-3xl">
+          <div className="space-y-6 max-w-4xl">
+            {/* My Enrolled Courses Section */}
+            <Card className="shadow-none">
+              <CardHeader className="pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                      <GraduationCap className="size-4 text-primary" />
+                      <span>{tr("My Enrolled Courses", "المقررات المسجل بها")}</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
+                      {tr("Courses you are actively registered in and your lecture completion progress.", "المقررات المسجل بها رسميًا ونسبة إنجاز المحاضرات والاختبارات.")}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary" className="font-mono font-bold text-xs">
+                    {enrolledCourses.length} {tr("Courses", "مقررات")}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {enrolledCourses.length === 0 ? (
+                  <div className="text-center py-10 border border-dashed rounded-2xl p-6 bg-muted/20">
+                    <BookOpen className="size-10 text-muted-foreground/50 mx-auto" />
+                    <h4 className="mt-3 text-sm font-bold">{tr("No enrolled courses yet", "لم تشترك في أي مقرر بعد")}</h4>
+                    <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto">
+                      {tr(
+                        "Browse our available curriculum and enroll in courses to begin your academic learning track.",
+                        "استعرض المقررات المتاحة واشترك في المساقات لبدء رحلتك التعليمية."
+                      )}
+                    </p>
+                    <Button size="sm" className="mt-4 font-bold" asChild>
+                      <Link href="/#courses">{tr("Explore Courses", "استعراض المقررات")}</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {enrolledCourses.map((item) => {
+                      const courseTitle = isAr ? item.course.title_ar : item.course.title_en
+                      const nextLectureHref = item.lastActiveLectureId
+                        ? `/lecture/${item.lastActiveLectureId}`
+                        : `/course/${item.courseId}`
+
+                      return (
+                        <div
+                          key={item.enrollmentId}
+                          className="rounded-2xl border bg-card p-4 flex flex-col justify-between space-y-3 hover:border-primary/40 transition-colors shadow-2xs card-equal"
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-bold text-sm leading-snug line-clamp-2">{courseTitle}</span>
+                              <Badge
+                                variant="outline"
+                                className={`badge-nowrap text-[10px] font-bold shrink-0 ${
+                                  item.status === "completed"
+                                    ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10"
+                                    : item.status === "pending"
+                                    ? "border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/10 animate-pulse"
+                                    : "border-primary/30 text-primary bg-primary/10"
+                                }`}
+                              >
+                                {item.status === "completed"
+                                  ? tr("Completed", "مكتمل")
+                                  : item.status === "pending"
+                                  ? tr("Pending Approval", "قيد المراجعة")
+                                  : tr("Active", "نشط")}
+                              </Badge>
+                            </div>
+
+                            <div className="space-y-1.5 pt-1">
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span className="whitespace-nowrap">{tr("Course Progress", "نسبة الإنجاز")}</span>
+                                <span className="font-mono font-bold text-foreground whitespace-nowrap">{item.progressPercent}%</span>
+                              </div>
+                              <Progress value={item.progressPercent} className="h-2" />
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground pt-1">
+                              <span className="whitespace-nowrap">
+                                {item.completedLectures} / {item.totalLectures} {tr("Lectures watched", "محاضرة مكتملة")}
+                              </span>
+                              {item.totalQuizzes > 0 && (
+                                <span className="whitespace-nowrap">
+                                  • {item.completedQuizzes} / {item.totalQuizzes} {tr("Quizzes", "اختبار")}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {item.status === "pending" ? (
+                            <Button size="sm" variant="outline" className="btn-nowrap w-full font-bold text-xs gap-1.5 h-8 mt-2 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10" asChild>
+                              <Link href={`/course/${item.courseId}`}>
+                                <Clock className="size-3.5 shrink-0" />
+                                <span>{tr("Pending Approval", "قيد مراجعة الإدارة")}</span>
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="default" className="btn-nowrap w-full font-bold text-xs gap-1.5 h-8 mt-2" asChild>
+                              <Link href={nextLectureHref}>
+                                <PlayCircle className="size-3.5 shrink-0" />
+                                <span>{item.completedLectures > 0 ? tr("Resume Learning", "متابعة الدراسة") : tr("Start Course", "بدء المقرر")}</span>
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Analytics & Milestones Summary */}
             <Card className="shadow-none">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold">
-                  {tr("Recent Learning Milestones", "أحدث الإنجازات التعليمية")}
+                  {tr("Learning Summary & Engagement", "ملخص النشاط والتفاعل")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {tr("Track your progress across courses, lectures, and self-assessments.", "متابعة التقدم في المساقات والمحاضرات والاختبارات.")}
+                  {tr("Aggregated overview of your study engagement and learning streak.", "نظرة عامة على نشاطك ومشاركتك المستمرة في المنصة.")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="p-4 rounded-2xl border bg-muted/20 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-blue-500/10 text-blue-600 grid place-items-center font-bold">
-                      <BookOpen className="size-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold">
-                        {tr("General Pharmacology & Pharmacokinetics", "علم الأدوية العام وحركية الدواء")}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground">
-                        {tr("Lecture: Drug Absorption & Bioavailability", "محاضرة: امتصاص الدواء والتوافر الحيوي")}
-                      </p>
-                    </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
+                    <p className="text-lg font-bold font-mono text-primary">{metrics.videosWatched}</p>
+                    <p className="text-[11px] text-muted-foreground">{tr("Videos Watched", "فيديو تمت مشاهدته")}</p>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-bold border-blue-500/30 text-blue-600">
-                    {tr("Completed", "مكتمل")}
-                  </Badge>
-                </div>
-
-                <div className="p-4 rounded-2xl border bg-muted/20 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-emerald-500/10 text-emerald-600 grid place-items-center font-bold">
-                      <Award className="size-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold">
-                        {tr("Clinical Pharmacotherapy MCQ Assessment", "اختبار التقييم السريري الشامل")}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground">
-                        {tr("Score: 92% • 18/20 Correct", "النتيجة: 92% • 18/20 إجابة صحيحة")}
-                      </p>
-                    </div>
+                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
+                    <p className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">{metrics.quizzesTaken}</p>
+                    <p className="text-[11px] text-muted-foreground">{tr("Quizzes Taken", "اختبار مكتمل")}</p>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-bold border-emerald-500/30 text-emerald-600">
-                    {tr("Passed", "اجتياز")}
-                  </Badge>
+                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
+                    <p className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">{metrics.hoursStudied}h</p>
+                    <p className="text-[11px] text-muted-foreground">{tr("Study Time", "ساعات التعلم")}</p>
+                  </div>
+                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
+                    <p className="text-lg font-bold font-mono text-purple-600 dark:text-purple-400">{metrics.streakDays} {tr("days", "أيام")}</p>
+                    <p className="text-[11px] text-muted-foreground">{tr("Active Streak", "أيام النشاط")}</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

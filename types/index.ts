@@ -129,6 +129,35 @@ export interface EnrollmentSettings {
   faculties: Faculty[];
 }
 
+// ─── Course Enrollment Types ──────────────────────────────────────────────────
+
+export type CourseEnrollmentStatus = 'active' | 'pending' | 'rejected' | 'completed';
+
+export interface CourseEnrollment {
+  id: string;
+  user_id: string;
+  course_id: string;
+  status: CourseEnrollmentStatus;
+  enrolled_at: string;
+  course?: Course;
+  user?: UserProfile;
+}
+
+export interface EnrolledCourseProgress {
+  enrollmentId: string;
+  courseId: string;
+  course: Course;
+  status: CourseEnrollmentStatus;
+  enrolledAt: string;
+  totalLectures: number;
+  completedLectures: number;
+  progressPercent: number;
+  totalQuizzes: number;
+  completedQuizzes: number;
+  lastActiveLectureId?: string | null;
+  lastActiveLectureTitle?: string | null;
+}
+
 // ─── UI / Utility Types ───────────────────────────────────────────────────────
 
 export type Locale = 'en' | 'ar';

@@ -386,17 +386,17 @@ export default function AnalyticsDashboard({
       </div>
 
       {/* ─── PRIMARY KPI CARDS (5 METRICS) ────────────────────────────────── */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {/* 1. Unique Learners / Visitors */}
-        <Card className="card-interactive shadow-none">
-          <CardContent className="p-3.5 sm:p-5">
+        <Card className="card-interactive card-equal shadow-none">
+          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-primary/10 text-primary">
+              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-primary/10 text-primary shrink-0">
                 <Users className="size-4 sm:size-5" />
               </span>
-              <Badge variant="outline" className="gap-1 text-[10px] font-mono">
-                <Clock className="size-2.5" />
-                {timeRange.toUpperCase()}
+              <Badge variant="outline" className="badge-nowrap gap-1 text-[10px] font-mono shrink-0">
+                <Clock className="size-2.5 shrink-0" />
+                <span>{timeRange.toUpperCase()}</span>
               </Badge>
             </div>
             <div className="mt-3 sm:mt-4">
@@ -418,14 +418,14 @@ export default function AnalyticsDashboard({
         </Card>
 
         {/* 2. Estimated Learning Delivered */}
-        <Card className="card-interactive shadow-none">
-          <CardContent className="p-3.5 sm:p-5">
+        <Card className="card-interactive card-equal shadow-none">
+          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
                 <TrendingUp className="size-4 sm:size-5" />
               </span>
-              <Badge variant="outline" className="border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-bold text-[10px]">
-                {tr("Study Time", "ساعات التعلم")}
+              <Badge variant="outline" className="badge-nowrap border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] shrink-0">
+                <span>{tr("Study Time", "ساعات التعلم")}</span>
               </Badge>
             </div>
             <div className="mt-3 sm:mt-4">
@@ -447,14 +447,14 @@ export default function AnalyticsDashboard({
         </Card>
 
         {/* 3. Video Sessions & Completion */}
-        <Card className="card-interactive shadow-none">
-          <CardContent className="p-3.5 sm:p-5">
+        <Card className="card-interactive card-equal shadow-none">
+          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-[#6AA6B8]/15 text-[#6AA6B8]">
+              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-[#6AA6B8]/15 text-[#6AA6B8] shrink-0">
                 <Video className="size-4 sm:size-5" />
               </span>
-              <Badge variant="outline" className="gap-1 border-primary/30 text-primary font-bold text-[10px]">
-                {data.retention?.completionRate ?? 0}% {tr("completed", "إكمال")}
+              <Badge variant="outline" className="badge-nowrap gap-1 border-primary/30 text-primary font-bold text-[10px] shrink-0">
+                <span>{data.retention?.completionRate ?? 0}% {tr("completed", "إكمال")}</span>
               </Badge>
             </div>
             <div className="mt-3 sm:mt-4">
@@ -476,18 +476,18 @@ export default function AnalyticsDashboard({
         </Card>
 
         {/* 4. Quiz Mastery & Pass Rate */}
-        <Card className="card-interactive shadow-none">
-          <CardContent className="p-3.5 sm:p-5">
+        <Card className="card-interactive card-equal shadow-none">
+          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
                 <Award className="size-4 sm:size-5" />
               </span>
               <Badge
                 variant="outline"
-                className="gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]"
+                className="badge-nowrap gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] shrink-0"
               >
-                <CheckCircle2 className="size-2.5" />
-                {data.stats.quizPassRate}%
+                <CheckCircle2 className="size-2.5 shrink-0" />
+                <span>{data.stats.quizPassRate}%</span>
               </Badge>
             </div>
             <div className="mt-3 sm:mt-4">
@@ -509,25 +509,26 @@ export default function AnalyticsDashboard({
         </Card>
 
         {/* 5. Community Q&A Resolution */}
-        <Card className="card-interactive shadow-none col-span-2 sm:col-span-1">
-          <CardContent className="p-3.5 sm:p-5">
+        <Card className="card-interactive card-equal shadow-none col-span-2 md:col-span-1">
+          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
                 <MessageCircle className="size-4 sm:size-5" />
               </span>
               {unansweredQuestionsCount > 0 ? (
-                <Badge variant="destructive" className="text-[10px] font-bold">
-                  {unansweredQuestionsCount} {tr("Pending", "معلق")}
+                <Badge variant="destructive" className="badge-nowrap text-[10px] font-bold shrink-0">
+                  <span>{unansweredQuestionsCount} {tr("Pending", "معلق")}</span>
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="text-[10px] font-bold">
-                  {tr("All Resolved", "تم الرد")}
+                <Badge variant="outline" className="badge-nowrap border-emerald-500/30 text-emerald-600 font-bold text-[10px] shrink-0">
+                  <CheckCircle2 className="size-2.5 shrink-0" />
+                  <span>{tr("All Resolved", "مكتمل")}</span>
                 </Badge>
               )}
             </div>
             <div className="mt-3 sm:mt-4">
               <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">
-                {tr("Q&A Inquiries", "استفسارات الطلاب")}
+                {tr("Student Inquiries", "استفسارات الطلاب")}
               </p>
               <p className="mt-1 text-2xl sm:text-3xl font-black">
                 {unansweredQuestionsCount === 0

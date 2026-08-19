@@ -49,18 +49,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ error: error.message })
       }
 
-      // Fetch progress metrics from analytics or courses
-      const { count: videoViewsCount } = await supabaseAdmin
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .like("event_name", "video_%")
+      // Fetch progress metrics from analytics and real course enrollments
+      const [{ count: videoViewsCount }, { count: quizAttemptsCount }, { count: enrollmentsCount }] = await Promise.all([
+        supabaseAdmin
+          .from("analytics_events")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .like("event_name", "video_%"),
+        supabaseAdmin
+          .from("analytics_events")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .like("event_name", "quiz_%"),
+        supabaseAdmin
+          .from("course_enrollments")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("status", "active"),
+      ])
 
-      const { count: quizAttemptsCount } = await supabaseAdmin
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .like("event_name", "quiz_%")
+      const totalVideos = videoViewsCount || 0
+      const totalQuizzes = quizAttemptsCount || 0
+      const activeEnrollments = enrollmentsCount || 0
 
       return res.status(200).json({
         profile: profile || {
@@ -71,11 +81,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: "active",
         },
         metrics: {
-          videosWatched: videoViewsCount || 0,
-          quizzesTaken: quizAttemptsCount || 0,
-          hoursStudied: Math.round(((videoViewsCount || 0) * 0.45) * 10) / 10,
-          streakDays: 4,
-          coursesEnrolled: 3,
+          videosWatched: totalVideos,
+          quizzesTaken: totalQuizzes,
+          hoursStudied: Math.round((totalVideos * 0.45) * 10) / 10,
+          streakDays: Math.max(1, Math.min(30, Math.ceil(totalVideos / 2) || 1)),
+          coursesEnrolled: activeEnrollments,
         },
       })
     } catch (err: unknown) {

@@ -381,7 +381,7 @@ export default function AdminModals({
 
       {/* ─── 3. QUIZ MODAL ───────────────────────────────────────────── */}
       <Dialog open={editor === "quiz"} onOpenChange={(v) => !v && setEditor(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-xl p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           <form onSubmit={onSaveQuiz}>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl font-extrabold">
@@ -474,7 +474,7 @@ export default function AdminModals({
 
       {/* ─── 4. RESOURCE MODAL ───────────────────────────────────────── */}
       <Dialog open={editor === "resource"} onOpenChange={(v) => !v && setEditor(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-xl p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           <form onSubmit={onSaveResource}>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl font-extrabold">
@@ -800,75 +800,60 @@ export default function AdminModals({
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid gap-3.5 sm:gap-4 py-4 sm:py-5 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="edit-user-name" className="text-xs font-bold">{tr("Full Name", "الاسم الكامل")}</Label>
+              <div className="space-y-4 py-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{tr("Email (Immutable)", "البريد الإلكتروني")}</Label>
+                  <Input value={editingUser.email} disabled className="bg-muted text-muted-foreground text-xs" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{tr("Full Name", "الاسم الكامل")}</Label>
                   <Input
-                    id="edit-user-name"
                     value={userEditForm.full_name}
-                    onChange={(e) => setUserEditForm((prev) => ({ ...prev, full_name: e.target.value }))}
-                    autoComplete="name"
-                    className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                    onChange={(e) => setUserEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                    placeholder="Dr. Sarah Ahmed"
                     required
+                    className="text-xs"
                   />
                 </div>
 
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="edit-user-email" className="text-xs font-bold">{tr("Email Address", "البريد الإلكتروني")}</Label>
-                  <Input
-                    id="edit-user-email"
-                    type="email"
-                    value={userEditForm.email}
-                    onChange={(e) => setUserEditForm((prev) => ({ ...prev, email: e.target.value }))}
-                    autoComplete="email"
-                    className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="edit-user-pwd" className="text-xs font-bold">{tr("New Password (Optional)", "كلمة مرور جديدة (اختياري)")}</Label>
-                  <Input
-                    id="edit-user-pwd"
-                    type="password"
-                    minLength={8}
-                    value={userEditForm.password}
-                    onChange={(e) => setUserEditForm((prev) => ({ ...prev, password: e.target.value }))}
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                    className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    {tr("Leave blank to keep the current password.", "اتركها فارغة للإبقاء على كلمة المرور الحالية.")}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs font-bold">{tr("Assigned Role", "الدور")}</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{tr("Staff Role", "الدور الوظيفي")}</Label>
                   <Select
                     value={userEditForm.role}
-                    onValueChange={(val) => setUserEditForm((prev) => ({ ...prev, role: val as UserRole }))}
+                    onValueChange={(val: UserRole) => setUserEditForm((f) => ({ ...f, role: val }))}
                     disabled={editingUser.id === currentUserId}
                   >
-                    <SelectTrigger className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]">
+                    <SelectTrigger className="text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mentor">{tr("Mentor (Courses, Quizzes, Q&A)", "مرشد تعليمي")}</SelectItem>
-                      <SelectItem value="super_admin">{tr("Super Admin (Full Access + Users)", "مشرف عام")}</SelectItem>
-                      <SelectItem value="dev">{tr("Developer (Full Access + Site CMS)", "مطور")}</SelectItem>
+                      <SelectItem value="mentor">{tr("Mentor / Instructor", "أستاذ / مرشد تعليمي")}</SelectItem>
+                      <SelectItem value="super_admin">{tr("Super Administrator", "مدير نظام عام")}</SelectItem>
+                      <SelectItem value="dev">{tr("Developer / Engineering", "مطور برمجيات")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-1.5 border-t pt-3">
+                  <Label className="text-xs">{tr("Set New Password (optional)", "تعيين كلمة مرور جديدة (اختياري)")}</Label>
+                  <Input
+                    type="password"
+                    value={userEditForm.password}
+                    onChange={(e) => setUserEditForm((f) => ({ ...f, password: e.target.value }))}
+                    placeholder={tr("Leave blank to keep unchanged", "اتركه فارغًا للإبقاء دون تغيير")}
+                    className="text-xs"
+                  />
+                </div>
               </div>
 
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
                 <Button type="button" variant="outline" onClick={() => setEditingUser(null)} className="w-full sm:w-auto min-h-[40px] sm:min-h-[36px]">
                   {tr("Cancel", "إلغاء")}
                 </Button>
-                <Button type="submit" disabled={userActionId === editingUser.id} className="w-full sm:w-auto min-h-[40px] sm:min-h-[36px]">
-                  {userActionId === editingUser.id && <Loader2 className="size-3.5 animate-spin me-1.5" />}
-                  {tr("Save Changes", "حفظ التعديلات")}
+                <Button type="submit" disabled={saving} className="gap-1.5 font-bold w-full sm:w-auto min-h-[40px] sm:min-h-[36px]">
+                  {saving && <Loader2 className="size-3.5 animate-spin" />}
+                  <span>{tr("Save Changes", "حفظ التعديلات")}</span>
                 </Button>
               </DialogFooter>
             </form>
@@ -878,7 +863,7 @@ export default function AdminModals({
 
       {/* ─── 7. DELETE USER CONFIRMATION ─────────────────────────────── */}
       <Dialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-md p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-md overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           {deletingUser && (
             <>
               <DialogHeader>
@@ -919,7 +904,7 @@ export default function AdminModals({
 
       {/* ─── 8. UNANSWERED QUESTIONS NOTIFICATION MODAL ──────────────── */}
       <Dialog open={questionAlertOpen} onOpenChange={setQuestionAlertOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-md p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-md overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           <DialogHeader>
             <div className="mb-2.5 grid size-10 place-items-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <MessageCircle className="size-5" />

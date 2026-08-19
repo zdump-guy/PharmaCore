@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { loadSiteContent } from "@/lib/siteContent"
+import { verifyTurnstileToken, extractClientIp } from "@/lib/turnstile"
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -35,7 +36,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       university,
       faculty,
       start_year,
+      turnstileToken,
     } = req.body
+
+    // 1. Cloudflare Turnstile Bot & Spam Verification
+    const clientIp = extractClientIp(req)
+    const turnstileResult = await verifyTurnstileToken({
+      token: turnstileToken,
+      remoteIp: clientIp,
+      expectedAction: "student_signup",
+    })
+
+    if (!turnstileResult.success) {
+      return res.status(403).json({
+        error: "Security verification failed. Please refresh and try again.",
+        error_ar: "فشل التحقق الأمني من النشاط التلقائي. يرجى إعادة المحاولة.",
+      })
+    }
 
     // Validation
     if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !password) {

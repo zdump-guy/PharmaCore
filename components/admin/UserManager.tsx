@@ -108,21 +108,21 @@ export default function UserManager({
 
         {/* Quick Role Badges */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <Badge variant="outline" className="text-xs gap-1.5 py-1">
-            <span className="size-2 rounded-full bg-purple-500" />
-            {devsCount} {tr("Devs", "مطورين")}
+          <Badge variant="outline" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+            <span className="size-2 rounded-full bg-purple-500 shrink-0" />
+            <span>{devsCount} {tr("Devs", "مطورين")}</span>
           </Badge>
-          <Badge variant="outline" className="text-xs gap-1.5 py-1">
-            <span className="size-2 rounded-full bg-primary" />
-            {superAdminsCount} {tr("Super Admins", "مشرفين عامين")}
+          <Badge variant="outline" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+            <span className="size-2 rounded-full bg-primary shrink-0" />
+            <span>{superAdminsCount} {tr("Super Admins", "مشرفين عامين")}</span>
           </Badge>
-          <Badge variant="outline" className="text-xs gap-1.5 py-1">
-            <span className="size-2 rounded-full bg-emerald-500" />
-            {mentorsCount} {tr("Mentors", "مرشدين")}
+          <Badge variant="outline" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+            <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+            <span>{mentorsCount} {tr("Mentors", "مرشدين")}</span>
           </Badge>
           {suspendedCount > 0 && (
-            <Badge variant="destructive" className="text-xs gap-1.5 py-1">
-              {suspendedCount} {tr("Suspended", "موقوف")}
+            <Badge variant="destructive" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+              <span>{suspendedCount} {tr("Suspended", "موقوف")}</span>
             </Badge>
           )}
         </div>
@@ -308,32 +308,32 @@ export default function UserManager({
                               {user.full_name || tr("Unnamed staff", "عضو بدون اسم")}
                             </p>
                             {isCurrent && (
-                              <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/30">
-                                {tr("You", "أنت")}
+                              <Badge variant="outline" className="badge-nowrap text-[10px] bg-primary/5 text-primary border-primary/30 shrink-0">
+                                <span>{tr("You", "أنت")}</span>
                               </Badge>
                             )}
-                            <Badge variant="outline" className={`text-[10px] capitalize ${roleBadgeColor}`}>
-                              <ShieldCheck className="size-3 me-1" />
-                              {user.role.replace("_", " ")}
+                            <Badge variant="outline" className={`badge-nowrap text-[10px] capitalize shrink-0 ${roleBadgeColor}`}>
+                              <ShieldCheck className="size-3 me-1 shrink-0" />
+                              <span>{user.role.replace("_", " ")}</span>
                             </Badge>
                             <Badge
                               variant={suspended ? "destructive" : "secondary"}
-                              className="text-[10px]"
+                              className="badge-nowrap text-[10px] shrink-0"
                             >
-                              {suspended ? tr("Suspended", "موقوف") : tr("Active", "نشط")}
+                              <span>{suspended ? tr("Suspended", "موقوف") : tr("Active", "نشط")}</span>
                             </Badge>
                           </div>
 
                           <p className="font-mono text-xs text-muted-foreground truncate">{user.email}</p>
 
                           <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-[11px] text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <ClockIcon className="size-3" />
-                              {tr("Joined:", "انضم:")}{" "}
-                              {new Date(user.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}
+                            <span className="flex items-center gap-1 whitespace-nowrap">
+                              <ClockIcon className="size-3 shrink-0" />
+                              <span>{tr("Joined:", "انضم:")}{" "}
+                              {new Date(user.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}</span>
                             </span>
                             {user.last_sign_in_at && (
-                              <span>
+                              <span className="whitespace-nowrap">
                                 {tr("Last active:", "آخر نشاط:")}{" "}
                                 {new Date(user.last_sign_in_at).toLocaleDateString(isAr ? "ar-EG" : "en-US")}
                               </span>
@@ -347,36 +347,36 @@ export default function UserManager({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 text-xs font-semibold gap-1 px-2.5"
+                          className="btn-nowrap h-8 text-xs font-semibold gap-1 px-2.5 shrink-0"
                           onClick={() => onOpenEditUser(user)}
                           disabled={isBusy}
                         >
-                          <Pencil className="size-3" />
-                          {tr("Edit", "تعديل")}
+                          <Pencil className="size-3 shrink-0" />
+                          <span>{tr("Edit", "تعديل")}</span>
                         </Button>
 
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`h-8 text-xs font-semibold gap-1 px-2.5 ${
+                          className={`btn-nowrap h-8 text-xs font-semibold gap-1 px-2.5 shrink-0 ${
                             suspended ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
                           }`}
                           onClick={() => onToggleSuspendUser(user)}
                           disabled={isBusy || isCurrent}
                         >
-                          {suspended ? <ActivateIcon className="size-3" /> : <SuspendIcon className="size-3" />}
-                          {suspended ? tr("Restore Access", "تفعيل") : tr("Suspend Access", "إيقاف")}
+                          {suspended ? <ActivateIcon className="size-3 shrink-0" /> : <SuspendIcon className="size-3 shrink-0" />}
+                          <span>{suspended ? tr("Restore Access", "تفعيل") : tr("Suspend Access", "إيقاف")}</span>
                         </Button>
 
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 text-xs font-semibold gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive ms-auto px-2.5"
+                          className="btn-nowrap h-8 text-xs font-semibold gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive ms-auto px-2.5 shrink-0"
                           onClick={() => onOpenDeleteUser(user)}
                           disabled={isBusy || isCurrent}
                         >
-                          <Trash2 className="size-3" />
-                          {tr("Delete", "حذف")}
+                          <Trash2 className="size-3 shrink-0" />
+                          <span>{tr("Delete", "حذف")}</span>
                         </Button>
                       </div>
                     </div>

@@ -125,12 +125,12 @@ export default function Footer() {
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group"
+                        className="inline-flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group max-w-full"
                       >
                         <Icon className="size-3.5 text-foreground/70 group-hover:text-primary transition-colors shrink-0" aria-hidden="true" />
-                        <span className="font-medium group-hover:underline underline-offset-4 text-foreground">{platformName}</span>
+                        <span className="font-medium group-hover:underline underline-offset-4 text-foreground whitespace-nowrap">{platformName}</span>
                         {label && (
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground truncate">
                             — {label}
                           </span>
                         )}
@@ -161,10 +161,10 @@ export default function Footer() {
               <li>
                 <a
                   href={`mailto:${copy.footer_email}`}
-                  className="inline-flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group"
+                  className="inline-flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group max-w-full"
                 >
                   <Mail className="size-3.5 text-foreground/70 group-hover:text-primary transition-colors shrink-0" />
-                  <span className="font-medium group-hover:underline underline-offset-4">{copy.footer_email}</span>
+                  <span className="font-medium group-hover:underline underline-offset-4 truncate">{copy.footer_email}</span>
                 </a>
               </li>
 
@@ -178,7 +178,7 @@ export default function Footer() {
                     className="inline-flex items-center gap-2.5 text-xs text-muted-foreground hover:text-primary transition-colors group"
                   >
                     <Icon className="size-3.5 text-foreground/70 group-hover:text-primary transition-colors shrink-0" aria-hidden="true" />
-                    <span className="font-medium group-hover:underline underline-offset-4">{label}</span>
+                    <span className="font-medium group-hover:underline underline-offset-4 whitespace-nowrap">{label}</span>
                   </a>
                 </li>
               ))}

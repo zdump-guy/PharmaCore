@@ -1,5 +1,5 @@
 import type { GetServerSideProps } from "next"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/router"
 import { serverSideTranslations } from "next-i18next/serverSideTranslations"
 import {
@@ -19,6 +19,7 @@ import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
 import BrandMark from "@/components/BrandMark"
 import StudentSetupModal from "@/components/StudentSetupModal"
+import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,8 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
   const [signUpStatus, setSignUpStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
   const [signUpMessage, setSignUpMessage] = useState("")
   const [isPendingReview, setIsPendingReview] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState("")
+  const turnstileRef = useRef<TurnstileRef>(null)
 
   // ─── Setup Modal State (for Generic Provisioned Accounts) ──────────────────
   const [setupModalOpen, setSetupModalOpen] = useState(false)
@@ -259,12 +262,14 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
           university,
           faculty,
           start_year: startYear,
+          turnstileToken,
         }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
+        turnstileRef.current?.reset()
         throw new Error((isAr && data.error_ar) ? data.error_ar : (data.error || "Failed to register"))
       }
 
@@ -283,6 +288,7 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
         router.replace(returnUrl || "/#courses")
       }
     } catch (err: unknown) {
+      turnstileRef.current?.reset()
       setSignUpStatus("error")
       setSignUpMessage(err instanceof Error ? err.message : "Failed to sign up")
     }
@@ -361,22 +367,22 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
             <div className="mb-6 flex items-center justify-between">
               <BrandMark className="size-10" />
               {returnUrl && (
-                <Badge variant="secondary" className="text-[11px] gap-1 font-mono">
-                  <LockKeyhole className="size-3" />
-                  {isAr ? "محتوى مخصص" : "Protected Content"}
+                <Badge variant="secondary" className="badge-nowrap text-[11px] gap-1 font-mono shrink-0">
+                  <LockKeyhole className="size-3 shrink-0" />
+                  <span>{isAr ? "محتوى مخصص" : "Protected Content"}</span>
                 </Badge>
               )}
             </div>
 
             <Tabs value={tab} onValueChange={(val) => setTab(val as "signin" | "signup")}>
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="gap-2">
-                  <LockKeyhole className="size-3.5" />
-                  {copy.signInTab}
+                <TabsTrigger value="signin" className="badge-nowrap gap-2 min-h-10 text-xs sm:text-sm font-semibold">
+                  <LockKeyhole className="size-3.5 shrink-0" />
+                  <span>{copy.signInTab}</span>
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="gap-2">
-                  <UserPlus className="size-3.5" />
-                  {copy.signUpTab}
+                <TabsTrigger value="signup" className="badge-nowrap gap-2 min-h-10 text-xs sm:text-sm font-semibold">
+                  <UserPlus className="size-3.5 shrink-0" />
+                  <span>{copy.signUpTab}</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -430,16 +436,16 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
 
                   {signInStatus === "pending_approval" && (
                     <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
-                      <Clock className="size-4 text-amber-600" />
+                      <Clock className="size-4 text-amber-600 shrink-0" />
                       <AlertTitle className="font-bold">{copy.approvalNoticeTitle}</AlertTitle>
                       <AlertDescription className="text-xs mt-1">{copy.pendingError}</AlertDescription>
                     </Alert>
                   )}
 
-                  <Button type="submit" size="lg" className="w-full mt-2" disabled={signInStatus === "submitting"}>
-                    {signInStatus === "submitting" ? <Loader2 className="animate-spin" /> : <LockKeyhole />}
-                    {signInStatus === "submitting" ? copy.submitting : copy.signInBtn}
-                    <ArrowRight className="rtl:rotate-180" />
+                  <Button type="submit" size="lg" className="btn-nowrap w-full mt-2" disabled={signInStatus === "submitting"}>
+                    {signInStatus === "submitting" ? <Loader2 className="animate-spin shrink-0" /> : <LockKeyhole className="shrink-0" />}
+                    <span>{signInStatus === "submitting" ? copy.submitting : copy.signInBtn}</span>
+                    <ArrowRight className="shrink-0 rtl:rotate-180" />
                   </Button>
                 </form>
               </TabsContent>
@@ -624,6 +630,15 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                         <AlertDescription>{signUpMessage}</AlertDescription>
                       </Alert>
                     )}
+
+                    {/* Background Cloudflare Turnstile bot verification */}
+                    <Turnstile
+                      ref={turnstileRef}
+                      action="student_signup"
+                      size="invisible"
+                      onVerify={(token) => setTurnstileToken(token)}
+                      onExpire={() => setTurnstileToken("")}
+                    />
 
                     <Button type="submit" size="lg" className="w-full mt-3" disabled={signUpStatus === "submitting"}>
                       {signUpStatus === "submitting" ? <Loader2 className="animate-spin" /> : <UserPlus />}

@@ -269,7 +269,7 @@ export default function DeveloperConsole({
                     }`}
                   />
                 </span>
-                <Badge variant="secondary" className="text-xs font-mono font-bold ms-1">
+                <Badge variant="secondary" className="badge-nowrap text-xs font-mono font-bold ms-1 shrink-0">
                   {filteredEvents.length} {tr("events", "حدث")}
                 </Badge>
               </div>
@@ -281,16 +281,16 @@ export default function DeveloperConsole({
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setLiveStreamActive(!liveStreamActive)}
-                className={`gap-1.5 text-xs font-bold shadow-xs h-9 ${
+                className={`btn-nowrap gap-1.5 text-xs font-bold shadow-xs h-9 shrink-0 ${
                   liveStreamActive ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600"
                 }`}
               >
-                {liveStreamActive ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+                {liveStreamActive ? <Pause className="size-3.5 shrink-0" /> : <Play className="size-3.5 shrink-0" />}
                 <span>{liveStreamActive ? tr("Pause Stream", "إيقاف مؤقت") : tr("Resume Stream", "استئناف")}</span>
               </Button>
 
@@ -299,9 +299,9 @@ export default function DeveloperConsole({
                 size="sm"
                 onClick={handleExportCSV}
                 disabled={!filteredEvents.length}
-                className="gap-1.5 text-xs font-bold shadow-xs h-9"
+                className="btn-nowrap gap-1.5 text-xs font-bold shadow-xs h-9 shrink-0"
               >
-                <Download className="size-3.5" />
+                <Download className="size-3.5 shrink-0" />
                 <span>CSV</span>
               </Button>
 
@@ -310,9 +310,9 @@ export default function DeveloperConsole({
                 size="sm"
                 onClick={handleExportJSON}
                 disabled={!filteredEvents.length}
-                className="gap-1.5 text-xs font-bold shadow-xs h-9"
+                className="btn-nowrap gap-1.5 text-xs font-bold shadow-xs h-9 shrink-0"
               >
-                <Code className="size-3.5" />
+                <Code className="size-3.5 shrink-0" />
                 <span>JSON</span>
               </Button>
 
@@ -320,10 +320,10 @@ export default function DeveloperConsole({
                 variant="ghost"
                 size="sm"
                 onClick={() => setEvents([])}
-                className="size-9 p-0 text-muted-foreground hover:text-destructive"
+                className="size-9 p-0 text-muted-foreground hover:text-destructive shrink-0"
                 title={tr("Clear buffer", "مسح السجل المحلي")}
               >
-                <Trash2 className="size-3.5" />
+                <Trash2 className="size-3.5 shrink-0" />
               </Button>
             </div>
           </div>

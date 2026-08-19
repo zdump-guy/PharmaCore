@@ -114,11 +114,11 @@ export default function SiteContentManager({
       <div className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Globe className="size-5 text-primary" />
+            <Globe className="size-5 text-primary shrink-0" />
             <h3 className="text-xl font-bold tracking-tight">{tr("Website Content CMS", "إدارة وتخصيص نصوص الموقع")}</h3>
-            <Badge variant="outline" className="text-xs gap-1 font-mono">
-              <TypeIcon className="size-3" />
-              Bilingual
+            <Badge variant="outline" className="badge-nowrap text-xs gap-1 font-mono shrink-0">
+              <TypeIcon className="size-3 shrink-0" />
+              <span>Bilingual</span>
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -132,10 +132,10 @@ export default function SiteContentManager({
         <Button
           onClick={onSaveContent}
           disabled={saving}
-          className="gap-2 font-bold text-xs shrink-0 w-full sm:w-auto min-h-[40px] sm:min-h-[36px]"
+          className="btn-nowrap gap-2 font-bold text-xs shrink-0 w-full sm:w-auto min-h-[40px] sm:min-h-[36px]"
         >
-          {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          {saving ? tr("Publishing Changes...", "جارٍ حفظ التغييرات...") : tr("Publish Site Content", "نشر محتوى الموقع")}
+          {saving ? <Loader2 className="size-4 animate-spin shrink-0" /> : <Save className="size-4 shrink-0" />}
+          <span>{saving ? tr("Publishing Changes...", "جارٍ حفظ التغييرات...") : tr("Publish Site Content", "نشر محتوى الموقع")}</span>
         </Button>
       </div>
 
@@ -160,7 +160,7 @@ export default function SiteContentManager({
                   <h4 className="font-bold text-sm sm:text-base leading-none">
                     {tr("PharmaCore Community & Social Channels", "قنوات المجتمع وروابط التواصل الاجتماعي")}
                   </h4>
-                  <Badge variant="secondary" className="text-xs font-mono">
+                  <Badge variant="secondary" className="badge-nowrap text-xs font-mono shrink-0">
                     {socialLinks.length}
                   </Badge>
                 </div>
@@ -187,10 +187,10 @@ export default function SiteContentManager({
                 type="button"
                 size="sm"
                 onClick={addSocialLink}
-                className="gap-1.5 font-bold text-xs shrink-0 min-h-[36px]"
+                className="btn-nowrap gap-1.5 font-bold text-xs shrink-0 min-h-[36px]"
               >
-                <Plus className="size-3.5" />
-                {tr("Add Social Channel", "إضافة قناة تواصل")}
+                <Plus className="size-3.5 shrink-0" />
+                <span>{tr("Add Social Channel", "إضافة قناة تواصل")}</span>
               </Button>
             </div>
 

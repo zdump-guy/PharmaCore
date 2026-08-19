@@ -16,6 +16,7 @@ import {
   FiSearch as Search,
   FiShield as Shield,
   FiTrash2 as Trash2,
+  FiUsers as Users,
   FiVideo as FileVideo,
   FiX as X,
   FiYoutube as YoutubeIcon,
@@ -25,10 +26,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { Course, Lecture, Question, Quiz, Resource } from "@/types"
+import CourseEnrollmentManager from "@/components/admin/CourseEnrollmentManager"
+import type { Course, EnrollmentSettings, Lecture, Question, Quiz, Resource } from "@/types"
 
 interface CurriculumManagerProps {
   isAr: boolean
+  token?: string | null
+  enrollmentSettings?: EnrollmentSettings
   searchQuery: string
   courses: Course[]
   lectures: Lecture[]
@@ -38,6 +42,7 @@ interface CurriculumManagerProps {
   selectedQuizId: string
   setSelectedQuizId: (id: string) => void
   activeSubTab?: SubTab
+  selectedEnrollmentCourseId?: string
   onOpenCourseEditor: (course?: Course) => void
   onOpenLectureEditor: (lecture?: Lecture) => void
   onOpenQuizEditor: (quiz?: Quiz) => void
@@ -48,12 +53,16 @@ interface CurriculumManagerProps {
     id: string,
     name: string
   ) => void
+  onNavigateToEnrollments?: (courseId?: string) => void
+  onEnrollmentsUpdated?: (pendingCount: number) => void
 }
 
-type SubTab = "courses" | "lectures" | "quizzes" | "resources"
+type SubTab = "courses" | "enrollments" | "lectures" | "quizzes" | "resources"
 
 export default function CurriculumManager({
   isAr,
+  token = null,
+  enrollmentSettings = { signup_mode: "approval_required", universities: [], faculties: [] },
   searchQuery,
   courses,
   lectures,
@@ -63,12 +72,15 @@ export default function CurriculumManager({
   selectedQuizId,
   setSelectedQuizId,
   activeSubTab: controlledSubTab,
+  selectedEnrollmentCourseId,
   onOpenCourseEditor,
   onOpenLectureEditor,
   onOpenQuizEditor,
   onOpenResourceEditor,
   onOpenQuestionEditor,
   onDeleteEntity,
+  onNavigateToEnrollments,
+  onEnrollmentsUpdated,
 }: CurriculumManagerProps) {
   const activeSubTab = controlledSubTab || "courses"
   const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>("all")
@@ -185,7 +197,7 @@ export default function CurriculumManager({
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
             {filteredCourses.map((course) => {
               const courseLectures = lectures.filter((l) => l.course_id === course.id)
               const courseQuizzes = quizzes.filter((q) => q.course_id === course.id)
@@ -193,26 +205,26 @@ export default function CurriculumManager({
               const desc = isAr ? course.description_ar : course.description_en
 
               return (
-                <Card key={course.id} className="card-interactive overflow-hidden shadow-none flex flex-col justify-between">
+                <Card key={course.id} className="card-interactive card-equal overflow-hidden shadow-none flex flex-col justify-between">
                   <div>
                     {/* Course Thumbnail */}
                     {course.thumbnail_url ? (
-                      <div className="aspect-video w-full overflow-hidden bg-muted/40 relative">
+                      <div className="aspect-video w-full overflow-hidden bg-muted/40 relative shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={course.thumbnail_url}
                           alt={title}
                           className="h-full w-full object-cover"
                         />
-                        <Badge className="absolute top-2.5 end-2.5 bg-black/70 backdrop-blur-md text-[10px] text-white">
-                          {courseLectures.length} {tr("lectures", "محاضرة")}
+                        <Badge className="badge-nowrap absolute top-2.5 end-2.5 bg-black/70 backdrop-blur-md text-[10px] text-white">
+                          <span>{courseLectures.length} {tr("lectures", "محاضرة")}</span>
                         </Badge>
                       </div>
                     ) : (
-                      <div className="aspect-video w-full bg-muted/30 grid place-items-center relative border-b">
+                      <div className="aspect-video w-full bg-muted/30 grid place-items-center relative border-b shrink-0">
                         <BookOpen className="size-8 text-muted-foreground/40" />
-                        <Badge variant="outline" className="absolute top-2.5 end-2.5 text-[10px]">
-                          {courseLectures.length} {tr("lectures", "محاضرة")}
+                        <Badge variant="outline" className="badge-nowrap absolute top-2.5 end-2.5 text-[10px]">
+                          <span>{courseLectures.length} {tr("lectures", "محاضرة")}</span>
                         </Badge>
                       </div>
                     )}
@@ -223,27 +235,27 @@ export default function CurriculumManager({
                       {desc && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{desc}</p>}
 
                       <div className="flex flex-wrap gap-1.5 pt-1">
-                        <Badge variant="outline" className="text-[11px] gap-1">
-                          <FileVideo className="size-3 text-primary" />
-                          {courseLectures.length} {tr("Lectures", "محاضرة")}
+                        <Badge variant="outline" className="badge-nowrap text-[11px] gap-1 shrink-0">
+                          <FileVideo className="size-3 text-primary shrink-0" />
+                          <span>{courseLectures.length} {tr("Lectures", "محاضرة")}</span>
                         </Badge>
-                        <Badge variant="outline" className="text-[11px] gap-1">
-                          <ClipboardCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
-                          {courseQuizzes.length} {tr("Quizzes", "اختبار")}
+                        <Badge variant="outline" className="badge-nowrap text-[11px] gap-1 shrink-0">
+                          <ClipboardCheck className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>{courseQuizzes.length} {tr("Quizzes", "اختبار")}</span>
                         </Badge>
                         {course.is_locked || course.access_policy === "students_only" ? (
-                          <Badge variant="secondary" className="text-[10px] gap-1 border-amber-500/30 text-amber-700 dark:text-amber-300 font-bold">
-                            <Lock className="size-3 text-amber-600 dark:text-amber-400" />
+                          <Badge variant="secondary" className="badge-nowrap text-[10px] gap-1 border-amber-500/30 text-amber-700 dark:text-amber-300 font-bold shrink-0">
+                            <Lock className="size-3 text-amber-600 dark:text-amber-400 shrink-0" />
                             <span>{tr("Students Only", "للطلاب فقط")}</span>
                           </Badge>
                         ) : course.access_policy === "enrolled_only" ? (
-                          <Badge variant="secondary" className="text-[10px] gap-1 border-purple-500/30 text-purple-700 dark:text-purple-300 font-bold">
-                            <Shield className="size-3 text-purple-600 dark:text-purple-400" />
+                          <Badge variant="secondary" className="badge-nowrap text-[10px] gap-1 border-purple-500/30 text-purple-700 dark:text-purple-300 font-bold shrink-0">
+                            <Shield className="size-3 text-purple-600 dark:text-purple-400 shrink-0" />
                             <span>{tr("Cohort Only", "مجموعات محددة")}</span>
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-[10px] gap-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold">
-                            <Globe className="size-3 text-emerald-600 dark:text-emerald-400" />
+                          <Badge variant="secondary" className="badge-nowrap text-[10px] gap-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold shrink-0">
+                            <Globe className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                             <span>{tr("Open Access", "وصول مفتوح")}</span>
                           </Badge>
                         )}
@@ -252,25 +264,38 @@ export default function CurriculumManager({
                   </div>
 
                   {/* Actions footer */}
-                  <div className="border-t bg-muted/20 p-3 flex items-center justify-between gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 gap-1 text-xs font-semibold"
-                      onClick={() => onOpenCourseEditor(course)}
-                    >
-                      <Pencil className="size-3.5" />
-                      {tr("Edit Details", "تعديل")}
-                    </Button>
+                  <div className="border-t bg-muted/20 p-3 flex items-center justify-between gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="btn-nowrap h-8 gap-1 text-xs font-semibold shrink-0"
+                        onClick={() => onOpenCourseEditor(course)}
+                      >
+                        <Pencil className="size-3.5 shrink-0" />
+                        <span>{tr("Edit Details", "تعديل")}</span>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="btn-nowrap h-8 gap-1 text-xs font-semibold text-primary border-primary/30 hover:bg-primary/5 shrink-0"
+                        onClick={() => onNavigateToEnrollments?.(course.id)}
+                        title={tr("Manage Enrolled Students", "إدارة تسجيل وقبول الطلاب")}
+                      >
+                        <Users className="size-3.5 shrink-0" />
+                        <span>{tr("Students", "الطلاب")}</span>
+                      </Button>
+                    </div>
 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
                       onClick={() => onDeleteEntity("courses", course.id, title)}
                       title={tr("Delete course", "حذف المقرر")}
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-3.5 shrink-0" />
                     </Button>
                   </div>
                 </Card>
@@ -294,7 +319,19 @@ export default function CurriculumManager({
         </div>
       )}
 
-      {/* ─── 2. LECTURES VIEW ───────────────────────────────────────────── */}
+      {/* ─── 2. COURSE ENROLLMENTS & REQUESTS VIEW ────────────────────── */}
+      {activeSubTab === "enrollments" && (
+        <CourseEnrollmentManager
+          isAr={isAr}
+          token={token}
+          courses={courses}
+          enrollmentSettings={enrollmentSettings}
+          initialCourseFilter={selectedEnrollmentCourseId || selectedCourseFilter}
+          onEnrollmentsUpdated={onEnrollmentsUpdated}
+        />
+      )}
+
+      {/* ─── 3. LECTURES VIEW ───────────────────────────────────────────── */}
       {activeSubTab === "lectures" && (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
@@ -359,7 +396,7 @@ export default function CurriculumManager({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
             {filteredLectures.map((lecture) => {
               const courseTitle = getCourseTitle(lecture.course_id)
               const title = isAr ? lecture.title_ar : lecture.title_en
@@ -530,7 +567,7 @@ export default function CurriculumManager({
           </div>
 
           {/* Quiz Cards Grid */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
             {filteredQuizzes.map((quiz) => {
               const isSelected = (activeQuiz?.id ?? selectedQuizId) === quiz.id
               const quizQuestions = questions.filter((q) => q.quiz_id === quiz.id)
@@ -802,7 +839,7 @@ export default function CurriculumManager({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
             {filteredResources.map((resource) => {
               const lectureTitle = getLectureTitle(resource.lecture_id)
               const title = isAr ? resource.title_ar : resource.title_en

@@ -55,6 +55,7 @@ interface AdminSidebarProps {
   profile: UserProfile | null
   unansweredCount: number
   pendingStudentsCount: number
+  pendingEnrollmentsCount?: number
   canManageUsers: boolean
   isDev: boolean
   onLogout: () => void
@@ -72,6 +73,7 @@ export default function AdminSidebar({
   profile,
   unansweredCount,
   pendingStudentsCount,
+  pendingEnrollmentsCount = 0,
   canManageUsers,
   isDev,
   onLogout,
@@ -112,6 +114,16 @@ export default function AdminSidebar({
           label_en: "Courses Library",
           label_ar: "المقررات الدراسية",
           icon: BookOpen,
+        },
+        {
+          id: "curriculum:enrollments",
+          page: "curriculum",
+          subpage: "enrollments",
+          label_en: "Course Enrollments",
+          label_ar: "تسجيلات المقررات والطلبات",
+          icon: ShieldCheck,
+          badge: pendingEnrollmentsCount > 0 ? pendingEnrollmentsCount : null,
+          badgeColor: "bg-amber-500 text-white",
         },
         {
           id: "curriculum:lectures",
@@ -443,14 +455,14 @@ export default function AdminSidebar({
                         )}
 
                         {!collapsed && (
-                          <span className="truncate text-start flex-1 ms-2.5">
+                          <span className="truncate text-start flex-1 ms-2.5 whitespace-nowrap">
                             {isAr ? item.label_ar : item.label_en}
                           </span>
                         )}
 
                         {!collapsed && item.badge !== undefined && item.badge !== null && (
                           <span
-                            className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ms-2 ${
+                            className={`badge-nowrap px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ms-2 ${
                               item.badgeColor || "bg-primary/20 text-primary"
                             }`}
                           >

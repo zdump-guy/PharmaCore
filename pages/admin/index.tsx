@@ -150,9 +150,10 @@ export default function AdminPage() {
   
   // Navigation State
   const [activePage, setActivePage] = useState<string>("analytics")
-  const [activeCurriculumSubTab, setActiveCurriculumSubTab] = useState<"courses" | "lectures" | "quizzes" | "resources">("courses")
+  const [activeCurriculumSubTab, setActiveCurriculumSubTab] = useState<"courses" | "enrollments" | "lectures" | "quizzes" | "resources">("courses")
   const [activeStudentSubTab, setActiveStudentSubTab] = useState<"roster" | "pending" | "controller" | "directories" | "provision">("roster")
   const [activeDevSubTab, setActiveDevSubTab] = useState<DevSubTab>("logs")
+  const [selectedEnrollmentCourseId, setSelectedEnrollmentCourseId] = useState<string>("all")
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false)
 
@@ -169,6 +170,12 @@ export default function AdminPage() {
     }
   }
 
+  const handleNavigateToCourseEnrollments = (courseId?: string) => {
+    if (courseId) setSelectedEnrollmentCourseId(courseId)
+    setActivePage("curriculum")
+    setActiveCurriculumSubTab("enrollments")
+  }
+
   const currentSubpage =
     activePage === "curriculum"
       ? activeCurriculumSubTab
@@ -182,6 +189,7 @@ export default function AdminPage() {
 
   const [sessionToken, setSessionToken] = useState<string | null>(null)
   const [pendingStudentsCount, setPendingStudentsCount] = useState(0)
+  const [pendingEnrollmentsCount, setPendingEnrollmentsCount] = useState(0)
 
   // Users management
   const [userForm, setUserForm] = useState<UserForm>(emptyUser)
@@ -208,14 +216,21 @@ export default function AdminPage() {
 
       setSessionToken(session.access_token)
 
-      // Query pending students count
+      // Query pending students and course enrollments count
       try {
-        const { count } = await client
-          .from("users")
-          .select("*", { count: "exact", head: true })
-          .eq("role", "student")
-          .eq("status", "pending")
-        if (count !== null) setPendingStudentsCount(count)
+        const [{ count: studentCount }, { count: enrollCount }] = await Promise.all([
+          client
+            .from("users")
+            .select("*", { count: "exact", head: true })
+            .eq("role", "student")
+            .eq("status", "pending"),
+          client
+            .from("course_enrollments")
+            .select("*", { count: "exact", head: true })
+            .eq("status", "pending"),
+        ])
+        if (studentCount !== null) setPendingStudentsCount(studentCount)
+        if (enrollCount !== null) setPendingEnrollmentsCount(enrollCount)
       } catch {}
 
       const data = await Promise.all([
@@ -855,6 +870,7 @@ export default function AdminPage() {
           profile={profile}
           unansweredCount={unansweredCommunity.length}
           pendingStudentsCount={pendingStudentsCount}
+          pendingEnrollmentsCount={pendingEnrollmentsCount}
           canManageUsers={canManageUsers}
           isDev={isDev}
           onLogout={logout}
@@ -886,7 +902,7 @@ export default function AdminPage() {
           />
 
           {/* Main Workspace Canvas */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-10 max-w-[1720px] w-full mx-auto">
             {notice && (
               <Alert variant={notice.error ? "destructive" : "default"} className="mb-6">
                 <AlertDescription>{notice.text}</AlertDescription>
@@ -909,6 +925,14 @@ export default function AdminPage() {
             {activePage === "curriculum" && (
               <CurriculumManager
                 isAr={isAr}
+                token={sessionToken}
+                enrollmentSettings={
+                  siteContent.enrollment_settings || {
+                    signup_mode: "approval_required",
+                    universities: [],
+                    faculties: [],
+                  }
+                }
                 searchQuery={searchQuery}
                 courses={courses}
                 lectures={lectures}
@@ -918,12 +942,15 @@ export default function AdminPage() {
                 selectedQuizId={selectedQuizId}
                 setSelectedQuizId={setSelectedQuizId}
                 activeSubTab={activeCurriculumSubTab}
+                selectedEnrollmentCourseId={selectedEnrollmentCourseId}
                 onOpenCourseEditor={openCourse}
                 onOpenLectureEditor={openLecture}
                 onOpenQuizEditor={openQuiz}
                 onOpenResourceEditor={openResource}
                 onOpenQuestionEditor={openQuestion}
                 onDeleteEntity={remove}
+                onNavigateToEnrollments={handleNavigateToCourseEnrollments}
+                onEnrollmentsUpdated={(count) => setPendingEnrollmentsCount(count)}
               />
             )}
 
@@ -947,6 +974,7 @@ export default function AdminPage() {
                 isAr={isAr}
                 token={sessionToken}
                 subTab={activeStudentSubTab}
+                courses={courses}
                 enrollmentSettings={
                   siteContent.enrollment_settings || {
                     signup_mode: "approval_required",
