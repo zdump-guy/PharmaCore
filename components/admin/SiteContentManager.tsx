@@ -1,13 +1,18 @@
 import {
+  FiAward as Award,
+  FiBarChart2 as BarChart2,
+  FiCheckSquare as CheckSquare,
+  FiCpu as Cpu,
   FiGlobe as Globe,
   FiLayers as Layers,
   FiLink as LinkIcon,
   FiLoader as Loader2,
+  FiMessageSquare as MessageSquare,
   FiPlus as Plus,
   FiSave as Save,
   FiShare2 as Share2,
+  FiSliders as Sliders,
   FiTrash2 as Trash2,
-  FiType as TypeIcon,
 } from "react-icons/fi"
 import {
   FaDiscord,
@@ -30,12 +35,18 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   contentGroups,
   contentLabel,
+  defaultFeatureFlags,
   type SiteContent,
   type SiteLocale,
   type SiteLocaleContent,
   type SocialLink,
   type SocialPlatform,
 } from "@/lib/siteContent"
+import {
+  FEATURE_FLAG_DEFINITIONS,
+  FEATURE_FLAG_KEYS,
+} from "@/lib/featureFlags"
+import type { FeatureFlagsConfig } from "@/types"
 
 interface SiteContentManagerProps {
   isAr: boolean
@@ -67,6 +78,17 @@ export default function SiteContentManager({
 }: SiteContentManagerProps) {
   const tr = (en: string, ar: string) => (isAr ? ar : en)
   const socialLinks = siteContent.social_links || []
+
+  const toggleFeatureFlag = (key: keyof FeatureFlagsConfig) => {
+    setSiteContent((prev) => ({
+      ...prev,
+      features: {
+        ...defaultFeatureFlags,
+        ...(prev.features || {}),
+        [key]: !(prev.features?.[key] ?? defaultFeatureFlags[key]),
+      },
+    }))
+  }
 
   const updateField = (locale: SiteLocale, field: keyof SiteLocaleContent, value: string) => {
     setSiteContent((prev) => ({
@@ -111,17 +133,18 @@ export default function SiteContentManager({
   return (
     <div className="space-y-6" dir={isAr ? "rtl" : "ltr"}>
       {/* Header & Save Action */}
-      <div className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-3xl border border-border/80 bg-card/90 p-5 sm:p-6 shadow-sm backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Globe className="size-5 text-primary shrink-0" />
-            <h3 className="text-xl font-bold tracking-tight">{tr("Website Content CMS", "إدارة وتخصيص نصوص الموقع")}</h3>
-            <Badge variant="outline" className="badge-nowrap text-xs gap-1 font-mono shrink-0">
-              <TypeIcon className="size-3 shrink-0" />
-              <span>Bilingual</span>
+          <div className="flex items-center gap-2.5">
+            <div className="size-10 grid place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+              <Globe className="size-5" />
+            </div>
+            <h3 className="text-xl font-black tracking-tight text-foreground">{tr("Website Content CMS", "إدارة وتخصيص نصوص الموقع")}</h3>
+            <Badge variant="secondary" className="text-xs font-mono font-bold">
+              Bilingual
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {tr(
               "Manage public-facing text, headlines, social links, and call-to-actions across English and Arabic locales.",
               "تعديل وتخصيص كافة النصوص العامة، والعناوين الرئيسية، وروابط التواصل الاجتماعي باللغتين العربية والإنجليزية."
@@ -132,7 +155,7 @@ export default function SiteContentManager({
         <Button
           onClick={onSaveContent}
           disabled={saving}
-          className="btn-nowrap gap-2 font-bold text-xs shrink-0 w-full sm:w-auto min-h-[40px] sm:min-h-[36px]"
+          className="gap-2 font-bold text-xs h-11 px-6 rounded-full shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 w-full sm:w-auto"
         >
           {saving ? <Loader2 className="size-4 animate-spin shrink-0" /> : <Save className="size-4 shrink-0" />}
           <span>{saving ? tr("Publishing Changes...", "جارٍ حفظ التغييرات...") : tr("Publish Site Content", "نشر محتوى الموقع")}</span>
@@ -142,25 +165,140 @@ export default function SiteContentManager({
       {/* Accordion grouped content */}
       <Accordion
         type="multiple"
-        defaultValue={["Hero", "About section", "Courses and CTA", "Footer & Attribution", "Community Social Links"]}
-        className="space-y-3.5 sm:space-y-4"
+        defaultValue={["Hero", "About section", "Courses and CTA", "Footer & Attribution", "Community Social Links", "Feature Flags"]}
+        className="space-y-4"
       >
-        {/* ─── 1. PHARMACORE SOCIAL & COMMUNITY CHANNELS ──────────────── */}
+        {/* ─── 0. GLOBAL FEATURE FLAGS & MODULAR ACTIVATION ──────────── */}
         <AccordionItem
-          value="Community Social Links"
-          className="rounded-2xl border border-primary/30 bg-card px-4 sm:px-5 shadow-xs overflow-hidden"
+          value="Feature Flags"
+          className="rounded-3xl border border-indigo-500/30 bg-card/90 px-5 sm:px-6 shadow-sm overflow-hidden"
         >
-          <AccordionTrigger className="hover:no-underline py-3.5 sm:py-4">
+          <AccordionTrigger className="hover:no-underline py-4 sm:py-5">
             <div className="flex items-center gap-3">
-              <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
-                <Share2 className="size-4" />
+              <span className="grid size-10 place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
+                <Sliders className="size-5" />
               </span>
               <div className="text-start">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-sm sm:text-base leading-none">
+                  <h4 className="font-black text-sm sm:text-base text-foreground leading-none">
+                    {tr("Platform Feature Flags & Modular Activation", "إدارة وتفعيل وحدات وميزات المنصة")}
+                  </h4>
+                  <Badge variant="outline" className="text-xs font-mono font-bold shrink-0">
+                    {
+                      Object.values({
+                        ...defaultFeatureFlags,
+                        ...(siteContent.features || {}),
+                      }).filter(Boolean).length
+                    }
+                    /{FEATURE_FLAG_KEYS.length} {tr("Active", "مفعّل")}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {tr(
+                    "Toggle global availability of AI assistant, practice mode, certificates, community Q&A, and gradebook.",
+                    "التحكم المركزي في إتاحة المساعد الذكي، وضع التدريب، الشهادات، مجتمع النقاش، وسجل الدرجات."
+                  )}
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+
+          <AccordionContent className="pt-2 pb-6 space-y-4">
+            <p className="text-xs text-muted-foreground leading-relaxed border-b border-border/60 pb-3">
+              {tr(
+                "These global flags set baseline behavior across the platform. Specific courses can override these defaults in their respective course settings.",
+                "تسري هذه الإعدادات كقيم افتراضية لكافة المقررات في المنصة، مع إمكانية استثناء أي ميزة وتخصيصها لكل مقرر على حدة."
+              )}
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {FEATURE_FLAG_DEFINITIONS.map((def) => {
+                const currentFeatures = {
+                  ...defaultFeatureFlags,
+                  ...(siteContent.features || {}),
+                }
+                const isEnabled = Boolean(currentFeatures[def.key])
+
+                const categoryIcons: Record<string, typeof Cpu> = {
+                  ai: Cpu,
+                  assessment: CheckSquare,
+                  gamification: Award,
+                  collaboration: MessageSquare,
+                  analytics: BarChart2,
+                }
+                const IconComp = categoryIcons[def.category] || Sliders
+
+                return (
+                  <div
+                    key={def.key}
+                    className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                      isEnabled
+                        ? "border-primary/40 bg-card/90 shadow-2xs"
+                        : "border-border/60 bg-muted/20 opacity-80"
+                    }`}
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="size-8 grid place-items-center rounded-xl bg-primary/10 text-primary shrink-0">
+                            <IconComp className="size-4" />
+                          </span>
+                          <span className="font-bold text-xs text-foreground leading-tight">
+                            {isAr ? def.title_ar : def.title_en}
+                          </span>
+                        </div>
+                        <Badge
+                          className={`rounded-full px-2 py-0 text-[10px] font-bold shrink-0 ${
+                            isEnabled
+                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                              : "bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30"
+                          }`}
+                        >
+                          {isEnabled ? tr("ON", "مفعل") : tr("OFF", "معطل")}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+                        {isAr ? def.description_ar : def.description_en}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/50">
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {def.key}
+                      </span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={() => toggleFeatureFlag(def.key)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                      </label>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ─── 1. PHARMACORE SOCIAL & COMMUNITY CHANNELS ──────────────── */}
+        <AccordionItem
+          value="Community Social Links"
+          className="rounded-3xl border border-primary/30 bg-card/90 px-5 sm:px-6 shadow-sm overflow-hidden"
+        >
+          <AccordionTrigger className="hover:no-underline py-4 sm:py-5">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                <Share2 className="size-5" />
+              </span>
+              <div className="text-start">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-black text-sm sm:text-base text-foreground leading-none">
                     {tr("PharmaCore Community & Social Channels", "قنوات المجتمع وروابط التواصل الاجتماعي")}
                   </h4>
-                  <Badge variant="secondary" className="badge-nowrap text-xs font-mono shrink-0">
+                  <Badge variant="secondary" className="text-xs font-mono font-bold shrink-0">
                     {socialLinks.length}
                   </Badge>
                 </div>
@@ -174,9 +312,9 @@ export default function SiteContentManager({
             </div>
           </AccordionTrigger>
 
-          <AccordionContent className="pt-2 pb-5 sm:pb-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <p className="text-xs text-muted-foreground">
+          <AccordionContent className="pt-2 pb-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {tr(
                   "Configure platform, bilingual context text (e.g. 'Official Channel', 'Study Group', 'Page'), and URL.",
                   "اختر المنصة واكتب النص التوضيحي بالعربية والإنجليزية (مثال: 'القناة الرسمية'، 'مجموعة النقاش'، 'الصفحة')."
@@ -187,23 +325,23 @@ export default function SiteContentManager({
                 type="button"
                 size="sm"
                 onClick={addSocialLink}
-                className="btn-nowrap gap-1.5 font-bold text-xs shrink-0 min-h-[36px]"
+                className="gap-1.5 font-bold text-xs shrink-0 rounded-full h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
               >
                 <Plus className="size-3.5 shrink-0" />
                 <span>{tr("Add Social Channel", "إضافة قناة تواصل")}</span>
               </Button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {socialLinks.map((link, idx) => {
                 return (
                   <div
                     key={link.id}
-                    className="rounded-xl border bg-muted/15 p-3.5 sm:p-4 space-y-3 transition-colors hover:border-primary/40"
+                    className="rounded-2xl border border-border/70 bg-background/60 p-4 space-y-3.5 transition-colors hover:border-primary/40"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs">
+                        <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs font-mono">
                           #{idx + 1}
                         </span>
                         <span className="font-bold text-xs uppercase tracking-wider text-foreground">
@@ -215,7 +353,7 @@ export default function SiteContentManager({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="size-8 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => removeSocialLink(link.id)}
                         title={tr("Delete link", "حذف الرابط")}
                       >
@@ -226,15 +364,15 @@ export default function SiteContentManager({
                     <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
                       {/* Platform Select */}
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-bold">{tr("Platform", "المنصة")}</Label>
+                        <Label className="text-xs font-bold text-foreground">{tr("Platform", "المنصة")}</Label>
                         <Select
                           value={link.platform}
                           onValueChange={(val) => updateSocialLink(link.id, { platform: val as SocialPlatform })}
                         >
-                          <SelectTrigger className="text-xs min-h-[38px]">
+                          <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-2xl">
                             {availablePlatforms.map((p) => (
                               <SelectItem key={p.id} value={p.id}>
                                 <div className="flex items-center gap-2">
@@ -249,37 +387,37 @@ export default function SiteContentManager({
 
                       {/* English Label / Context */}
                       <div className="space-y-1.5" dir="ltr">
-                        <Label className="text-xs font-bold">English Context / Type</Label>
+                        <Label className="text-xs font-bold text-foreground">English Context / Type</Label>
                         <Input
                           value={link.label_en}
                           onChange={(e) => updateSocialLink(link.id, { label_en: e.target.value })}
                           placeholder="e.g. Official Channel, Study Group, Page"
-                          className="text-xs min-h-[38px]"
+                          className="rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                         />
                       </div>
 
                       {/* Arabic Label / Context */}
                       <div className="space-y-1.5" dir="rtl">
-                        <Label className="text-xs font-bold">التوصيف بالعربية</Label>
+                        <Label className="text-xs font-bold text-foreground">التوصيف بالعربية</Label>
                         <Input
                           value={link.label_ar}
                           onChange={(e) => updateSocialLink(link.id, { label_ar: e.target.value })}
                           placeholder="مثال: القناة الرسمية، مجموعة النقاش، الصفحة"
-                          className="text-xs min-h-[38px]"
+                          className="rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                         />
                       </div>
 
                       {/* Target URL */}
                       <div className="space-y-1.5 sm:col-span-3">
-                        <Label className="text-xs font-bold">{tr("Target Channel / Group URL", "رابط القناة أو المجموعة")}</Label>
+                        <Label className="text-xs font-bold text-foreground">{tr("Target Channel / Group URL", "رابط القناة أو المجموعة")}</Label>
                         <div className="relative">
-                          <LinkIcon className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <LinkIcon className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             type="url"
                             value={link.url}
                             onChange={(e) => updateSocialLink(link.id, { url: e.target.value })}
                             placeholder="https://t.me/your_channel or https://facebook.com/groups/..."
-                            className="ps-8 pe-3 text-xs min-h-[38px] font-mono"
+                            className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs font-mono"
                           />
                         </div>
                       </div>
@@ -289,13 +427,13 @@ export default function SiteContentManager({
               })}
 
               {!socialLinks.length && (
-                <div className="grid min-h-24 place-items-center rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+                <div className="grid min-h-24 place-items-center rounded-2xl border border-dashed border-border/80 p-6 text-center text-muted-foreground">
                   <div>
-                    <Share2 className="mx-auto size-6 opacity-40" />
-                    <p className="mt-2 text-xs font-bold">
+                    <Share2 className="mx-auto size-8 opacity-40" />
+                    <p className="mt-2 text-xs font-bold text-foreground">
                       {tr("No social channels added yet", "لم تتم إضافة قنوات تواصل بعد")}
                     </p>
-                    <p className="mt-0.5 text-[11px]">
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {tr("Click 'Add Social Channel' above to create footer channel buttons.", "انقر على 'إضافة قناة تواصل' أعلاه لإضافة أزرار الفوتر.")}
                     </p>
                   </div>
@@ -310,15 +448,15 @@ export default function SiteContentManager({
           <AccordionItem
             key={group.title}
             value={group.title}
-            className="rounded-2xl border bg-card px-4 sm:px-5 shadow-xs overflow-hidden"
+            className="rounded-3xl border border-border/80 bg-card/90 px-5 sm:px-6 shadow-sm overflow-hidden"
           >
-            <AccordionTrigger className="hover:no-underline py-3.5 sm:py-4">
+            <AccordionTrigger className="hover:no-underline py-4 sm:py-5">
               <div className="flex items-center gap-3">
-                <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
-                  <Layers className="size-4" />
+                <span className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <Layers className="size-5" />
                 </span>
                 <div className="text-start">
-                  <h4 className="font-bold text-sm sm:text-base leading-none">{group.title}</h4>
+                  <h4 className="font-black text-sm sm:text-base text-foreground leading-none">{group.title}</h4>
                   <p className="text-xs text-muted-foreground mt-1">
                     {group.fields.length} {tr("fields available", "حقول قابلة للتعديل")}
                   </p>
@@ -326,7 +464,7 @@ export default function SiteContentManager({
               </div>
             </AccordionTrigger>
 
-            <AccordionContent className="pt-2 pb-5 sm:pb-6 space-y-4 sm:space-y-6">
+            <AccordionContent className="pt-2 pb-6 space-y-4">
               {group.fields.map((field: keyof SiteLocaleContent) => {
                 const multiline = /body|description|subtitle|tagline/.test(field)
                 const isEmail = field === "footer_email"
@@ -336,13 +474,13 @@ export default function SiteContentManager({
                 return (
                   <div
                     key={field}
-                    className="rounded-xl border bg-muted/15 p-3.5 sm:p-4 space-y-3 transition-colors hover:border-primary/30"
+                    className="rounded-2xl border border-border/70 bg-background/60 p-4 space-y-3 transition-colors hover:border-primary/30"
                   >
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-bold uppercase tracking-wider text-primary">
                         {contentLabel(field)}
                       </Label>
-                      <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+                      <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground rounded-full px-2">
                         {field}
                       </Badge>
                     </div>
@@ -359,14 +497,14 @@ export default function SiteContentManager({
                             rows={3}
                             value={enVal}
                             onChange={(e) => updateField("en", field, e.target.value)}
-                            className="text-sm sm:text-xs leading-relaxed"
+                            className="rounded-2xl border-border/80 bg-background/80 text-xs leading-relaxed p-3 focus:ring-2 focus:ring-primary/20"
                           />
                         ) : (
                           <Input
                             type={isEmail ? "email" : "text"}
                             value={enVal}
                             onChange={(e) => updateField("en", field, e.target.value)}
-                            className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                            className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
                           />
                         )}
                       </div>
@@ -382,14 +520,14 @@ export default function SiteContentManager({
                             rows={3}
                             value={arVal}
                             onChange={(e) => updateField("ar", field, e.target.value)}
-                            className="text-sm sm:text-xs leading-relaxed"
+                            className="rounded-2xl border-border/80 bg-background/80 text-xs leading-relaxed p-3 focus:ring-2 focus:ring-primary/20"
                           />
                         ) : (
                           <Input
                             type={isEmail ? "email" : "text"}
                             value={arVal}
                             onChange={(e) => updateField("ar", field, e.target.value)}
-                            className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                            className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
                           />
                         )}
                       </div>

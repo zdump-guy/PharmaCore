@@ -208,6 +208,34 @@
   .prose-measure {
     max-width: 68ch;
   }
+
+  .glass-nav {
+    @apply backdrop-blur-xl bg-background/80 border border-border/70 shadow-lg shadow-primary/5;
+  }
+
+  .glass-panel {
+    @apply backdrop-blur-xl bg-card/85 border border-border/70 shadow-sm;
+  }
+
+  .hero-glow {
+    background: radial-gradient(circle 600px at 50% -10%, hsl(var(--primary) / 0.15), hsl(var(--accent) / 0.05) 50%, transparent 80%);
+  }
+
+  .hero-glow-dark {
+    background: radial-gradient(circle 600px at 50% -10%, hsl(var(--primary) / 0.25), hsl(var(--accent) / 0.1) 50%, transparent 80%);
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-emerald-600 to-teal-500 bg-clip-text text-transparent dark:from-emerald-400 dark:via-teal-300 dark:to-cyan-400;
+  }
+
+  .bento-card {
+    @apply relative overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-7 shadow-xs backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5;
+  }
+
+  .stat-badge {
+    @apply inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/70 px-3.5 py-1.5 text-xs font-bold text-foreground shadow-xs backdrop-blur-md;
+  }
 }
 
 @layer utilities {
@@ -225,6 +253,10 @@
 
   .animation-delay-200 {
     animation-delay: 200ms;
+  }
+
+  .animation-delay-300 {
+    animation-delay: 300ms;
   }
 }
 

@@ -7,12 +7,14 @@ import {
   FiSearch as Search,
   FiSend as Send,
   FiShield as ShieldCheck,
+  FiX as X,
 } from "react-icons/fi"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { CommunityQuestion, Lecture, UserProfile } from "@/types"
 
 interface CommunityManagerProps {
@@ -79,19 +81,22 @@ export default function CommunityManager({
     return (
       <Card
         key={question.id}
-        className={`card-interactive shadow-none transition-all ${
-          isUnanswered ? "border-amber-500/30 bg-amber-500/[0.02]" : ""
+        className={`rounded-3xl border transition-all shadow-xs overflow-hidden ${
+          isUnanswered ? "border-amber-500/40 bg-amber-500/[0.03] shadow-amber-500/5" : "border-border/80 bg-card/90"
         }`}
       >
-        <CardContent className="p-4 sm:p-5 space-y-4">
+        <CardContent className="p-5 sm:p-6 space-y-4">
           {/* Header */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="grid size-9 sm:size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary font-bold text-sm">
-                {question.author_name.charAt(0).toUpperCase()}
-              </span>
+              <Avatar className="size-10 ring-2 ring-primary/20 shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary font-black text-sm uppercase">
+                  {question.author_name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+
               <div className="min-w-0">
-                <p className="font-extrabold text-sm text-foreground truncate">{question.author_name}</p>
+                <p className="font-black text-sm text-foreground truncate">{question.author_name}</p>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock className="size-3 shrink-0" />
                   <span>
@@ -105,7 +110,7 @@ export default function CommunityManager({
                   {lectureTitle && (
                     <>
                       <span>·</span>
-                      <span className="font-medium truncate max-w-[160px] sm:max-w-[240px] text-foreground/80">
+                      <span className="font-semibold truncate max-w-[180px] sm:max-w-[280px] text-foreground/80">
                         {lectureTitle}
                       </span>
                     </>
@@ -115,10 +120,8 @@ export default function CommunityManager({
             </div>
 
             <Badge
-              variant={isUnanswered ? "outline" : "secondary"}
-              className={`badge-nowrap self-start text-xs font-semibold gap-1 shrink-0 ${
-                isUnanswered ? "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10" : ""
-              }`}
+              variant={isUnanswered ? "warning" : "success"}
+              className="text-xs font-bold gap-1 shrink-0 self-start"
             >
               {isUnanswered ? (
                 <>
@@ -127,7 +130,7 @@ export default function CommunityManager({
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="size-3 shrink-0" />
                   <span>{tr("Answered", "تمت الإجابة")}</span>
                 </>
               )}
@@ -135,21 +138,21 @@ export default function CommunityManager({
           </div>
 
           {/* Question Text */}
-          <div className="rounded-xl bg-muted/30 p-3.5 sm:p-4">
-            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{question.text}</p>
+          <div className="rounded-2xl bg-muted/40 p-4 border border-border/50">
+            <p className="text-xs sm:text-sm leading-relaxed text-foreground whitespace-pre-wrap">{question.text}</p>
           </div>
 
           {/* Previous Staff Answers */}
           {question.answers && question.answers.length > 0 && (
-            <div className="space-y-2.5 ps-2.5 sm:ps-5 border-s-2 border-primary/40">
+            <div className="space-y-3 ps-3 sm:ps-5 border-s-2 border-primary/40">
               {question.answers.map((ans) => (
-                <div key={ans.id} className="rounded-xl bg-secondary/40 p-3 sm:p-3.5 space-y-1.5">
+                <div key={ans.id} className="rounded-2xl bg-primary/5 border border-primary/20 p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-bold text-primary">
+                    <span className="flex items-center gap-1.5 font-bold text-primary text-[11px] uppercase tracking-wider">
                       <ShieldCheck className="size-3.5" />
-                      {tr("Staff Educator Answer", "إجابة المرشد / المشرف")}
+                      <span>{tr("Staff Mentor Response", "إجابة المرشد الأكاديمي")}</span>
                     </span>
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-[10px] text-muted-foreground font-mono">
                       {new Date(ans.created_at).toLocaleTimeString(isAr ? "ar-EG" : "en-US", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -170,16 +173,16 @@ export default function CommunityManager({
               onKeyDown={handleKeyDown}
               placeholder={
                 question.answers?.length
-                  ? tr("Add a follow-up answer (Ctrl+Enter)...", "أضف ردًا توضيحيًا إضافيًا (Ctrl+Enter)...")
-                  : tr("Write an educator response (Ctrl+Enter)...", "اكتب إجابة علمية واضحة للطالب (Ctrl+Enter)...")
+                  ? tr("Add a follow-up clarification (Ctrl+Enter)...", "أضف ردًا توضيحيًا إضافيًا (Ctrl+Enter)...")
+                  : tr("Write a clinical educator response (Ctrl+Enter)...", "اكتب إجابة علمية واضحة للطالب (Ctrl+Enter)...")
               }
-              className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+              className="rounded-xl h-11 border-border/80 bg-background/60 text-xs flex-1"
             />
             <Button
               size="sm"
               onClick={() => onSendReply(question.id)}
               disabled={!replyText.trim()}
-              className="btn-nowrap gap-1.5 font-bold shrink-0 text-xs min-h-[40px] sm:min-h-[36px] w-full sm:w-auto"
+              className="rounded-full font-bold gap-2 px-6 h-11 text-xs shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 shrink-0"
             >
               <Send className="size-3.5 rtl:rotate-180 shrink-0" />
               <span>{tr("Send Answer", "إرسال الإجابة")}</span>
@@ -193,13 +196,15 @@ export default function CommunityManager({
   return (
     <div className="space-y-6" dir={isAr ? "rtl" : "ltr"}>
       {/* Header & Stats */}
-      <div className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-3xl border border-border/80 bg-card/90 p-5 sm:p-6 shadow-sm backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="size-5 text-primary" />
-            <h3 className="text-xl font-bold tracking-tight">{tr("Student Q&A Moderation", "إدارة أسئلة واستفسارات الطلاب")}</h3>
+          <div className="flex items-center gap-2.5">
+            <div className="size-10 grid place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+              <MessageCircle className="size-5" />
+            </div>
+            <h3 className="text-xl font-black tracking-tight text-foreground">{tr("Student Q&A Moderation", "إدارة أسئلة واستفسارات الطلاب")}</h3>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {tr(
               "Review student inquiries, answer lecture questions, and build community knowledge.",
               "متابعة استفسارات الطلاب، والرد على أسئلة المحاضرات لبناء مرجع علمي يستفيد منه الجميع."
@@ -208,34 +213,42 @@ export default function CommunityManager({
         </div>
 
         {/* Search */}
-        <div className="relative w-full sm:w-60">
+        <div className="relative w-full sm:w-64">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             placeholder={tr("Search questions & students...", "بحث بالاسم أو نص السؤال...")}
-            className="h-9 ps-8 pe-3 text-xs w-full"
+            className="h-10 ps-9 pe-8 rounded-xl text-xs bg-background/60"
           />
+          {localSearch && (
+            <button
+              onClick={() => setLocalSearch("")}
+              className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Tabs: Unanswered vs Answered */}
-      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="space-y-4">
-        <TabsList className="grid grid-cols-2 h-10 w-full sm:w-80 p-1 bg-muted/60">
-          <TabsTrigger value="unanswered" className="badge-nowrap text-xs font-bold gap-2 min-h-[34px]">
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="space-y-5">
+        <TabsList className="grid grid-cols-2 h-11 w-full sm:w-80 p-1 bg-muted/60 rounded-2xl border border-border/60">
+          <TabsTrigger value="unanswered" className="text-xs font-bold gap-2 rounded-xl">
             <span>{tr("Unanswered", "غير مجابة")}</span>
             <Badge
               variant={unanswered.length > 0 ? "destructive" : "secondary"}
-              className="badge-nowrap h-4 px-1.5 text-[10px] shrink-0"
+              className="h-4 px-1.5 text-[10px] shrink-0 font-bold font-mono"
             >
               {unanswered.length}
             </Badge>
           </TabsTrigger>
 
-          <TabsTrigger value="answered" className="badge-nowrap text-xs font-bold gap-2 min-h-[34px]">
+          <TabsTrigger value="answered" className="text-xs font-bold gap-2 rounded-xl">
             <span>{tr("Answered", "تمت الإجابة")}</span>
-            <Badge variant="secondary" className="badge-nowrap h-4 px-1.5 text-[10px] shrink-0">
+            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] shrink-0 font-bold font-mono">
               {answered.length}
             </Badge>
           </TabsTrigger>
@@ -245,13 +258,13 @@ export default function CommunityManager({
           {filteredUnanswered.map(renderQuestionCard)}
 
           {!filteredUnanswered.length && (
-            <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
+            <div className="grid min-h-48 place-items-center rounded-3xl border border-dashed border-border/80 p-8 text-center text-muted-foreground">
               <div>
-                <CheckCircle2 className="mx-auto size-8 text-emerald-500 opacity-80" />
-                <p className="mt-2 font-bold text-sm text-foreground">
+                <CheckCircle2 className="mx-auto size-9 text-emerald-500 opacity-90" />
+                <p className="mt-3 font-bold text-sm text-foreground">
                   {tr("All caught up!", "تمت الإجابة عن جميع الأسئلة!")}
                 </p>
-                <p className="mt-1 text-xs">
+                <p className="mt-1 text-xs leading-relaxed">
                   {tr("There are no pending questions awaiting educator answers.", "لا توجد أسئلة معلقة بانتظار رد المرشد.")}
                 </p>
               </div>
@@ -263,10 +276,10 @@ export default function CommunityManager({
           {filteredAnswered.map(renderQuestionCard)}
 
           {!filteredAnswered.length && (
-            <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
+            <div className="grid min-h-48 place-items-center rounded-3xl border border-dashed border-border/80 p-8 text-center text-muted-foreground">
               <div>
-                <MessageCircle className="mx-auto size-8 opacity-40" />
-                <p className="mt-2 font-bold text-sm">
+                <MessageCircle className="mx-auto size-9 opacity-40" />
+                <p className="mt-3 font-bold text-sm text-foreground">
                   {tr("No answered questions yet", "لا توجد أسئلة مجاب عنها بعد")}
                 </p>
               </div>

@@ -298,18 +298,18 @@ export default function AnalyticsDashboard({
   return (
     <div className="space-y-6 sm:space-y-8 relative" dir={isAr ? "rtl" : "ltr"}>
       {/* ─── TOP BAR & CONTROLS ─────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:gap-5 rounded-2xl border bg-card p-4 sm:p-6 shadow-xs lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="grid size-8 sm:size-9 place-items-center rounded-xl bg-primary/10 text-primary">
-              <Activity className="size-4 sm:size-5" />
-            </span>
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+      <div className="flex flex-col gap-4 sm:gap-5 rounded-3xl border border-border/80 bg-card/90 p-5 sm:p-7 shadow-sm backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="size-10 grid place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+              <Activity className="size-5" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
               {tr("Platform Insights & Telemetry", "تحليلات المنصة ومؤشرات الأداء")}
             </h2>
-            <Badge variant="default" className="gap-1 font-bold bg-emerald-600 dark:bg-emerald-500 text-white text-[11px]">
-              <Database className="size-2.5" />
-              {tr("Supabase Native", "تحليلات Supabase")}
+            <Badge variant="default" className="gap-1.5 font-bold bg-emerald-600 dark:bg-emerald-500 text-white text-[11px] rounded-full px-3">
+              <Database className="size-3" />
+              <span>{tr("Supabase Native", "تحليلات Supabase")}</span>
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground max-w-3xl leading-relaxed">
@@ -321,8 +321,8 @@ export default function AnalyticsDashboard({
         </div>
 
         {/* Time Range Selector & Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-          <div className="grid grid-cols-4 sm:flex rounded-xl border bg-muted/50 p-1 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+          <div className="grid grid-cols-4 sm:flex rounded-2xl border border-border/80 bg-muted/50 p-1 w-full sm:w-auto">
             {(
               [
                 ["today", tr("Today", "اليوم")],
@@ -335,7 +335,7 @@ export default function AnalyticsDashboard({
                 key={range}
                 variant={timeRange === range ? "default" : "ghost"}
                 size="sm"
-                className="h-8 rounded-lg px-2.5 text-xs font-bold"
+                className="h-8 rounded-xl px-3 text-xs font-bold"
                 onClick={() => setTimeRange(range)}
                 disabled={loading}
               >
@@ -349,12 +349,12 @@ export default function AnalyticsDashboard({
               <Button
                 variant={isInsightsOpen ? "default" : "outline"}
                 size="sm"
-                className="h-8 gap-1.5 text-xs font-bold flex-1 sm:flex-initial"
+                className="h-9 gap-1.5 text-xs font-bold rounded-full px-3.5 flex-1 sm:flex-initial"
                 onClick={() => setIsInsightsOpen(!isInsightsOpen)}
               >
                 <Zap className="size-3.5" />
                 <span>{tr("Suggestions", "المقترحات")}</span>
-                <Badge variant="secondary" className="px-1.5 py-0 text-[10px] h-4">
+                <Badge variant="secondary" className="px-1.5 py-0 text-[10px] h-4 font-mono font-bold">
                   {insightsList.length}
                 </Badge>
               </Button>
@@ -363,54 +363,54 @@ export default function AnalyticsDashboard({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 text-xs font-bold flex-1 sm:flex-initial"
+              className="h-9 gap-1.5 text-xs font-bold rounded-full px-3.5 flex-1 sm:flex-initial"
               onClick={fetchAnalytics}
               disabled={loading}
             >
               <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
-              {tr("Refresh", "تحديث")}
+              <span>{tr("Refresh", "تحديث")}</span>
             </Button>
 
             <Button
               variant="secondary"
               size="sm"
-              className="h-8 gap-1.5 text-xs font-bold flex-1 sm:flex-initial"
+              className="h-9 gap-1.5 text-xs font-bold rounded-full px-3.5 flex-1 sm:flex-initial"
               onClick={handleExportCSV}
               disabled={loading}
             >
               <Download className="size-3.5" />
-              {tr("Export CSV", "تصدير CSV")}
+              <span>{tr("Export CSV", "تصدير CSV")}</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* ─── PRIMARY KPI CARDS (5 METRICS) ────────────────────────────────── */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {/* 1. Unique Learners / Visitors */}
-        <Card className="card-interactive card-equal shadow-none">
-          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-primary/10 text-primary shrink-0">
-                <Users className="size-4 sm:size-5" />
-              </span>
-              <Badge variant="outline" className="badge-nowrap gap-1 text-[10px] font-mono shrink-0">
+              <div className="size-11 grid place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                <Users className="size-5" />
+              </div>
+              <Badge variant="outline" className="gap-1 text-[10px] font-mono shrink-0 rounded-full px-2">
                 <Clock className="size-2.5 shrink-0" />
                 <span>{timeRange.toUpperCase()}</span>
               </Badge>
             </div>
-            <div className="mt-3 sm:mt-4">
-              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
                 {tr("Active Learners", "الطلاب والزوار")}
               </p>
-              <p className="mt-1 text-2xl sm:text-3xl font-black">
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-foreground font-mono">
                 {loading ? (
                   <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 ) : (
                   data.stats.uniqueVisitors.toLocaleString()
                 )}
               </p>
-              <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground truncate">
+              <p className="mt-1 text-[11px] text-muted-foreground truncate font-medium">
                 {data.stats.pageviews.toLocaleString()} {tr("pageviews", "مشاهدة صفحة")}
               </p>
             </div>
@@ -418,28 +418,28 @@ export default function AnalyticsDashboard({
         </Card>
 
         {/* 2. Estimated Learning Delivered */}
-        <Card className="card-interactive card-equal shadow-none">
-          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
-                <TrendingUp className="size-4 sm:size-5" />
-              </span>
-              <Badge variant="outline" className="badge-nowrap border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] shrink-0">
+              <div className="size-11 grid place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
+                <TrendingUp className="size-5" />
+              </div>
+              <Badge variant="outline" className="border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] shrink-0 rounded-full px-2">
                 <span>{tr("Study Time", "ساعات التعلم")}</span>
               </Badge>
             </div>
-            <div className="mt-3 sm:mt-4">
-              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
                 {tr("Learning Delivered", "وقت التعلم")}
               </p>
-              <p className="mt-1 text-2xl sm:text-3xl font-black">
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-foreground font-mono">
                 {loading ? (
                   <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 ) : (
                   formatStudyTime(data.stats.estimatedStudyMinutes || 0)
                 )}
               </p>
-              <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground truncate">
+              <p className="mt-1 text-[11px] text-muted-foreground truncate font-medium">
                 {courses.length} {tr("courses published", "مقرر منشور")}
               </p>
             </div>
@@ -447,28 +447,28 @@ export default function AnalyticsDashboard({
         </Card>
 
         {/* 3. Video Sessions & Completion */}
-        <Card className="card-interactive card-equal shadow-none">
-          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-[#6AA6B8]/15 text-[#6AA6B8] shrink-0">
-                <Video className="size-4 sm:size-5" />
-              </span>
-              <Badge variant="outline" className="badge-nowrap gap-1 border-primary/30 text-primary font-bold text-[10px] shrink-0">
+              <div className="size-11 grid place-items-center rounded-2xl bg-teal-500/10 text-teal-600 border border-teal-500/20 shrink-0">
+                <Video className="size-5" />
+              </div>
+              <Badge variant="outline" className="gap-1 border-teal-500/30 text-teal-600 dark:text-teal-400 font-bold text-[10px] shrink-0 rounded-full px-2">
                 <span>{data.retention?.completionRate ?? 0}% {tr("completed", "إكمال")}</span>
               </Badge>
             </div>
-            <div className="mt-3 sm:mt-4">
-              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
                 {tr("Video Sessions", "تشغيل المحاضرات")}
               </p>
-              <p className="mt-1 text-2xl sm:text-3xl font-black">
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-foreground font-mono">
                 {loading ? (
                   <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 ) : (
                   data.stats.videoPlays.toLocaleString()
                 )}
               </p>
-              <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground truncate">
+              <p className="mt-1 text-[11px] text-muted-foreground truncate font-medium">
                 {data.stats.videoCompletions.toLocaleString()} {tr("fully completed", "مكتملة بالكامل")}
               </p>
             </div>
@@ -476,66 +476,66 @@ export default function AnalyticsDashboard({
         </Card>
 
         {/* 4. Quiz Mastery & Pass Rate */}
-        <Card className="card-interactive card-equal shadow-none">
-          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm hover:shadow-md transition-all">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                <Award className="size-4 sm:size-5" />
-              </span>
+              <div className="size-11 grid place-items-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                <Award className="size-5" />
+              </div>
               <Badge
                 variant="outline"
-                className="badge-nowrap gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] shrink-0"
+                className="gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] shrink-0 rounded-full px-2"
               >
                 <CheckCircle2 className="size-2.5 shrink-0" />
                 <span>{data.stats.quizPassRate}%</span>
               </Badge>
             </div>
-            <div className="mt-3 sm:mt-4">
-              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
                 {tr("Quiz Submissions", "تسليم الاختبارات")}
               </p>
-              <p className="mt-1 text-2xl sm:text-3xl font-black">
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-foreground font-mono">
                 {loading ? (
                   <Loader2 className="size-6 animate-spin text-muted-foreground" />
                 ) : (
                   data.stats.quizSubmissions.toLocaleString()
                 )}
               </p>
-              <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground truncate">
-                {data.stats.avgQuizScore}% {tr("avg score", "متوسط الدرجة")} · {questions.length} {tr("Q's in", "سؤالًا في")} {quizzes.length} {tr("quizzes", "اختبار")}
+              <p className="mt-1 text-[11px] text-muted-foreground truncate font-medium">
+                {data.stats.avgQuizScore}% {tr("avg score", "متوسط الدرجة")}
               </p>
             </div>
           </CardContent>
         </Card>
 
         {/* 5. Community Q&A Resolution */}
-        <Card className="card-interactive card-equal shadow-none col-span-2 md:col-span-1">
-          <CardContent className="p-3.5 sm:p-5 flex flex-col justify-between h-full">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm hover:shadow-md transition-all col-span-2 md:col-span-1">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
             <div className="flex items-center justify-between">
-              <span className="grid size-9 sm:size-11 place-items-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
-                <MessageCircle className="size-4 sm:size-5" />
-              </span>
+              <div className="size-11 grid place-items-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                <MessageCircle className="size-5" />
+              </div>
               {unansweredQuestionsCount > 0 ? (
-                <Badge variant="destructive" className="badge-nowrap text-[10px] font-bold shrink-0">
+                <Badge variant="destructive" className="text-[10px] font-bold shrink-0 rounded-full px-2.5">
                   <span>{unansweredQuestionsCount} {tr("Pending", "معلق")}</span>
                 </Badge>
               ) : (
-                <Badge variant="outline" className="badge-nowrap border-emerald-500/30 text-emerald-600 font-bold text-[10px] shrink-0">
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 font-bold text-[10px] shrink-0 rounded-full px-2">
                   <CheckCircle2 className="size-2.5 shrink-0" />
                   <span>{tr("All Resolved", "مكتمل")}</span>
                 </Badge>
               )}
             </div>
-            <div className="mt-3 sm:mt-4">
-              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground truncate">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
                 {tr("Student Inquiries", "استفسارات الطلاب")}
               </p>
-              <p className="mt-1 text-2xl sm:text-3xl font-black">
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-foreground font-mono">
                 {unansweredQuestionsCount === 0
                   ? "100%"
                   : `${Math.max(0, 100 - unansweredQuestionsCount * 10)}%`}
               </p>
-              <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground truncate">
+              <p className="mt-1 text-[11px] text-muted-foreground truncate font-medium">
                 {unansweredQuestionsCount === 0
                   ? tr("No pending questions", "لا توجد أسئلة معلقة")
                   : `${unansweredQuestionsCount} ${tr("awaiting reply", "بانتظار الرد")}`}
@@ -546,17 +546,17 @@ export default function AnalyticsDashboard({
       </div>
 
       {/* ─── TIME-SERIES ACTIVITY TREND CHART ────────────────────────────── */}
-      <Card className="shadow-none">
-        <CardHeader className="border-b p-4 sm:p-6 pb-3 sm:pb-4">
+      <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-border/60 p-6 pb-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-base sm:text-lg font-bold">
+                <CardTitle className="text-base sm:text-lg font-black text-foreground">
                   {tr("Learning Activity & Engagement Trends", "مؤشرات وتدفق النشاط التعليمي عبر الوقت")}
                 </CardTitle>
                 {activeHoverPoint && (
-                  <Badge variant="secondary" className="text-xs font-mono">
-                    {activeHoverPoint.label}: {activeHoverPoint.pageviews} views, {activeHoverPoint.videoPlays} plays, {activeHoverPoint.quizSubmissions} quizzes
+                  <Badge variant="secondary" className="text-xs font-mono font-bold">
+                    {activeHoverPoint.label}: {activeHoverPoint.pageviews}v, {activeHoverPoint.videoPlays}p, {activeHoverPoint.quizSubmissions}q
                   </Badge>
                 )}
               </div>
@@ -569,27 +569,27 @@ export default function AnalyticsDashboard({
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-3 text-xs font-semibold">
+            <div className="flex items-center gap-4 text-xs font-bold">
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2.5 rounded-full bg-primary" />
-                {tr("Views", "المشاهدات")}
+                <span>{tr("Views", "المشاهدات")}</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2.5 rounded-full bg-[#6AA6B8]" />
-                {tr("Videos", "الفيديو")}
+                <span>{tr("Videos", "الفيديو")}</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="size-2.5 rounded-full bg-emerald-500" />
-                {tr("Quizzes", "الاختبارات")}
+                <span>{tr("Quizzes", "الاختبارات")}</span>
               </span>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="p-6">
           {chartPoints.length > 0 ? (
             <div className="space-y-2">
-              <div className="h-44 sm:h-52 w-full flex items-end gap-1.5 sm:gap-3 pt-6 pb-2 border-b">
+              <div className="h-44 sm:h-52 w-full flex items-end gap-2 sm:gap-3 pt-6 pb-2 border-b border-border/60">
                 {chartPoints.map((pt) => {
                   const viewPct = Math.min(100, Math.round((pt.pageviews / maxChartVal) * 100))
                   const videoPct = Math.min(100, Math.round((pt.videoPlays / maxChartVal) * 100))
@@ -604,29 +604,28 @@ export default function AnalyticsDashboard({
                     >
                       {/* Tooltip on hover */}
                       <div className="absolute -top-10 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
-                        <div className="rounded-lg border bg-popover px-2.5 py-1 text-[10px] font-bold text-popover-foreground shadow-md whitespace-nowrap">
+                        <div className="rounded-xl border border-border/80 bg-popover px-3 py-1.5 text-[10px] font-bold text-popover-foreground shadow-lg whitespace-nowrap">
                           {pt.label} · {pt.pageviews}v / {pt.videoPlays}p / {pt.quizSubmissions}q
                         </div>
                       </div>
 
                       {/* Stacked/Clustered Bars */}
-                      <div className="w-full flex items-end justify-center gap-0.5 sm:gap-1 h-full">
+                      <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 h-full">
                         {/* Pageviews bar */}
                         <div
-                          className="w-1/3 min-w-[3px] max-w-[12px] bg-primary/70 group-hover:bg-primary rounded-t transition-all"
-                          style={{ height: pt.pageviews > 0 ? `${Math.max(viewPct, 4)}%` : "0%" }}
+                          className="w-1/3 min-w-[4px] max-w-[14px] bg-primary/70 group-hover:bg-primary rounded-t-md transition-all shadow-xs"
+                          style={{ height: pt.pageviews > 0 ? `${Math.max(viewPct, 5)}%` : "0%" }}
                         />
                         {/* Video plays bar */}
                         <div
-                          className="w-1/3 min-w-[3px] max-w-[12px] bg-[#6AA6B8]/70 group-hover:bg-[#6AA6B8] rounded-t transition-all"
-                          style={{ height: pt.videoPlays > 0 ? `${Math.max(videoPct, 4)}%` : "0%" }}
+                          className="w-1/3 min-w-[4px] max-w-[14px] bg-[#6AA6B8]/70 group-hover:bg-[#6AA6B8] rounded-t-md transition-all shadow-xs"
+                          style={{ height: pt.videoPlays > 0 ? `${Math.max(videoPct, 5)}%` : "0%" }}
                         />
                         {/* Quiz submissions bar */}
                         <div
-                          className="w-1/3 min-w-[3px] max-w-[12px] bg-emerald-500/70 group-hover:bg-emerald-500 rounded-t transition-all"
-                          style={{ height: pt.quizSubmissions > 0 ? `${Math.max(quizPct, 4)}%` : "0%" }}
+                          className="w-1/3 min-w-[4px] max-w-[14px] bg-emerald-500/70 group-hover:bg-emerald-500 rounded-t-md transition-all shadow-xs"
+                          style={{ height: pt.quizSubmissions > 0 ? `${Math.max(quizPct, 5)}%` : "0%" }}
                         />
-
                       </div>
 
                       <span className="mt-2 text-[10px] font-mono text-muted-foreground truncate w-full text-center">
@@ -638,7 +637,7 @@ export default function AnalyticsDashboard({
               </div>
             </div>
           ) : (
-            <div className="grid min-h-36 place-items-center rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+            <div className="grid min-h-36 place-items-center rounded-2xl border border-dashed border-border/80 p-6 text-center text-muted-foreground">
               <p className="text-xs font-semibold">
                 {tr("No time-series events recorded yet.", "لم يتم تسجيل أحداث زمنية بعد.")}
               </p>
@@ -652,23 +651,23 @@ export default function AnalyticsDashboard({
         {/* LEFT COLUMN: Video Retention Barometer & Quiz Score Distribution */}
         <div className="space-y-6">
           {/* 1. Video Retention & Milestone Barometer */}
-          <Card className="shadow-none">
-            <CardHeader className="border-b p-4 pb-3">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-border/60 p-5 pb-3">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <CardTitle className="text-sm sm:text-base font-bold">
+                  <CardTitle className="text-sm sm:text-base font-black text-foreground">
                     {tr("Video Retention & Milestone Barometer", "مقياس استمرارية مشاهدة المحاضرات")}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
                     {tr("Drop-off analysis at each quarter of the video.", "معدل استمرار الطلاب خلال أرباع المحاضرة.")}
                   </p>
                 </div>
-                <Badge variant="outline" className="font-mono text-xs text-primary font-bold">
+                <Badge variant="outline" className="font-mono text-xs text-primary font-bold rounded-full px-2.5">
                   {data.retention?.completionRate ?? 0}% {tr("Complete", "إكمال")}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 space-y-4">
+            <CardContent className="p-5 sm:p-6 space-y-4">
               {[
                 { label: tr("Start (0%)", "البداية (٠٪)"), count: data.stats.videoPlays, pct: data.stats.videoPlays > 0 ? 100 : 0, color: "bg-primary" },
                 { label: tr("Quarter (25%)", "الربع الأول (٢٥٪)"), count: data.retention?.p25 || 0, pct: data.stats.videoPlays > 0 ? Math.round(((data.retention?.p25 || 0) / data.stats.videoPlays) * 100) : 0, color: "bg-[#6AA6B8]" },
@@ -677,13 +676,13 @@ export default function AnalyticsDashboard({
               ].map((m) => (
                 <div key={m.label} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="font-semibold">{m.label}</span>
+                    <span className="font-bold text-foreground">{m.label}</span>
                     <div className="flex items-center gap-2 font-mono text-xs">
                       <span className="text-muted-foreground">{m.count.toLocaleString()}</span>
-                      <span className="font-bold w-10 text-end">{m.pct}%</span>
+                      <span className="font-bold w-10 text-end text-primary">{m.pct}%</span>
                     </div>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
                     <div className={`h-full rounded-full transition-all duration-500 ${m.color}`} style={{ width: `${m.pct}%` }} />
                   </div>
                 </div>
@@ -692,23 +691,23 @@ export default function AnalyticsDashboard({
           </Card>
 
           {/* 2. Quiz Score Mastery Distribution Tiers */}
-          <Card className="shadow-none">
-            <CardHeader className="border-b p-4 pb-3">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-border/60 p-5 pb-3">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <CardTitle className="text-sm sm:text-base font-bold">
+                  <CardTitle className="text-sm sm:text-base font-black text-foreground">
                     {tr("Quiz Score Mastery Distribution", "توزيع مستويات إتقان ودرجات الاختبارات")}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
                     {tr("Student score tiers across all completed quizzes.", "تصنيف أداء الطلاب حسب الشرائح المئوية للدرجات.")}
                   </p>
                 </div>
-                <Badge variant="secondary" className="font-mono text-xs">
+                <Badge variant="secondary" className="font-mono text-xs font-bold rounded-full px-2.5">
                   {data.stats.quizSubmissions} {tr("Submissions", "تسليم")}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 space-y-3">
+            <CardContent className="p-5 sm:p-6 space-y-3.5">
               {[
                 {
                   icon: Award,
@@ -743,12 +742,12 @@ export default function AnalyticsDashboard({
                   color: "bg-destructive",
                 },
               ].map((tier) => (
-                <div key={tier.label} className="space-y-1">
+                <div key={tier.label} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold">{tier.label}</span>
+                    <span className="font-bold text-foreground">{tier.label}</span>
                     <span className="font-mono text-muted-foreground">{tier.count} ({tier.pct}%)</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
                     <div className={`h-full rounded-full transition-all duration-500 ${tier.color}`} style={{ width: `${tier.pct}%` }} />
                   </div>
                 </div>
@@ -760,39 +759,39 @@ export default function AnalyticsDashboard({
         {/* RIGHT COLUMN: Top Courses, Lecture Drop-off, Device & Locale */}
         <div className="space-y-6">
           {/* 1. Top Courses */}
-          <Card className="shadow-none">
-            <CardHeader className="border-b p-4 pb-3">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-border/60 p-5 pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm sm:text-base font-bold">
+                <CardTitle className="text-sm sm:text-base font-black text-foreground">
                   {tr("Top Viewed Courses", "أعلى المقررات مشاهدة")}
                 </CardTitle>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {courses.length} {tr("Available", "متاح")}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="divide-y p-0">
+            <CardContent className="divide-y divide-border/60 p-0">
               {data.topCourses.length > 0 ? (
                 data.topCourses.map((course, idx) => (
                   <div
                     key={course.title + idx}
-                    className="flex items-center justify-between p-3 sm:p-4"
+                    className="flex items-center justify-between p-4"
                   >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                    <div className="flex items-center gap-3 truncate">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-xl bg-primary/10 text-xs font-black text-primary">
                         #{idx + 1}
                       </span>
-                      <span className="truncate font-semibold text-xs sm:text-sm">
+                      <span className="truncate font-bold text-xs sm:text-sm text-foreground">
                         {course.title}
                       </span>
                     </div>
-                    <Badge variant="outline" className="font-mono text-[11px] shrink-0">
+                    <Badge variant="outline" className="font-mono text-[11px] shrink-0 font-bold">
                       {course.views.toLocaleString()} {tr("views", "مشاهدة")}
                     </Badge>
                   </div>
                 ))
               ) : (
-                <div className="p-4 text-center text-xs text-muted-foreground">
+                <div className="p-6 text-center text-xs text-muted-foreground">
                   {tr("No course view events recorded.", "لم يتم تسجيل مشاهدات مقررات بعد.")}
                 </div>
               )}
@@ -800,40 +799,40 @@ export default function AnalyticsDashboard({
           </Card>
 
           {/* 2. Top Lectures with Friction Analysis */}
-          <Card className="shadow-none">
-            <CardHeader className="border-b p-4 pb-3">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-border/60 p-5 pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm sm:text-base font-bold">
+                <CardTitle className="text-sm sm:text-base font-black text-foreground">
                   {tr("Lecture Retention & Drop-off Diagnostics", "تشخيص استمرارية المحاضرات")}
                 </CardTitle>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {lectures.length} {tr("Lectures", "محاضرة")}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="divide-y p-0">
+            <CardContent className="divide-y divide-border/60 p-0">
               {data.topLectures.length > 0 ? (
                 data.topLectures.map((lecture, idx) => (
                   <div
                     key={lecture.title + idx}
-                    className="flex items-center justify-between p-3 sm:p-4"
+                    className="flex items-center justify-between p-4"
                   >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#6AA6B8]/15 text-xs font-bold text-[#6AA6B8]">
+                    <div className="flex items-center gap-3 truncate">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-xl bg-[#6AA6B8]/15 text-xs font-black text-[#6AA6B8]">
                         #{idx + 1}
                       </span>
-                      <span className="truncate font-semibold text-xs sm:text-sm">
+                      <span className="truncate font-bold text-xs sm:text-sm text-foreground">
                         {lecture.title}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className="font-mono text-[11px]">
+                      <Badge variant="outline" className="font-mono text-[11px] font-bold">
                         {lecture.views.toLocaleString()} {tr("views", "مشاهدة")}
                       </Badge>
                       {lecture.dropoffRate !== undefined && (
                         <Badge
                           variant={lecture.dropoffRate > 50 ? "destructive" : "secondary"}
-                          className="font-mono text-[10px]"
+                          className="font-mono text-[10px] font-bold"
                         >
                           {lecture.dropoffRate}% {tr("drop-off", "توقف")}
                         </Badge>
@@ -842,7 +841,7 @@ export default function AnalyticsDashboard({
                   </div>
                 ))
               ) : (
-                <div className="p-4 text-center text-xs text-muted-foreground">
+                <div className="p-6 text-center text-xs text-muted-foreground">
                   {tr("No lecture view events recorded.", "لم يتم تسجيل مشاهدات محاضرات بعد.")}
                 </div>
               )}
@@ -852,41 +851,41 @@ export default function AnalyticsDashboard({
           {/* 3. Learner Demographics: Device Split & Language */}
           <div className="grid grid-cols-2 gap-4">
             {/* Device Demographics */}
-            <Card className="shadow-none">
-              <CardHeader className="p-4 pb-2">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+              <CardHeader className="p-4 pb-2 border-b border-border/60">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Monitor className="size-3.5 text-primary" />
-                  {tr("Device Breakdown", "الأجهزة")}
+                  <span>{tr("Device Breakdown", "الأجهزة")}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="flex items-center gap-1"><Smartphone className="size-3 text-muted-foreground" /> {tr("Mobile", "هاتف")}</span>
-                  <span className="font-mono">{Math.round(((data.deviceStats?.mobile || 0) / totalDeviceViews) * 100)}%</span>
+              <CardContent className="p-4 pt-3 space-y-2.5">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="flex items-center gap-1.5"><Smartphone className="size-3.5 text-muted-foreground" /> {tr("Mobile", "هاتف")}</span>
+                  <span className="font-mono text-primary">{Math.round(((data.deviceStats?.mobile || 0) / totalDeviceViews) * 100)}%</span>
                 </div>
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="flex items-center gap-1"><Monitor className="size-3 text-muted-foreground" /> {tr("Desktop", "حاسوب")}</span>
-                  <span className="font-mono">{Math.round(((data.deviceStats?.desktop || 0) / totalDeviceViews) * 100)}%</span>
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="flex items-center gap-1.5"><Monitor className="size-3.5 text-muted-foreground" /> {tr("Desktop", "حاسوب")}</span>
+                  <span className="font-mono text-primary">{Math.round(((data.deviceStats?.desktop || 0) / totalDeviceViews) * 100)}%</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Language Demographics */}
-            <Card className="shadow-none">
-              <CardHeader className="p-4 pb-2">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+              <CardHeader className="p-4 pb-2 border-b border-border/60">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Globe className="size-3.5 text-primary" />
-                  {tr("Language Split", "اللغة")}
+                  <span>{tr("Language Split", "اللغة")}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-1 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold">
+              <CardContent className="p-4 pt-3 space-y-2.5">
+                <div className="flex items-center justify-between text-xs font-bold">
                   <span>{tr("Arabic (العربية)", "العربية")}</span>
-                  <span className="font-mono">{Math.round(((data.localeStats?.ar || 0) / totalLocaleViews) * 100)}%</span>
+                  <span className="font-mono text-primary">{Math.round(((data.localeStats?.ar || 0) / totalLocaleViews) * 100)}%</span>
                 </div>
-                <div className="flex items-center justify-between text-xs font-semibold">
+                <div className="flex items-center justify-between text-xs font-bold">
                   <span>{tr("English", "الإنجليزية")}</span>
-                  <span className="font-mono">{Math.round(((data.localeStats?.en || 0) / totalLocaleViews) * 100)}%</span>
+                  <span className="font-mono text-primary">{Math.round(((data.localeStats?.en || 0) / totalLocaleViews) * 100)}%</span>
                 </div>
               </CardContent>
             </Card>
@@ -895,25 +894,25 @@ export default function AnalyticsDashboard({
       </div>
 
       {/* ─── REAL-TIME LIVE EVENT TELEMETRY STREAM ───────────────────────── */}
-      <Card className="shadow-none">
-        <CardHeader className="border-b p-4 sm:p-6 pb-3 sm:pb-4">
+      <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-border/60 p-6 pb-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className={`size-2.5 rounded-full ${isLivePaused ? "bg-amber-500" : "bg-emerald-500 animate-pulse"}`} />
-                <CardTitle className="text-base sm:text-lg font-bold">
+              <div className="flex items-center gap-2.5">
+                <span className={`size-3 rounded-full ${isLivePaused ? "bg-amber-500" : "bg-emerald-500 animate-pulse"}`} />
+                <CardTitle className="text-base sm:text-lg font-black text-foreground">
                   {tr("Live Event Telemetry Stream", "شريط الأحداث المباشر")}
                 </CardTitle>
-                <Badge variant="secondary" className="text-xs font-mono">
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {filteredEvents.length}
                 </Badge>
               </div>
             </div>
 
             {/* Stream Controls */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               {/* Category Filter Pills */}
-              <div className="flex overflow-x-auto rounded-lg border bg-muted/40 p-0.5 text-xs scrollbar-none snap-x w-full sm:w-auto">
+              <div className="flex overflow-x-auto rounded-2xl border border-border/80 bg-muted/40 p-1 text-xs scrollbar-none snap-x w-full sm:w-auto">
                 {(
                   [
                     ["all", tr("All", "الكل")],
@@ -926,7 +925,7 @@ export default function AnalyticsDashboard({
                   <button
                     key={cat}
                     onClick={() => setEventCategoryFilter(cat)}
-                    className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap min-h-[30px] ${
+                    className={`flex-1 sm:flex-initial px-3 py-1 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[30px] ${
                       eventCategoryFilter === cat
                         ? "bg-background text-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground"
@@ -942,28 +941,28 @@ export default function AnalyticsDashboard({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsLivePaused(!isLivePaused)}
-                  className="h-8 gap-1.5 text-xs flex-1 sm:flex-initial"
+                  className="h-9 rounded-full px-3.5 gap-1.5 text-xs font-bold flex-1 sm:flex-initial"
                 >
                   {isLivePaused ? <Play className="size-3 text-emerald-600" /> : <Pause className="size-3" />}
-                  {isLivePaused ? tr("Resume", "استئناف") : tr("Pause", "إيقاف")}
+                  <span>{isLivePaused ? tr("Resume", "استئناف") : tr("Pause", "إيقاف")}</span>
                 </Button>
 
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={triggerSampleTestEvent}
-                  className="h-8 gap-1.5 text-xs flex-1 sm:flex-initial"
+                  className="h-9 rounded-full px-3.5 gap-1.5 text-xs font-bold flex-1 sm:flex-initial"
                 >
                   <Zap className="size-3 text-primary" />
-                  {tr("Ping", "نبضة")}
+                  <span>{tr("Ping", "نبضة")}</span>
                 </Button>
               </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-3.5 sm:p-6">
-          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+        <CardContent className="p-6">
+          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
             {filteredEvents.length > 0 ? (
               filteredEvents.map((evt) => {
                 const isVideo = evt.name.startsWith("video_")
@@ -1003,20 +1002,20 @@ export default function AnalyticsDashboard({
                 return (
                   <div
                     key={evt.id}
-                    className="flex flex-col gap-1.5 rounded-xl border bg-muted/15 p-2.5 sm:p-3 sm:flex-row sm:items-center sm:justify-between transition-colors hover:bg-muted/30"
+                    className="flex flex-col gap-1.5 rounded-2xl border border-border/70 bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between transition-colors hover:bg-muted/40"
                   >
                     <div className="flex items-center gap-2.5 truncate">
                       <Badge
                         variant="outline"
-                        className={`shrink-0 font-mono text-[10px] sm:text-[11px] ${badgeColor}`}
+                        className={`shrink-0 font-mono text-[10px] sm:text-[11px] font-bold rounded-lg ${badgeColor}`}
                       >
                         {evt.name}
                       </Badge>
-                      <span className="truncate text-xs font-semibold">
+                      <span className="truncate text-xs font-bold text-foreground">
                         {eventDetail}
                       </span>
                     </div>
-                    <span className="shrink-0 font-mono text-[10px] sm:text-[11px] text-muted-foreground">
+                    <span className="shrink-0 font-mono text-[10px] sm:text-[11px] text-muted-foreground font-semibold">
                       {new Date(evt.timestamp).toLocaleTimeString(
                         isAr ? "ar-EG" : "en-US"
                       )}
@@ -1025,10 +1024,10 @@ export default function AnalyticsDashboard({
                 )
               })
             ) : (
-              <div className="grid min-h-32 place-items-center rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+              <div className="grid min-h-32 place-items-center rounded-2xl border border-dashed border-border/80 p-6 text-center text-muted-foreground">
                 <div>
-                  <Activity className="mx-auto size-7 opacity-40" />
-                  <p className="mt-2 text-xs font-semibold">
+                  <Activity className="mx-auto size-8 opacity-40" />
+                  <p className="mt-2 text-xs font-bold">
                     {tr(
                       "Awaiting real-time telemetry events...",
                       "بانتظار الأحداث التلقائية المباشرة..."
@@ -1046,20 +1045,20 @@ export default function AnalyticsDashboard({
         <>
           {isInsightsOpen ? (
             <div
-              className="fixed bottom-5 end-5 z-50 w-[calc(100vw-2.5rem)] sm:w-[420px] rounded-2xl border bg-card/95 backdrop-blur-2xl shadow-2xl p-4 sm:p-5 space-y-3 animate-in slide-in-from-bottom-5 fade-in duration-300"
+              className="fixed bottom-5 end-5 z-50 w-[calc(100vw-2.5rem)] sm:w-[420px] rounded-3xl border border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl p-5 space-y-3.5 animate-in slide-in-from-bottom-5 fade-in duration-300"
               dir={isAr ? "rtl" : "ltr"}
             >
               {/* Header */}
-              <div className="flex items-center justify-between gap-2 border-b pb-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="grid size-7 place-items-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-8 grid place-items-center rounded-xl bg-primary/10 text-primary">
                     <Zap className="size-4" />
-                  </span>
+                  </div>
                   <div>
-                    <h4 className="text-xs font-bold text-foreground">
+                    <h4 className="text-xs font-black text-foreground">
                       {tr("Pedagogical Suggestions", "المقترحات والتوصيات التعليمية")}
                     </h4>
-                    <span className="text-[10px] text-muted-foreground font-mono">
+                    <span className="text-[10px] text-muted-foreground font-mono font-bold">
                       {activeInsightIndex + 1} {tr("of", "من")} {insightsList.length}
                     </span>
                   </div>
@@ -1112,9 +1111,9 @@ export default function AnalyticsDashboard({
               {/* Current Insight Body */}
               {currentInsight && (
                 <div className="space-y-2">
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-3">
                     <span
-                      className={`grid size-7 shrink-0 place-items-center rounded-lg mt-0.5 ${
+                      className={`grid size-8 shrink-0 place-items-center rounded-xl mt-0.5 ${
                         currentInsight.type === "success"
                           ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                           : currentInsight.type === "warning"
@@ -1123,21 +1122,21 @@ export default function AnalyticsDashboard({
                       }`}
                     >
                       {currentInsight.type === "success" ? (
-                        <CheckCircle2 className="size-3.5" />
+                        <CheckCircle2 className="size-4" />
                       ) : currentInsight.type === "warning" ? (
-                        <AlertTriangle className="size-3.5" />
+                        <AlertTriangle className="size-4" />
                       ) : (
-                        <Info className="size-3.5" />
+                        <Info className="size-4" />
                       )}
                     </span>
 
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-xs font-bold text-foreground truncate">
+                        <p className="text-xs font-black text-foreground truncate">
                           {isAr ? currentInsight.title_ar : currentInsight.title}
                         </p>
                         {currentInsight.metric && (
-                          <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                          <Badge variant="outline" className="text-[10px] font-mono shrink-0 font-bold rounded-md">
                             {currentInsight.metric}
                           </Badge>
                         )}
@@ -1151,14 +1150,14 @@ export default function AnalyticsDashboard({
               )}
 
               {/* Footer Button */}
-              <div className="flex items-center justify-between pt-2 border-t text-xs">
+              <div className="flex items-center justify-between pt-2.5 border-t border-border/60 text-xs">
                 <span className="text-[10px] text-muted-foreground">
                   {tr("Rule-based automated insights", "تحليلات واقتراحات آلية")}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  className="h-7 text-xs font-bold text-muted-foreground hover:text-foreground rounded-full px-3"
                   onClick={() => setIsInsightsOpen(false)}
                 >
                   {tr("Dismiss", "إخفاء")}
@@ -1169,11 +1168,11 @@ export default function AnalyticsDashboard({
             /* Minimized Floating Trigger Button */
             <button
               onClick={() => setIsInsightsOpen(true)}
-              className="fixed bottom-5 end-5 z-40 flex items-center gap-2 rounded-full border bg-card/95 px-3.5 py-2 text-xs font-bold text-foreground shadow-xl backdrop-blur-md transition-transform hover:scale-105 active:scale-95 hover:border-primary/50"
+              className="fixed bottom-5 end-5 z-40 flex items-center gap-2.5 rounded-full border border-border/80 bg-card/95 px-4 py-2.5 text-xs font-bold text-foreground shadow-2xl backdrop-blur-md transition-transform hover:scale-105 active:scale-95 hover:border-primary/50"
             >
-              <Zap className="size-3.5 text-primary animate-pulse" />
+              <Zap className="size-4 text-primary animate-pulse" />
               <span>{tr("Suggestions", "المقترحات")}</span>
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] h-4 font-mono">
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] h-4 font-mono font-bold">
                 {insightsList.length}
               </Badge>
             </button>

@@ -17,6 +17,10 @@ const config: Config = {
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
       },
       fontFamily: { sans: ["var(--font-inter)"], display: ["var(--font-inter)"] },
+      boxShadow: {
+        xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "2xs": "0 1px rgb(0 0 0 / 0.05)",
+      },
       borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

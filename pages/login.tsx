@@ -376,12 +376,12 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
         </section>
 
         {/* Right Side: Auth Card with Tabs */}
-        <Card className="mx-auto w-full max-w-lg border-primary/20 shadow-xl shadow-primary/5">
+        <Card className="mx-auto w-full max-w-lg rounded-3xl border border-border/80 bg-card/90 shadow-2xl shadow-primary/5 backdrop-blur-xl">
           <CardContent className="p-6 sm:p-8">
             <div className="mb-6 flex items-center justify-between">
               <BrandMark className="size-10" />
               {returnUrl && (
-                <Badge variant="secondary" className="badge-nowrap text-[11px] gap-1 font-mono shrink-0">
+                <Badge variant="secondary" className="rounded-full text-[11px] gap-1 font-mono shrink-0 px-3 py-1">
                   <LockKeyhole className="size-3 shrink-0" />
                   <span>{isAr ? "محتوى مخصص" : "Protected Content"}</span>
                 </Badge>
@@ -389,12 +389,12 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
             </div>
 
             <Tabs value={tab} onValueChange={(val) => setTab(val as "signin" | "signup")}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="badge-nowrap gap-2 min-h-10 text-xs sm:text-sm font-semibold">
+              <TabsList className="grid w-full grid-cols-2 mb-6 p-1.5 bg-muted/60 rounded-2xl h-12">
+                <TabsTrigger value="signin" className="rounded-xl gap-2 h-9 text-xs sm:text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
                   <LockKeyhole className="size-3.5 shrink-0" />
                   <span>{copy.signInTab}</span>
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="badge-nowrap gap-2 min-h-10 text-xs sm:text-sm font-semibold">
+                <TabsTrigger value="signup" className="rounded-xl gap-2 h-9 text-xs sm:text-sm font-bold data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
                   <UserPlus className="size-3.5 shrink-0" />
                   <span>{copy.signUpTab}</span>
                 </TabsTrigger>
@@ -403,19 +403,19 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
               {/* ─── TAB 1: SIGN IN ─────────────────────────────────────── */}
               <TabsContent value="signin">
                 <div className="mb-5">
-                  <h2 className="text-2xl font-extrabold">{copy.loginTitle}</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">{copy.loginSubtitle}</p>
+                  <h2 className="text-2xl font-black tracking-tight text-foreground">{copy.loginTitle}</h2>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{copy.loginSubtitle}</p>
                 </div>
 
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="signin-email">{copy.email}</Label>
+                    <Label htmlFor="signin-email" className="text-xs font-bold text-foreground">{copy.email}</Label>
                     <div className="relative">
-                      <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Mail className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="signin-email"
                         type="email"
-                        className="ps-9"
+                        className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         autoComplete="email"
@@ -426,13 +426,13 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="signin-password">{copy.password}</Label>
+                    <Label htmlFor="signin-password" className="text-xs font-bold text-foreground">{copy.password}</Label>
                     <div className="relative">
-                      <KeyRound className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <KeyRound className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="signin-password"
                         type="password"
-                        className="ps-9"
+                        className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="current-password"
@@ -443,23 +443,23 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                   </div>
 
                   {signInStatus === "error" && (
-                    <Alert variant="destructive">
+                    <Alert variant="destructive" className="rounded-2xl">
                       <AlertDescription>{signInError}</AlertDescription>
                     </Alert>
                   )}
 
                   {signInStatus === "pending_approval" && (
-                    <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                    <Alert className="rounded-2xl border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
                       <Clock className="size-4 text-amber-600 shrink-0" />
                       <AlertTitle className="font-bold">{copy.approvalNoticeTitle}</AlertTitle>
                       <AlertDescription className="text-xs mt-1">{copy.pendingError}</AlertDescription>
                     </Alert>
                   )}
 
-                  <Button type="submit" size="lg" className="btn-nowrap w-full mt-2" disabled={signInStatus === "submitting"}>
-                    {signInStatus === "submitting" ? <Loader2 className="animate-spin shrink-0" /> : <LockKeyhole className="shrink-0" />}
+                  <Button type="submit" size="lg" className="w-full mt-2 h-11 rounded-full font-bold shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground gap-2" disabled={signInStatus === "submitting"}>
+                    {signInStatus === "submitting" ? <Loader2 className="size-4 animate-spin shrink-0" /> : <LockKeyhole className="size-4 shrink-0" />}
                     <span>{signInStatus === "submitting" ? copy.submitting : copy.signInBtn}</span>
-                    <ArrowRight className="shrink-0 rtl:rotate-180" />
+                    <ArrowRight className="size-4 shrink-0 rtl:rotate-180" />
                   </Button>
                 </form>
               </TabsContent>
@@ -468,27 +468,27 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
               <TabsContent value="signup">
                 {isClosedRegistration ? (
                   <div className="py-8 text-center space-y-4">
-                    <div className="mx-auto grid size-12 place-items-center rounded-full bg-amber-500/10 text-amber-600">
+                    <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
                       <AlertTriangle className="size-6" />
                     </div>
-                    <h3 className="text-lg font-bold">{copy.closedTitle}</h3>
+                    <h3 className="text-lg font-bold text-foreground">{copy.closedTitle}</h3>
                     <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
                       {copy.closedDesc}
                     </p>
-                    <Button variant="outline" onClick={() => setTab("signin")}>
+                    <Button variant="outline" className="rounded-full h-10 px-5 font-bold" onClick={() => setTab("signin")}>
                       {copy.signInTab}
                     </Button>
                   </div>
                 ) : isPendingReview ? (
                   <div className="py-8 text-center space-y-4">
-                    <div className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+                    <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
                       <Clock className="size-6" />
                     </div>
-                    <h3 className="text-xl font-bold">{copy.approvalNoticeTitle}</h3>
+                    <h3 className="text-xl font-bold text-foreground">{copy.approvalNoticeTitle}</h3>
                     <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
                       {copy.approvalNoticeDesc}
                     </p>
-                    <Button variant="outline" onClick={() => setTab("signin")}>
+                    <Button variant="outline" className="rounded-full h-10 px-5 font-bold" onClick={() => setTab("signin")}>
                       {copy.signInTab}
                     </Button>
                   </div>
@@ -497,12 +497,12 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                     {/* First & Last Name */}
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-firstname">{copy.firstName} *</Label>
+                        <Label htmlFor="signup-firstname" className="text-xs font-bold text-foreground">{copy.firstName} *</Label>
                         <div className="relative">
-                          <User className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <User className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             id="signup-firstname"
-                            className="ps-9"
+                            className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
                             placeholder={isAr ? "أحمد" : "Ahmed"}
@@ -511,12 +511,12 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-lastname">{copy.lastName} *</Label>
+                        <Label htmlFor="signup-lastname" className="text-xs font-bold text-foreground">{copy.lastName} *</Label>
                         <div className="relative">
-                          <User className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <User className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             id="signup-lastname"
-                            className="ps-9"
+                            className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
                             placeholder={isAr ? "علي" : "Ali"}
@@ -529,13 +529,13 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                     {/* Email & Password */}
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-email">{copy.email} *</Label>
+                        <Label htmlFor="signup-email" className="text-xs font-bold text-foreground">{copy.email} *</Label>
                         <div className="relative">
-                          <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Mail className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             id="signup-email"
                             type="email"
-                            className="ps-9"
+                            className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                             value={signupEmail}
                             onChange={(e) => setSignupEmail(e.target.value)}
                             placeholder="student@example.com"
@@ -544,13 +544,13 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="signup-password">{copy.password} *</Label>
+                        <Label htmlFor="signup-password" className="text-xs font-bold text-foreground">{copy.password} *</Label>
                         <div className="relative">
-                          <KeyRound className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <KeyRound className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             id="signup-password"
                             type="password"
-                            className="ps-9"
+                            className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                             value={signupPassword}
                             onChange={(e) => setSignupPassword(e.target.value)}
                             placeholder="••••••••"
@@ -563,13 +563,13 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
 
                     {/* Phone */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="signup-phone">{copy.phone}</Label>
+                      <Label htmlFor="signup-phone" className="text-xs font-bold text-foreground">{copy.phone}</Label>
                       <div className="relative">
-                        <Phone className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Phone className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           id="signup-phone"
                           type="tel"
-                          className="ps-9"
+                          className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="+20 100 000 0000"
@@ -580,14 +580,14 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                     {/* University & Faculty */}
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label>{copy.uni} *</Label>
+                        <Label className="text-xs font-bold text-foreground">{copy.uni} *</Label>
                         <Select value={university} onValueChange={setUniversity} required>
-                          <SelectTrigger>
+                          <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm">
                             <SelectValue placeholder={copy.selectUni} />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-2xl border-border/80">
                             {universities.map((u) => (
-                              <SelectItem key={u.id} value={isAr ? u.name_ar : u.name_en}>
+                              <SelectItem key={u.id} value={isAr ? u.name_ar : u.name_en} className="rounded-lg text-xs">
                                 {isAr ? u.name_ar : u.name_en}
                               </SelectItem>
                             ))}
@@ -596,14 +596,14 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label>{copy.faculty} *</Label>
+                        <Label className="text-xs font-bold text-foreground">{copy.faculty} *</Label>
                         <Select value={faculty} onValueChange={setFaculty} required>
-                          <SelectTrigger>
+                          <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm">
                             <SelectValue placeholder={copy.selectFaculty} />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-2xl border-border/80">
                             {faculties.map((f) => (
-                              <SelectItem key={f.id} value={isAr ? f.name_ar : f.name_en}>
+                              <SelectItem key={f.id} value={isAr ? f.name_ar : f.name_en} className="rounded-lg text-xs">
                                 {isAr ? f.name_ar : f.name_en}
                               </SelectItem>
                             ))}
@@ -615,14 +615,14 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                     {/* Starting Year & Live Academic Level Display */}
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <Label>{copy.startYear}</Label>
+                        <Label className="text-xs font-bold text-foreground">{copy.startYear}</Label>
                         <Select value={String(startYear)} onValueChange={(val) => setStartYear(Number(val))}>
-                          <SelectTrigger>
+                          <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="rounded-2xl border-border/80">
                             {startYears.map((yr) => (
-                              <SelectItem key={yr} value={String(yr)}>
+                              <SelectItem key={yr} value={String(yr)} className="rounded-lg text-xs">
                                 {yr}
                               </SelectItem>
                             ))}
@@ -630,8 +630,8 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                         </Select>
                       </div>
 
-                      <div className="rounded-lg border bg-muted/40 p-2.5 flex flex-col justify-center">
-                        <span className="text-[11px] text-muted-foreground font-medium">{copy.academicLevel}</span>
+                      <div className="rounded-2xl border border-border/80 bg-muted/40 p-3 flex flex-col justify-center">
+                        <span className="text-[11px] text-muted-foreground font-bold">{copy.academicLevel}</span>
                         <div className="mt-0.5 flex items-center gap-1.5">
                           <span className="text-xs font-bold text-primary">{academicLevelText}</span>
                           <span className="text-[10px] text-muted-foreground">({copy.gradYear}: {predictedGraduationYear})</span>
@@ -640,7 +640,7 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                     </div>
 
                     {signUpStatus === "error" && (
-                      <Alert variant="destructive">
+                      <Alert variant="destructive" className="rounded-2xl">
                         <AlertDescription>{signUpMessage}</AlertDescription>
                       </Alert>
                     )}
@@ -655,9 +655,9 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                       onExpire={() => setTurnstileToken("")}
                     />
 
-                    <Button type="submit" size="lg" className="w-full mt-3" disabled={signUpStatus === "submitting"}>
-                      {signUpStatus === "submitting" ? <Loader2 className="animate-spin" /> : <UserPlus />}
-                      {signUpStatus === "submitting" ? copy.signingUp : copy.signUpBtn}
+                    <Button type="submit" size="lg" className="w-full mt-3 h-11 rounded-full font-bold shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground gap-2" disabled={signUpStatus === "submitting"}>
+                      {signUpStatus === "submitting" ? <Loader2 className="size-4 animate-spin shrink-0" /> : <UserPlus className="size-4 shrink-0" />}
+                      <span>{signUpStatus === "submitting" ? copy.signingUp : copy.signUpBtn}</span>
                     </Button>
                   </form>
                 )}

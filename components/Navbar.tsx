@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/router"
 import {
   FiBookOpen as BookOpen,
+  FiChevronDown as ChevronDown,
   FiChevronRight as ChevronRight,
   FiGlobe as Languages,
   FiHome as HomeIcon,
@@ -15,10 +16,19 @@ import {
   FiSun as Sun,
   FiUser as UserIcon,
 } from "react-icons/fi"
-import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import BrandMark from "@/components/BrandMark"
 import { useTheme } from "@/components/ThemeProvider"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Sheet,
   SheetClose,
@@ -41,8 +51,6 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const router = useRouter()
   const { locale, pathname, asPath, query } = router
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const userMenuRef = useRef<HTMLDivElement>(null)
   const isAr = locale === "ar"
   const [activeSection, setActiveSection] = useState<"home" | "about" | "courses">("home")
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
@@ -136,20 +144,6 @@ export default function Navbar() {
     }
   }, [])
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false)
-      }
-    }
-    if (userMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [userMenuOpen])
-
   const switchLocale = () => {
     const nextLocale = isAr ? "en" : "ar"
     trackLocaleSwitch({ fromLocale: locale || "en", toLocale: nextLocale })
@@ -204,37 +198,54 @@ export default function Navbar() {
   const tr = (en: string, ar: string) => (isAr ? ar : en)
   const isStaff = authUser && ["dev", "super_admin", "mentor"].includes(authUser.role)
 
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase()
+  }
+
   return (
-    <header className="sticky top-0 z-40 px-2 pt-2 sm:px-5 sm:pt-3">
+    <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4 transition-all">
       <nav
-        className="mx-auto flex h-16 w-full min-w-0 max-w-[1400px] items-center justify-between rounded-full border border-border/70 bg-background/65 px-2 text-foreground shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/55 sm:px-5 md:grid md:grid-cols-[1fr_auto_1fr]"
+        className="glass-nav mx-auto flex h-16 w-full min-w-0 max-w-7xl items-center justify-between rounded-full px-3 text-foreground sm:px-5 md:grid md:grid-cols-[1fr_auto_1fr]"
         aria-label={isAr ? "التنقل الرئيسي" : "Main navigation"}
       >
         {/* Brand Logo */}
         <Link
           href="/"
           onClick={(e) => handleNavClick(e, "/", "home")}
-          className="flex min-h-11 min-w-0 items-center gap-2 rounded-full px-1 outline-none transition-colors hover:bg-accent/35 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-2"
+          className="group flex min-h-11 min-w-0 items-center gap-2.5 rounded-full px-2 outline-none transition-transform hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label={isAr ? "فارما كور - الرئيسية" : "PharmaCore home"}
         >
-          <BrandMark className="size-9 sm:size-10" />
-          <span className="hidden text-sm font-extrabold tracking-tight min-[360px]:inline sm:text-lg whitespace-nowrap shrink-0">
-            Pharma<span className="text-primary">Core</span>
-          </span>
+          <div className="relative flex items-center justify-center">
+            <BrandMark className="size-9 sm:size-10 transition-transform group-hover:rotate-6" />
+          </div>
+          <div className="hidden flex-col min-[380px]:flex">
+            <span className="text-base sm:text-lg font-black tracking-tight leading-none">
+              Pharma<span className="text-primary">Core</span>
+            </span>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none mt-0.5">
+              Clinical
+            </span>
+          </div>
         </Link>
 
         {/* Desktop Navigation Links */}
-        <div className="hidden items-center gap-1 rounded-full bg-muted/35 p-1 md:flex shrink-0">
+        <div className="hidden items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1.5 backdrop-blur-md md:flex shrink-0">
           {nav.map((item) => {
             const active = isNavActive(item.sectionId, item.href)
             return (
               <Button
                 key={item.href}
-                variant="ghost"
-                className={`h-11 rounded-full px-5 text-sm transition-all focus-visible:ring-ring whitespace-nowrap shrink-0 ${
+                variant={active ? "default" : "ghost"}
+                size="sm"
+                className={`h-9 rounded-full px-4 text-xs font-bold transition-all focus-visible:ring-ring shrink-0 ${
                   active
-                    ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground font-bold"
-                    : "text-foreground/70 hover:bg-accent/45 hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:bg-background/80 hover:text-foreground"
                 }`}
                 asChild
               >
@@ -250,116 +261,107 @@ export default function Navbar() {
         </div>
 
         {/* Controls & User Profile & Mobile Hamburger */}
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:justify-self-end">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5 md:justify-self-end">
           {/* Desktop Language Switcher */}
           <Button
             variant="ghost"
             size="icon"
-            className="hidden shrink-0 rounded-full text-foreground/75 hover:bg-accent/45 hover:text-foreground focus-visible:ring-ring md:inline-flex"
+            className="hidden size-9 shrink-0 rounded-full text-foreground/80 hover:bg-muted/70 focus-visible:ring-ring md:inline-flex"
             onClick={switchLocale}
             aria-label={isAr ? "Switch to English" : "التبديل إلى العربية"}
             title={isAr ? "English" : "العربية"}
           >
-            <Languages />
+            <Languages className="size-4" />
           </Button>
 
           {/* Desktop Theme Switcher */}
           <Button
             variant="ghost"
             size="icon"
-            className="hidden shrink-0 rounded-full text-foreground/75 hover:bg-accent/45 hover:text-foreground focus-visible:ring-ring md:inline-flex"
+            className="hidden size-9 shrink-0 rounded-full text-foreground/80 hover:bg-muted/70 focus-visible:ring-ring md:inline-flex"
             onClick={handleToggleTheme}
-            aria-label={
-              theme === "dark"
-                ? isAr
-                  ? "تفعيل الوضع الفاتح"
-                  : "Switch to light mode"
-                : isAr
-                ? "تفعيل الوضع الداكن"
-                : "Switch to dark mode"
-            }
+            aria-label={theme === "dark" ? tr("Switch to light mode", "الوضع الفاتح") : tr("Switch to dark mode", "الوضع الداكن")}
           >
-            {theme === "dark" ? <Sun /> : <Moon />}
+            {theme === "dark" ? <Sun className="size-4 text-amber-400" /> : <Moon className="size-4 text-primary" />}
           </Button>
 
           {/* User Profile / Sign In Button */}
           {authUser ? (
-            <div className="relative shrink-0" ref={userMenuRef}>
-              <Button
-                variant="outline"
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="h-10 rounded-full ps-2 pe-3 gap-2 border-primary/30 bg-card/60 hover:bg-card shadow-xs shrink-0 whitespace-nowrap"
-                aria-expanded={userMenuOpen}
-              >
-                <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs shrink-0">
-                  {isStaff ? <ShieldCheck className="size-3.5" /> : <GraduationCap className="size-3.5" />}
-                </span>
-                <span className="hidden sm:inline max-w-[120px] truncate text-xs font-bold">
-                  {authUser.fullName}
-                </span>
-              </Button>
-
-              {userMenuOpen && (
-                <div
-                  className={`absolute mt-2 w-56 rounded-2xl border bg-card/95 backdrop-blur-xl p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 ${
-                    isAr ? "start-0" : "end-0"
-                  }`}
-                  dir={isAr ? "rtl" : "ltr"}
+            <DropdownMenu dir={isAr ? "rtl" : "ltr"}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-full ps-2 pe-3 gap-2 border-border/80 bg-background/80 hover:bg-background shadow-xs shrink-0 focus-visible:ring-primary"
                 >
-                  <div className="px-2.5 py-2 border-b mb-1">
-                    <p className="text-sm font-bold leading-none truncate">{authUser.fullName}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-1">{authUser.email}</p>
-                    <span className="mt-1.5 inline-block text-[10px] font-semibold text-primary uppercase tracking-wider">
-                      {isStaff ? tr("Staff / Mentor", "كادر تدريسي / إدارة") : tr("Student Member", "حساب طالب")}
-                    </span>
-                  </div>
+                  <Avatar className="size-6 ring-1 ring-primary/30">
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-black">
+                      {getInitials(authUser.fullName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline max-w-[110px] truncate text-xs font-bold">
+                    {authUser.fullName}
+                  </span>
+                  <ChevronDown className="size-3 text-muted-foreground shrink-0 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
 
-                  <Link
-                    href="/profile"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground whitespace-nowrap"
-                  >
-                    <UserIcon className="size-4 text-primary shrink-0" />
+              <DropdownMenuContent
+                align={isAr ? "start" : "end"}
+                className="w-60 rounded-2xl p-2 shadow-2xl"
+              >
+                <DropdownMenuLabel className="p-2 font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-bold leading-none truncate text-foreground">{authUser.fullName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{authUser.email}</p>
+                    <div className="pt-1">
+                      <Badge variant={isStaff ? "mentor" : "success"} className="text-[10px] px-2 py-0">
+                        {isStaff ? tr("Faculty / Staff", "هيئة التدريس / إدارة") : tr("Student Portal", "حساب طالب")}
+                      </Badge>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
+                    <UserIcon className="size-4 text-primary" />
                     <span>{tr("My Profile & Progress", "ملفي الأكاديمي والتقدم")}</span>
                   </Link>
+                </DropdownMenuItem>
 
-                  <Link
-                    href="/#courses"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground whitespace-nowrap"
-                  >
-                    <BookOpen className="size-4 text-primary shrink-0" />
+                <DropdownMenuItem asChild>
+                  <Link href="/#courses" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
+                    <BookOpen className="size-4 text-primary" />
                     <span>{tr("Browse Courses", "استعراض المقررات")}</span>
                   </Link>
+                </DropdownMenuItem>
 
-                  {isStaff && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground border-t mt-1 pt-2 whitespace-nowrap"
-                    >
-                      <ShieldCheck className="size-4 text-primary shrink-0" />
-                      <span>{tr("Admin Dashboard", "لوحة الإدارة")}</span>
-                    </Link>
-                  )}
+                {isStaff && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="flex items-center gap-2.5 py-2 cursor-pointer font-bold text-primary">
+                        <ShieldCheck className="size-4" />
+                        <span>{tr("Admin Dashboard", "لوحة الإدارة الأكاديمية")}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
 
-                  <button
-                    onClick={() => {
-                      setUserMenuOpen(false)
-                      handleSignOut()
-                    }}
-                    className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer border-t mt-1 pt-2 whitespace-nowrap"
-                  >
-                    <LogOut className="size-4 shrink-0" />
-                    <span>{tr("Sign Out", "تسجيل الخروج")}</span>
-                  </button>
-                </div>
-              )}
-            </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold text-destructive focus:bg-destructive/10 focus:text-destructive"
+                >
+                  <LogOut className="size-4" />
+                  <span>{tr("Sign Out", "تسجيل الخروج")}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button
               size="sm"
-              className="h-9 sm:h-10 rounded-full px-3.5 sm:px-4 text-xs font-bold gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+              className="h-10 rounded-full px-4 text-xs font-bold gap-2 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95"
               asChild
             >
               <Link href="/login">
@@ -375,7 +377,7 @@ export default function Navbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-11 shrink-0 rounded-full text-foreground hover:bg-accent/45 hover:text-foreground focus-visible:ring-ring md:hidden"
+                className="size-10 shrink-0 rounded-full text-foreground hover:bg-muted/70 md:hidden"
                 aria-label={isAr ? "فتح القائمة" : "Open menu"}
               >
                 <Menu className="size-5" />
@@ -384,20 +386,20 @@ export default function Navbar() {
 
             <SheetContent
               side={isAr ? "left" : "right"}
-              className="w-[88vw] max-w-[360px] p-5 sm:p-6 flex flex-col justify-between bg-background/95 backdrop-blur-2xl border-s shadow-2xl"
+              className="w-[88vw] max-w-[360px] p-6 flex flex-col justify-between bg-background/95 backdrop-blur-2xl border-s shadow-2xl"
               dir={isAr ? "rtl" : "ltr"}
             >
               {/* Drawer Top Header */}
               <div className="space-y-6">
                 <SheetHeader className="text-start pe-10">
                   <SheetTitle className="flex items-center gap-3">
-                    <BrandMark className="size-9 shrink-0" />
+                    <BrandMark className="size-10 shrink-0" />
                     <div>
-                      <span className="text-base font-black tracking-tight block">
+                      <span className="text-lg font-black tracking-tight block">
                         Pharma<span className="text-primary">Core</span>
                       </span>
-                      <span className="text-[11px] font-normal text-muted-foreground block -mt-0.5">
-                        {tr("Open Pharmacy Education", "منصة التعليم الصيدلي المفتوح")}
+                      <span className="text-xs font-medium text-muted-foreground block -mt-0.5">
+                        {tr("Open Clinical Pharmacy", "منصة التعليم الصيدلي المفتوح")}
                       </span>
                     </div>
                   </SheetTitle>
@@ -405,23 +407,27 @@ export default function Navbar() {
 
                 {/* User Status Card if Logged In */}
                 {authUser && (
-                  <div className="rounded-2xl border bg-primary/5 p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground font-bold text-xs">
-                        {authUser.fullName.charAt(0)}
-                      </span>
+                  <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between shadow-2xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar className="size-9 ring-1 ring-primary/40">
+                        <AvatarFallback className="bg-primary text-primary-foreground font-black text-xs">
+                          {getInitials(authUser.fullName)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold truncate">{authUser.fullName}</p>
+                        <p className="text-xs font-bold truncate text-foreground">{authUser.fullName}</p>
                         <p className="text-[10px] text-muted-foreground truncate">{authUser.email}</p>
                       </div>
                     </div>
                     {isStaff ? (
-                      <Button size="sm" variant="outline" className="text-xs h-7 px-2" asChild>
-                        <Link href="/admin">
-                          <ShieldCheck className="size-3" />
-                        </Link>
-                      </Button>
-                    ) : null}
+                      <Badge variant="mentor" className="text-[10px] px-2 py-0.5">
+                        {tr("Staff", "إدارة")}
+                      </Badge>
+                    ) : (
+                      <Badge variant="success" className="text-[10px] px-2 py-0.5">
+                        {tr("Student", "طالب")}
+                      </Badge>
+                    )}
                   </div>
                 )}
 
@@ -481,17 +487,22 @@ export default function Navbar() {
                         </Link>
                       </SheetClose>
 
-                      <button
-                        onClick={handleSignOut}
-                        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-all min-h-[48px]"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="grid size-8 place-items-center rounded-xl bg-rose-500 text-white">
-                            <LogOut className="size-4" />
-                          </span>
-                          <span>{tr("Sign Out", "تسجيل الخروج")}</span>
-                        </div>
-                      </button>
+                      {isStaff && (
+                        <SheetClose asChild>
+                          <Link
+                            href="/admin"
+                            className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-all min-h-[48px]"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground">
+                                <ShieldCheck className="size-4" />
+                              </span>
+                              <span>{tr("Admin Dashboard", "لوحة الإدارة الأكاديمية")}</span>
+                            </div>
+                            <ChevronRight className={`size-4 ${isAr ? "rotate-180" : ""}`} />
+                          </Link>
+                        </SheetClose>
+                      )}
                     </>
                   )}
 
@@ -499,13 +510,13 @@ export default function Navbar() {
                     <SheetClose asChild>
                       <Link
                         href="/login"
-                        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-primary/10 text-primary hover:bg-primary/15 transition-all min-h-[48px]"
+                        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 transition-all min-h-[48px]"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground">
+                          <span className="grid size-8 place-items-center rounded-xl bg-primary-foreground/20 text-primary-foreground">
                             <LogIn className="size-4" />
                           </span>
-                          <span>{tr("Sign In / Register", "تسجيل الدخول / إنشاء حساب")}</span>
+                          <span>{tr("Sign In / Register", "تسجيل الدخول / حساب جديد")}</span>
                         </div>
                         <ChevronRight className={`size-4 ${isAr ? "rotate-180" : ""}`} />
                       </Link>
@@ -515,11 +526,11 @@ export default function Navbar() {
               </div>
 
               {/* Drawer Bottom Controls & Status */}
-              <div className="space-y-4 pt-6 border-t">
+              <div className="space-y-3 pt-6 border-t border-border/80">
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="outline"
-                    className="min-h-[44px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/30 hover:bg-muted/60"
+                    className="min-h-[44px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/40 hover:bg-muted"
                     onClick={switchLocale}
                   >
                     <Languages className="size-4 text-primary" />
@@ -528,12 +539,12 @@ export default function Navbar() {
 
                   <Button
                     variant="outline"
-                    className="min-h-[44px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/30 hover:bg-muted/60"
+                    className="min-h-[44px] rounded-2xl justify-center gap-2 text-xs font-bold bg-muted/40 hover:bg-muted"
                     onClick={handleToggleTheme}
                   >
                     {theme === "dark" ? (
                       <>
-                        <Sun className="size-4 text-amber-500" />
+                        <Sun className="size-4 text-amber-400" />
                         <span>{tr("Light", "فاتح")}</span>
                       </>
                     ) : (
@@ -549,7 +560,7 @@ export default function Navbar() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="w-full rounded-2xl h-10 gap-2 font-bold"
+                    className="w-full rounded-2xl h-11 gap-2 font-bold"
                     onClick={handleSignOut}
                   >
                     <LogOut className="size-4" />

@@ -1,6 +1,7 @@
 import React from "react"
 import {
   FiActivity as Activity,
+  FiAward as Award,
   FiBookOpen as BookOpen,
   FiChevronLeft as ChevronLeft,
   FiChevronRight as ChevronRight,
@@ -99,6 +100,13 @@ export default function AdminSidebar({
           label_en: "Analytics & Telemetry",
           label_ar: "لوحة التحليلات والمؤشرات",
           icon: Activity,
+        },
+        {
+          id: "gradebook",
+          page: "gradebook",
+          label_en: "Faculty Gradebook",
+          label_ar: "سجل الدرجات والتحصيل",
+          icon: Award,
         },
       ],
     },

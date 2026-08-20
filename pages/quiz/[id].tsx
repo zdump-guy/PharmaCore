@@ -6,6 +6,7 @@ import { serverSideTranslations } from "next-i18next/pages/serverSideTranslation
 import {
   FiArrowLeft as ArrowLeft,
   FiArrowRight as ArrowRight,
+  FiAward as Award,
   FiCheck as Check,
   FiCheckCircle as CheckCircle2,
   FiClipboard as ClipboardCheck,
@@ -14,9 +15,11 @@ import {
   FiRotateCcw as RotateCcw,
   FiSend as Send,
   FiX as X,
+  FiZap as Zap,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import PracticeModeControls, { type QuizRunnerMode } from "@/components/quiz/PracticeModeControls"
+import ClinicalRationaleCard from "@/components/quiz/ClinicalRationaleCard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,26 +27,42 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
+import { resolveCourseFeatures } from "@/lib/featureFlags"
 import { cn } from "@/lib/utils"
 import { trackQuizStart, trackQuestionAnswered, trackQuizSubmit, trackQuizRetry } from "@/lib/analytics"
-import type { Question, Quiz } from "@/types"
+import type { Course, Question, Quiz } from "@/types"
 
 interface QuizPageProps {
   quiz: Quiz | null
+  course: Course | null
   questions: Question[]
   isLocked: boolean
   siteContent: SiteContent
 }
 
-export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
+export default function QuizPage({ quiz, course, questions, isLocked, siteContent }: QuizPageProps) {
   const { locale } = useRouter()
   const isAr = locale === "ar"
+  const tr = (en: string, ar: string) => (isAr ? ar : en)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
-  // Check auth
+  // Resolve course features to check if practice_mode is enabled
+  const resolvedFeatures = resolveCourseFeatures(
+    siteContent?.features,
+    course?.feature_overrides
+  )
+  const isPracticeAvailable = Boolean(resolvedFeatures.practice_mode)
+
+  // Quiz runner mode state: defaults to practice if available, otherwise standard
+  const [mode, setMode] = useState<QuizRunnerMode>(isPracticeAvailable ? "practice" : "standard")
+
+  // Enforce standard mode if practice mode is disabled by course policy
+  const effectiveMode: QuizRunnerMode = isPracticeAvailable ? mode : "standard"
+
+  // Check auth state
   useEffect(() => {
     if (!supabase) return
 
@@ -82,9 +101,11 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
   if (!quiz) {
     return (
       <Layout title="Quiz not found">
-        <div className="page-shell section-space text-center">
-          <ClipboardCheck className="mx-auto size-12 text-muted-foreground" />
-          <h1 className="mt-5 text-3xl font-bold">{isAr ? "الاختبار غير موجود" : "Quiz not found"}</h1>
+        <div className="page-shell section-space text-center py-24">
+          <div className="size-16 grid place-items-center rounded-3xl bg-muted/60 text-muted-foreground mx-auto">
+            <ClipboardCheck className="size-8" />
+          </div>
+          <h1 className="mt-6 text-3xl font-black">{isAr ? "الاختبار غير موجود" : "Quiz not found"}</h1>
         </div>
       </Layout>
     )
@@ -101,47 +122,61 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
   const copy = isAr
     ? {
         back: "العودة للمحاضرة",
-        label: "اختبار قصير",
-        helper: "اختر أفضل إجابة لكل سؤال. يمكنك المراجعة قبل الإرسال.",
-        answered: "تمت الإجابة",
+        label: "اختبار سريري تفاعلي",
+        helper: "اختر الإجابة الأدق لكل سؤال سريري. يمكنك مراجعة اختياراتك قبل الاعتماد النهائي.",
+        answered: "الأسئلة المجاب عليها",
         of: "من",
-        submit: "إرسال الإجابات",
-        complete: "أجب عن جميع الأسئلة للإرسال",
-        result: "نتيجتك",
-        excellent: "إتقان ممتاز — يمكنك الانتقال بثقة.",
-        improve: "بداية جيدة. راجع الإجابات وحاول مرة أخرى.",
-        correct: "إجابة صحيحة",
-        incorrect: "تحتاج مراجعة",
-        answer: "الإجابة الصحيحة",
-        retry: "إعادة المحاولة",
-        true: "صح",
-        false: "خطأ",
-        placeholder: "اكتب إجابتك هنا",
+        submit: "اعتماد وإرسال الإجابات",
+        complete: "يرجى الإجابة عن كافة الأسئلة لتفعيل الإرسال",
+        result: "نتيجة التقييم السريري",
+        excellent: "أداء استثنائي — إتقان تام للمفاهيم السريرية والدوائية.",
+        proficient: "أداء جيد جداً — استيعاب قوي للمفاهيم الأساسية.",
+        improve: "بحاجة إلى مراجعة — يوصى بإعادة مشاهدة المحاضرة ومراجعة الملخص.",
+        correct: "إجابة دقيقة وصحيحة",
+        incorrect: "إجابة غير دقيقة",
+        answer: "الإجابة المعتمدة",
+        retry: "إعادة الاختبار",
+        true: "صحيح",
+        false: "خاطئ",
+        placeholder: "اكتب إجابتك هنا...",
         lockedTitle: "هذا الاختبار مخصص للطلاب المسجلين",
-        lockedDesc: "سجل الدخول بحساب الطالب الخاص بك لحل الاختبار وحفظ درجاتك وتقييم مستواك.",
+        lockedDesc: "سجل الدخول بحساب الطالب الخاص بك لحل الاختبار السريري وتسجيل نقاطك الأكاديمية.",
         signInCta: "تسجيل الدخول / إنشاء حساب",
+        practiceSummary: "ملخص أداء التدريب السريري",
+        practiceHelper: "في وضع التدريب، يتم تصحيح كل إجابة فور اختيارها مع إظهار التعليل الإكلينيكي والمراجع المعتمدة.",
+        resetPractice: "إعادة تعيين التدريب",
+        finishPractice: "إنهاء جلسة التدريب",
+        practiced: "الأسئلة المنجزة",
+        accuracy: "نسبة الدقة الحالية",
       }
     : {
-        back: "Back to lecture",
-        label: "Knowledge checkpoint",
-        helper: "Choose the best answer for each question. You can review before submitting.",
-        answered: "Answered",
+        back: "Back to Lecture",
+        label: "Clinical Knowledge Checkpoint",
+        helper: "Select the most accurate option for each clinical question. You can review before final submission.",
+        answered: "Questions Answered",
         of: "of",
-        submit: "Submit answers",
-        complete: "Answer every question to submit",
-        result: "Your result",
-        excellent: "Excellent mastery — move forward with confidence.",
-        improve: "Good start. Review the feedback and try once more.",
-        correct: "Correct answer",
-        incorrect: "Needs review",
-        answer: "Correct answer",
-        retry: "Retake quiz",
+        submit: "Submit Assessment",
+        complete: "Please answer all questions to enable submission",
+        result: "Clinical Evaluation Result",
+        excellent: "Outstanding mastery — thorough understanding of clinical pharmacology.",
+        proficient: "Proficient — strong grasp of core therapeutic principles.",
+        improve: "Needs review — recommend reviewing the lecture notes and retaking the checkpoint.",
+        correct: "Correct Answer",
+        incorrect: "Incorrect",
+        answer: "Approved Answer",
+        retry: "Retake Quiz",
         true: "True",
         false: "False",
-        placeholder: "Type your answer here",
-        lockedTitle: "This quiz is reserved for registered students",
-        lockedDesc: "Sign in to take this interactive quiz, test your pharmacological mastery, and record your score.",
+        placeholder: "Type your clinical answer...",
+        lockedTitle: "Quiz Reserved for Registered Students",
+        lockedDesc: "Sign in with your student account to complete this clinical assessment and record your progress.",
         signInCta: "Sign In / Register Free",
+        practiceSummary: "Practice Session Summary",
+        practiceHelper: "In Practice Mode, instant feedback, clinical rationales, and textbook citations are revealed immediately upon selecting an answer.",
+        resetPractice: "Reset Practice",
+        finishPractice: "Complete Practice Session",
+        practiced: "Questions Practiced",
+        accuracy: "Current Accuracy",
       }
 
   const setAnswer = (id: string, value: string) => {
@@ -182,23 +217,23 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
   if (isGated) {
     return (
       <Layout title={`${title} — PharmaCore`} description={copy.helper}>
-        <div className="page-shell section-space max-w-xl text-center">
-          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/30">
+        <div className="page-shell section-space max-w-xl text-center py-20">
+          <div className="mx-auto size-16 grid place-items-center rounded-3xl bg-amber-500/10 text-amber-600 border border-amber-500/30">
             <LockKeyhole className="size-8" />
           </div>
-          <h1 className="mt-5 text-3xl font-bold">{copy.lockedTitle}</h1>
+          <h1 className="mt-6 text-3xl font-black">{copy.lockedTitle}</h1>
           <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{copy.lockedDesc}</p>
           <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
-            <Button size="lg" className="font-bold gap-2" asChild>
+            <Button size="lg" className="rounded-full font-bold gap-2 shadow-md shadow-primary/20" asChild>
               <Link href={`/login?returnUrl=/quiz/${quiz.id}&tab=signup`}>
                 <LogIn className="size-4" />
-                {copy.signInCta}
+                <span>{copy.signInCta}</span>
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" className="rounded-full" asChild>
               <Link href={backHref}>
-                <DirectionArrow />
-                {copy.back}
+                <DirectionArrow className="size-4" />
+                <span>{copy.back}</span>
               </Link>
             </Button>
           </div>
@@ -207,113 +242,267 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
     )
   }
 
+  const isPractice = effectiveMode === "practice"
+
   return (
-    <Layout title={`${title} — PharmaCore`} description={copy.helper}>
-      <section className="border-b bg-muted/45">
-        <div className="page-shell max-w-4xl py-9 lg:py-12">
-          <Button variant="ghost" className="-ms-4 mb-6" asChild>
+    <Layout title={`${title} — PharmaCore`} description={isPractice ? copy.practiceHelper : copy.helper}>
+      {/* ─── QUIZ HEADER ─────────────────────────────────────────────────── */}
+      <section className="relative border-b border-border/70 bg-muted/30">
+        <div className="hero-glow pointer-events-none absolute inset-0 opacity-35" aria-hidden="true" />
+        <div className="page-shell max-w-4xl py-8 sm:py-12 relative space-y-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ms-3 rounded-full text-xs font-bold gap-1.5 text-muted-foreground hover:text-foreground"
+            asChild
+          >
             <Link href={backHref}>
-              <DirectionArrow />
-              {copy.back}
+              <DirectionArrow className="size-3.5" />
+              <span>{copy.back}</span>
             </Link>
           </Button>
-          <Badge variant="outline" className="badge-nowrap gap-2 bg-card">
-            <ClipboardCheck className="size-3.5 shrink-0" />
-            <span>{copy.label}</span>
-          </Badge>
-          <h1 className="mt-4 text-balance text-3xl font-extrabold sm:text-4xl">{title}</h1>
-          <p className="body-lead mt-3">{copy.helper}</p>
-          <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="whitespace-nowrap">
-              {copy.answered} {answeredCount} {copy.of} {questions.length}
-            </span>
+
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="gap-1.5 bg-background/80 text-primary font-bold">
+                <ClipboardCheck className="size-3.5" />
+                <span>{copy.label}</span>
+              </Badge>
+              {isPractice ? (
+                <Badge variant="success" className="gap-1 font-bold">
+                  <Zap className="size-3" />
+                  <span>{isAr ? "وضع التدريب الفوري" : "Practice Mode Active"}</span>
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="gap-1 font-bold">
+                  <Award className="size-3" />
+                  <span>{isAr ? "اختبار معياري" : "Standard Exam Mode"}</span>
+                </Badge>
+              )}
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl font-black text-foreground">{title}</h1>
+            <p className="body-lead text-sm sm:text-base text-muted-foreground">
+              {isPractice ? copy.practiceHelper : copy.helper}
+            </p>
           </div>
-          <Progress value={questions.length ? (answeredCount / questions.length) * 100 : 0} className="mt-3" />
+
+          {/* Practice vs Standard Mode Toggle Controls */}
+          <PracticeModeControls
+            mode={effectiveMode}
+            onChangeMode={(newMode) => {
+              setMode(newMode)
+              if (newMode === "practice") {
+                setSubmitted(false)
+              }
+            }}
+            isPracticeAvailable={isPracticeAvailable}
+            isAr={isAr}
+          />
+
+          {/* Progress Indicator */}
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-muted-foreground">
+                {isPractice ? copy.practiced : copy.answered}
+              </span>
+              <span className="font-mono text-primary">
+                {answeredCount} {copy.of} {questions.length}
+              </span>
+            </div>
+            <Progress value={questions.length ? (answeredCount / questions.length) * 100 : 0} className="h-2.5" />
+          </div>
         </div>
       </section>
 
-      <section className="page-shell max-w-4xl section-space">
+      {/* ─── QUESTIONS LIST & RESULTS ─────────────────────────────────────── */}
+      <section className="page-shell max-w-4xl py-10 sm:py-14 space-y-8">
+        {/* Results Banner (Shown in Standard Mode upon submission, or in Practice Mode when completed) */}
         {submitted && (
-          <Alert className="mb-8 border-primary/40 bg-secondary/80 p-6">
-            <CheckCircle2 className="size-6 text-primary shrink-0" />
-            <div className="ms-3 min-w-0">
-              <AlertTitle className="text-xl font-bold">
-                {copy.result}: {score}/{questions.length} ({percent}%)
-              </AlertTitle>
-              <AlertDescription className="mt-2 text-sm text-muted-foreground">
-                {percent >= 70 ? copy.excellent : copy.improve}
-              </AlertDescription>
+          <div
+            className={cn(
+              "rounded-3xl border p-7 sm:p-8 flex flex-col sm:flex-row items-center gap-6 shadow-xl animate-in fade-in zoom-in-95",
+              percent >= 80
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-50"
+                : percent >= 60
+                ? "border-primary/40 bg-primary/10 text-foreground"
+                : "border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-50"
+            )}
+          >
+            <div className="size-20 grid place-items-center rounded-3xl bg-background/90 text-primary shadow-md shrink-0">
+              <span className="text-2xl font-black font-mono">{percent}%</span>
             </div>
-          </Alert>
+            <div className="space-y-1.5 text-center sm:text-start flex-1">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h2 className="text-2xl font-black">
+                  {isPractice ? copy.practiceSummary : copy.result}: {score} / {questions.length}
+                </h2>
+                <Badge variant={percent >= 80 ? "success" : percent >= 60 ? "default" : "warning"}>
+                  {percent >= 80
+                    ? isAr
+                      ? "امتياز سريري"
+                      : "Distinction (Mastery)"
+                    : percent >= 60
+                    ? isAr
+                      ? "ناجح"
+                      : "Proficient"
+                    : isAr
+                    ? "يحتاج مراجعة"
+                    : "Needs Review"}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {percent >= 80 ? copy.excellent : percent >= 60 ? copy.proficient : copy.improve}
+              </p>
+            </div>
+          </div>
         )}
 
+        {/* Questions Cards */}
         <div className="space-y-6">
           {questions.map((question, index) => {
             const qText = isAr ? question.text_ar : question.text_en
-            const isCorrect = (answers[question.id] ?? "").trim().toLowerCase() === question.correct_answer.trim().toLowerCase()
-            const options = question.type === "true_false" ? [copy.true, copy.false] : (question.options ?? [])
+            const selectedVal = answers[question.id] ?? ""
+            const isAnswered = Boolean(selectedVal)
+            const isCorrect = selectedVal.trim().toLowerCase() === question.correct_answer.trim().toLowerCase()
+            const options = question.type === "true_false" ? [copy.true, copy.false] : question.options ?? []
+
+            // In practice mode, show feedback instantly once answered.
+            // In standard mode, show feedback only after final submission.
+            const showFeedback = isPractice ? isAnswered : submitted
 
             return (
               <Card
                 key={question.id}
                 className={cn(
-                  "shadow-none transition-colors",
-                  submitted && (isCorrect ? "border-emerald-500/50 bg-emerald-500/5" : "border-destructive/50 bg-destructive/5")
+                  "rounded-3xl border-border/80 bg-card/90 shadow-sm transition-all overflow-hidden",
+                  showFeedback &&
+                    (isCorrect ? "border-emerald-500/40 bg-emerald-500/5" : "border-rose-500/40 bg-rose-500/5")
                 )}
               >
-                <CardHeader>
+                <CardHeader className="p-6 pb-4">
                   <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline" className="badge-nowrap">
-                      {index + 1} {copy.of} {questions.length}
-                    </Badge>
-                    {submitted && (
-                      <span className={cn("badge-nowrap flex items-center gap-1 text-xs font-bold shrink-0", isCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
-                        {isCorrect ? <Check className="size-3.5 shrink-0" /> : <X className="size-3.5 shrink-0" />}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs font-bold bg-muted/40">
+                        {isAr ? `السؤال ${index + 1}` : `Question ${index + 1}`} {copy.of} {questions.length}
+                      </Badge>
+                      {question.difficulty && (
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] font-bold capitalize ${
+                            question.difficulty === "easy"
+                              ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                              : question.difficulty === "hard"
+                              ? "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10"
+                              : "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10"
+                          }`}
+                        >
+                          {question.difficulty === "easy"
+                            ? isAr ? "سهل" : "Easy"
+                            : question.difficulty === "hard"
+                            ? isAr ? "متقدم" : "Hard"
+                            : isAr ? "متوسط" : "Medium"}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {showFeedback && (
+                      <Badge variant={isCorrect ? "success" : "destructive"} className="gap-1 font-bold">
+                        {isCorrect ? <Check className="size-3" /> : <X className="size-3" />}
                         <span>{isCorrect ? copy.correct : copy.incorrect}</span>
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <CardTitle className="mt-3 text-lg leading-relaxed">{qText}</CardTitle>
+
+                  <CardTitle className="mt-3 text-lg sm:text-xl font-bold leading-relaxed text-foreground">
+                    {qText}
+                  </CardTitle>
                 </CardHeader>
 
-                <CardContent className="space-y-3">
+                <CardContent className="p-6 pt-0 space-y-4">
                   {question.type === "short_text" ? (
-                    <Input
-                      value={answers[question.id] ?? ""}
-                      onChange={(e) => setAnswer(question.id, e.target.value)}
-                      placeholder={copy.placeholder}
-                      disabled={submitted}
-                    />
+                    <div className="space-y-3">
+                      <Input
+                        value={selectedVal}
+                        onChange={(e) => setAnswer(question.id, e.target.value)}
+                        placeholder={copy.placeholder}
+                        disabled={!isPractice && submitted}
+                        className="rounded-xl h-12"
+                      />
+                    </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
-                      {options.map((option) => {
-                        const selected = answers[question.id] === option
+                      {options.map((option, optIdx) => {
+                        const isThisSelected = selectedVal === option
+                        const isThisCorrectOption =
+                          option.trim().toLowerCase() === question.correct_answer.trim().toLowerCase()
+
+                        let buttonStyles = "border-border/70 bg-background/50 hover:bg-muted/60 text-foreground/90 hover:border-border"
+                        let badgeStyles = "bg-muted/80 text-muted-foreground"
+
+                        if (showFeedback) {
+                          if (isThisSelected) {
+                            if (isCorrect) {
+                              buttonStyles = "border-emerald-500 bg-emerald-500/15 text-emerald-800 dark:text-emerald-200 font-bold shadow-xs ring-1 ring-emerald-500/50"
+                              badgeStyles = "bg-emerald-600 text-white"
+                            } else {
+                              buttonStyles = "border-rose-500 bg-rose-500/15 text-rose-800 dark:text-rose-200 font-bold shadow-xs ring-1 ring-rose-500/50"
+                              badgeStyles = "bg-rose-600 text-white"
+                            }
+                          } else if (isThisCorrectOption) {
+                            // Highlight the correct answer for learning reinforcement
+                            buttonStyles = "border-emerald-500/60 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 font-bold"
+                            badgeStyles = "bg-emerald-600/80 text-white"
+                          } else {
+                            buttonStyles = "border-border/40 bg-background/30 text-muted-foreground opacity-60"
+                          }
+                        } else if (isThisSelected) {
+                          buttonStyles = "border-primary bg-primary/10 text-primary font-bold shadow-xs ring-1 ring-primary/40"
+                          badgeStyles = "bg-primary text-primary-foreground"
+                        }
+
                         return (
-                          <Button
+                          <button
                             key={option}
                             type="button"
-                            variant={selected ? "default" : "outline"}
-                            className={cn(
-                              "h-auto min-h-12 justify-start whitespace-normal p-4 text-start font-medium",
-                              selected && "font-bold shadow-xs"
-                            )}
-                            disabled={submitted}
+                            disabled={!isPractice && submitted}
                             onClick={() => setAnswer(question.id, option)}
+                            className={cn(
+                              "flex items-center gap-3.5 rounded-2xl border p-4 text-start transition-all select-none",
+                              !isPractice && submitted ? "cursor-default" : "cursor-pointer hover:shadow-xs",
+                              buttonStyles
+                            )}
                           >
-                            <span className="me-2.5 grid size-6 shrink-0 place-items-center rounded-md bg-muted/60 text-xs font-mono font-bold">
-                              {options.indexOf(option) + 1}
-                            </span>
-                            <span className="flex-1">{option}</span>
-                          </Button>
+                            <div
+                              className={cn(
+                                "size-7 grid place-items-center rounded-xl text-xs font-mono font-black shrink-0 transition-colors",
+                                badgeStyles
+                              )}
+                            >
+                              {showFeedback && isThisSelected ? (
+                                isCorrect ? <Check className="size-3.5" /> : <X className="size-3.5" />
+                              ) : showFeedback && isThisCorrectOption ? (
+                                <Check className="size-3.5" />
+                              ) : (
+                                String.fromCharCode(65 + optIdx)
+                              )}
+                            </div>
+                            <span className="flex-1 text-sm leading-snug">{option}</span>
+                          </button>
                         )
                       })}
                     </div>
                   )}
 
-                  {submitted && !isCorrect && (
-                    <p className="mt-3 text-xs font-semibold text-muted-foreground">
-                      {copy.answer}: <span className="font-bold text-foreground">{question.correct_answer}</span>
-                    </p>
+                  {/* Clinical Rationale Card (Instant in Practice Mode, or Post-Submission in Standard Mode) */}
+                  {showFeedback && (
+                    <ClinicalRationaleCard
+                      question={question}
+                      selectedAnswer={selectedVal}
+                      isCorrect={isCorrect}
+                      isAr={isAr}
+                      showApprovedAnswer={!isCorrect}
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -321,21 +510,66 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
           })}
         </div>
 
-        <div className="sticky bottom-4 z-20 mt-8 flex flex-col gap-3 rounded-2xl border bg-background/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground whitespace-nowrap">
-            {answeredCount < questions.length ? copy.complete : `${questions.length} / ${questions.length}`}
-          </p>
-          {submitted ? (
-            <Button size="lg" variant="outline" className="btn-nowrap" onClick={reset}>
-              <RotateCcw className="size-4 shrink-0" />
-              <span>{copy.retry}</span>
-            </Button>
-          ) : (
-            <Button size="lg" className="btn-nowrap" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}>
-              <Send className="size-4 shrink-0" />
-              <span>{copy.submit}</span>
-            </Button>
-          )}
+        {/* Sticky Submission & Retry Bar */}
+        <div className="sticky bottom-4 z-20 mt-10 rounded-3xl border border-border/80 bg-background/95 p-4 sm:p-5 shadow-2xl backdrop-blur-xl flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-muted-foreground">
+            <span className="font-mono text-primary font-black">{answeredCount}</span>
+            <span>{copy.of}</span>
+            <span className="font-mono text-foreground font-black">{questions.length}</span>
+            <span className="hidden sm:inline ms-2 text-xs font-normal">
+              {isPractice
+                ? `(${score} / ${answeredCount} ${tr("correct", "صحيحة")})`
+                : answeredCount < questions.length
+                ? `(${copy.complete})`
+                : "✓"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {isPractice ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-full px-5 font-bold gap-2 border-border/80 hover:bg-muted/80 shadow-xs h-11 text-xs"
+                  onClick={reset}
+                >
+                  <RotateCcw className="size-3.5 shrink-0" />
+                  <span>{copy.resetPractice}</span>
+                </Button>
+                {answeredCount > 0 && !submitted && (
+                  <Button
+                    size="lg"
+                    className="rounded-full px-6 font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 h-11 text-xs"
+                    onClick={handleSubmitQuiz}
+                  >
+                    <CheckCircle2 className="size-3.5 shrink-0" />
+                    <span>{copy.finishPractice}</span>
+                  </Button>
+                )}
+              </div>
+            ) : submitted ? (
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full px-6 font-bold gap-2 border-border/80 hover:bg-muted/80 shadow-xs"
+                onClick={reset}
+              >
+                <RotateCcw className="size-4 shrink-0" />
+                <span>{copy.retry}</span>
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="rounded-full px-8 font-bold gap-2 bg-primary hover:bg-primary/90 shadow-md shadow-primary/20 h-12"
+                disabled={answeredCount !== questions.length}
+                onClick={handleSubmitQuiz}
+              >
+                <Send className="size-4 shrink-0" />
+                <span>{copy.submit}</span>
+              </Button>
+            )}
+          </div>
         </div>
       </section>
     </Layout>
@@ -345,6 +579,7 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
 export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ params, locale }) => {
   const id = params?.id as string
   let quiz: Quiz | null = null
+  let course: Course | null = null
   let questions: Question[] = []
   let isLocked = false
 
@@ -356,8 +591,13 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
         const courseId = quizData.course_id
 
         if (courseId) {
-          const { data: courseData } = await supabase.from("courses").select("is_locked, access_policy").eq("id", courseId).maybeSingle()
+          const { data: courseData } = await supabase
+            .from("courses")
+            .select("*")
+            .eq("id", courseId)
+            .maybeSingle()
           if (courseData) {
+            course = courseData
             isLocked = Boolean(
               courseData.is_locked ||
               courseData.access_policy === "students_only" ||
@@ -380,6 +620,7 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
   return {
     props: {
       quiz,
+      course,
       questions,
       isLocked,
       siteContent: await loadSiteContent(),

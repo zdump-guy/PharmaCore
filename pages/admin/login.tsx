@@ -211,10 +211,10 @@ export default function AdminLoginPage() {
           </div>
 
           {/* Login Form Card */}
-          <Card className="border-primary/20 shadow-xl shadow-primary/5">
+          <Card className="rounded-3xl border border-border/80 bg-card/90 shadow-2xl shadow-primary/5 backdrop-blur-xl">
             <CardContent className="p-6 sm:p-8 space-y-5">
               {errorMsg && (
-                <Alert variant="destructive" className="animate-in fade-in">
+                <Alert variant="destructive" className="rounded-2xl animate-in fade-in">
                   <AlertTriangle className="size-4" />
                   <AlertTitle className="text-xs font-bold">{tr("Authentication Error", "خطأ في تسجيل الدخول")}</AlertTitle>
                   <AlertDescription className="text-xs leading-relaxed mt-1">
@@ -225,11 +225,11 @@ export default function AdminLoginPage() {
 
               <form onSubmit={handleAdminSignIn} className="space-y-4" dir={isAr ? "rtl" : "ltr"}>
                 <div className="space-y-1.5">
-                  <Label htmlFor="admin-email" className="text-xs font-bold">
+                  <Label htmlFor="admin-email" className="text-xs font-bold text-foreground">
                     {tr("Staff Email Address", "البريد الإلكتروني المهني")}
                   </Label>
                   <div className="relative">
-                    <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Mail className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="admin-email"
                       type="email"
@@ -238,7 +238,7 @@ export default function AdminLoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="admin@pharmacore.com"
-                      className="ps-9 h-10 text-sm bg-background"
+                      className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                       dir="ltr"
                     />
                   </div>
@@ -246,12 +246,12 @@ export default function AdminLoginPage() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="admin-password" className="text-xs font-bold">
+                    <Label htmlFor="admin-password" className="text-xs font-bold text-foreground">
                       {tr("Password", "كلمة المرور")}
                     </Label>
                   </div>
                   <div className="relative">
-                    <KeyRound className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <KeyRound className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       id="admin-password"
                       type="password"
@@ -260,7 +260,7 @@ export default function AdminLoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="ps-9 h-10 text-sm bg-background"
+                      className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs sm:text-sm"
                     />
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export default function AdminLoginPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 text-xs font-bold gap-2 shadow-sm"
+                  className="w-full h-11 rounded-full text-xs font-bold gap-2 shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {loading ? (
                     <>
@@ -284,10 +284,10 @@ export default function AdminLoginPage() {
                 </Button>
               </form>
 
-              <div className="pt-3 border-t text-center">
+              <div className="pt-3 border-t border-border/60 text-center">
                 <Link
                   href="/login"
-                  className="text-xs text-muted-foreground hover:text-primary transition-colors font-semibold"
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors font-bold"
                 >
                   {tr("Looking for Student Login instead?", "هل تبحث عن تسجيل دخول الطلاب؟")}
                 </Link>

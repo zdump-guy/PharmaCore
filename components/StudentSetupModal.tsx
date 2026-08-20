@@ -70,7 +70,7 @@ export default function StudentSetupModal({
   const copy = isAr
     ? {
         title: "تفعيل الحساب واستكمال البيانات",
-        desc: "هذا الحساب تم إنشاؤه مسبقًا من قِبل الإدارة. يُرجى تحديث بياناتك الشخصية وتعيين بريدك وكلمة المرور الخاصة بك للمتابعة.",
+        desc: "هذا الحساب تم إنشاؤه مسبقًا من قِبل الإدارة. يُرجى استكمال بياناتك الشخصية وتعيين بريدك وكلمة المرور الخاصة بك للمتابعة.",
         firstName: "الاسم الأول",
         lastName: "اسم العائلة / اللقب",
         email: "بريدك الإلكتروني الشخصي",
@@ -83,7 +83,7 @@ export default function StudentSetupModal({
         startYear: "سنة بدء الدراسة بالكلية",
         gradYear: "سنة التخرج المتوقعة",
         academicLevel: "المستوى الدراسي الحالي",
-        submit: "حفظ وتفعيل الحساب",
+        submit: "حفظ وتفعيل الحساب الأكاديمي",
         submitting: "جارٍ حفظ البيانات...",
       }
     : {
@@ -159,32 +159,34 @@ export default function StudentSetupModal({
 
   return (
     <Dialog open={open}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl" onInteractOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-            <GraduationCap className="size-4" />
-            <span>PharmaCore Student</span>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-xl p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl" onInteractOutside={(e) => e.preventDefault()} dir={isAr ? "rtl" : "ltr"}>
+        <DialogHeader className="space-y-2">
+          <div className="flex items-center gap-2.5 text-primary font-bold text-xs">
+            <div className="size-8 grid place-items-center rounded-xl bg-primary/10 text-primary">
+              <GraduationCap className="size-4" />
+            </div>
+            <span>PharmaCore Student Setup</span>
           </div>
-          <DialogTitle className="text-2xl font-extrabold">{copy.title}</DialogTitle>
-          <DialogDescription className="text-sm">{copy.desc}</DialogDescription>
+          <DialogTitle className="text-xl sm:text-2xl font-black">{copy.title}</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground leading-relaxed">{copy.desc}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {errorMsg && (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMsg}</AlertDescription>
+            <Alert variant="destructive" className="rounded-2xl">
+              <AlertDescription className="text-xs font-bold">{errorMsg}</AlertDescription>
             </Alert>
           )}
 
           {/* Name */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="setup-firstname">{copy.firstName} *</Label>
+              <Label htmlFor="setup-firstname" className="text-xs font-bold text-foreground">{copy.firstName} *</Label>
               <div className="relative">
-                <User className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <User className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="setup-firstname"
-                  className="ps-9"
+                  className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder={isAr ? "أحمد" : "Ahmed"}
@@ -193,12 +195,12 @@ export default function StudentSetupModal({
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="setup-lastname">{copy.lastName} *</Label>
+              <Label htmlFor="setup-lastname" className="text-xs font-bold text-foreground">{copy.lastName} *</Label>
               <div className="relative">
-                <User className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <User className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="setup-lastname"
-                  className="ps-9"
+                  className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder={isAr ? "علي" : "Ali"}
@@ -211,13 +213,13 @@ export default function StudentSetupModal({
           {/* Email & Password */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="setup-email">{copy.email} *</Label>
+              <Label htmlFor="setup-email" className="text-xs font-bold text-foreground">{copy.email} *</Label>
               <div className="relative">
-                <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="setup-email"
                   type="email"
-                  className="ps-9"
+                  className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -225,13 +227,13 @@ export default function StudentSetupModal({
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="setup-password">{copy.password} *</Label>
+              <Label htmlFor="setup-password" className="text-xs font-bold text-foreground">{copy.password} *</Label>
               <div className="relative">
-                <KeyRound className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <KeyRound className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="setup-password"
                   type="password"
-                  className="ps-9"
+                  className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -244,13 +246,13 @@ export default function StudentSetupModal({
 
           {/* Phone */}
           <div className="space-y-1.5">
-            <Label htmlFor="setup-phone">{copy.phone}</Label>
+            <Label htmlFor="setup-phone" className="text-xs font-bold text-foreground">{copy.phone}</Label>
             <div className="relative">
-              <Phone className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Phone className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="setup-phone"
                 type="tel"
-                className="ps-9"
+                className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+20 100 000 0000"
@@ -261,12 +263,12 @@ export default function StudentSetupModal({
           {/* University & Faculty */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>{copy.uni} *</Label>
+              <Label className="text-xs font-bold text-foreground">{copy.uni} *</Label>
               <Select value={university} onValueChange={setUniversity}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                   <SelectValue placeholder={copy.selectUni} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl">
                   {universities.map((u) => (
                     <SelectItem key={u.id} value={isAr ? u.name_ar : u.name_en}>
                       {isAr ? u.name_ar : u.name_en}
@@ -277,12 +279,12 @@ export default function StudentSetupModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label>{copy.faculty} *</Label>
+              <Label className="text-xs font-bold text-foreground">{copy.faculty} *</Label>
               <Select value={faculty} onValueChange={setFaculty}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                   <SelectValue placeholder={copy.selectFaculty} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl">
                   {faculties.map((f) => (
                     <SelectItem key={f.id} value={isAr ? f.name_ar : f.name_en}>
                       {isAr ? f.name_ar : f.name_en}
@@ -296,12 +298,12 @@ export default function StudentSetupModal({
           {/* Starting Year & Live Academic Level Display */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>{copy.startYear}</Label>
+              <Label className="text-xs font-bold text-foreground">{copy.startYear}</Label>
               <Select value={String(startYear)} onValueChange={(val) => setStartYear(Number(val))}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs font-mono">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl">
                   {startYears.map((yr) => (
                     <SelectItem key={yr} value={String(yr)}>
                       {yr}
@@ -311,18 +313,23 @@ export default function StudentSetupModal({
               </Select>
             </div>
 
-            <div className="rounded-lg border bg-muted/40 p-3 flex flex-col justify-center">
-              <span className="text-xs text-muted-foreground font-medium">{copy.academicLevel}</span>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-sm font-bold text-primary">{academicLevelText}</span>
-                <span className="text-xs text-muted-foreground">({copy.gradYear}: {predictedGraduationYear})</span>
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 flex flex-col justify-center">
+              <span className="text-[11px] text-muted-foreground font-semibold">{copy.academicLevel}</span>
+              <div className="mt-0.5 flex items-center gap-2">
+                <span className="text-xs font-black text-primary">{academicLevelText}</span>
+                <span className="text-[10px] text-muted-foreground">({copy.gradYear}: {predictedGraduationYear})</span>
               </div>
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="w-full mt-4" disabled={saving}>
-            {saving ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-            {saving ? copy.submitting : copy.submit}
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full mt-4 rounded-full font-bold text-xs h-12 shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 gap-2"
+            disabled={saving}
+          >
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+            <span>{saving ? copy.submitting : copy.submit}</span>
           </Button>
         </form>
       </DialogContent>

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient"
-import type { University, Faculty, EnrollmentSettings } from "@/types"
+import type { University, Faculty, EnrollmentSettings, FeatureFlagsConfig } from "@/types"
+import { defaultFeatureFlags } from "./featureFlags"
 
 export type SiteLocale = "en" | "ar"
 
@@ -76,6 +77,7 @@ export interface SiteContent {
   social_links?: SocialLink[]
   enrollment_settings?: EnrollmentSettings
   maintenance_mode?: MaintenanceModeConfig
+  features?: FeatureFlagsConfig
 }
 
 export const defaultSocialLinks: SocialLink[] = [
@@ -216,6 +218,7 @@ export const defaultSiteContent: SiteContent = {
   },
   social_links: defaultSocialLinks,
   enrollment_settings: defaultEnrollmentSettings,
+  features: defaultFeatureFlags,
 }
 
 export const contentSections: Array<{
@@ -326,6 +329,10 @@ export const mergeSiteContent = (content?: Partial<SiteContent> | null): SiteCon
     message_en: "PharmaCore is undergoing planned platform improvements. We will be back shortly.",
     message_ar: "تخضع منصة فارما كور لأعمال تطوير وتحديث مجدولة. سنعود للعمل قريبًا جدًا.",
   },
+  features: {
+    ...defaultFeatureFlags,
+    ...(content?.features ?? {}),
+  },
 })
 
 export async function loadSiteContent(): Promise<SiteContent> {
@@ -343,3 +350,6 @@ export async function loadSiteContent(): Promise<SiteContent> {
   }
   return defaultSiteContent
 }
+
+export { defaultFeatureFlags, resolveCourseFeatures, isFeatureEnabled } from "./featureFlags"
+

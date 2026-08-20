@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertTitle } from "@/components/ui/alert"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Course, EnrollmentSettings, UserProfile, CourseEnrollmentStatus } from "@/types"
 
 export interface CourseEnrollmentRecord {
@@ -420,53 +421,61 @@ export default function CourseEnrollmentManager({
       )}
 
       {/* ─── 1. TOP METRICS & STATS ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
-        <Card className="card-equal shadow-none">
-          <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Total Enrollments", "إجمالي التسجيلات")}</span>
-              <BookOpen className="size-4 text-primary shrink-0" />
+              <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap">{tr("Total Enrollments", "إجمالي التسجيلات")}</span>
+              <div className="size-9 grid place-items-center rounded-xl bg-primary/10 text-primary">
+                <BookOpen className="size-4" />
+              </div>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-black">{stats.total}</p>
+            <p className="text-2xl sm:text-3xl font-black text-foreground font-mono">{stats.total}</p>
           </CardContent>
         </Card>
 
-        <Card className="card-equal shadow-none">
-          <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Active Students", "الطلاب المقبولون")}</span>
-              <UserCheck className="size-4 text-emerald-600 shrink-0" />
+              <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap">{tr("Active Students", "الطلاب المقبولون")}</span>
+              <div className="size-9 grid place-items-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                <UserCheck className="size-4" />
+              </div>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-black text-emerald-600">{stats.active}</p>
+            <p className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono">{stats.active}</p>
           </CardContent>
         </Card>
 
-        <Card className={`card-equal shadow-none ${stats.pending > 0 ? "border-amber-500/40 bg-amber-500/5" : ""}`}>
-          <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase text-amber-700 dark:text-amber-300 whitespace-nowrap">
+              <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                 {tr("Pending Requests", "طلبات قيد الانتظار")}
               </span>
-              <Clock className="size-4 text-amber-600 shrink-0" />
+              <div className="size-9 grid place-items-center rounded-xl bg-amber-500/10 text-amber-600">
+                <Clock className="size-4" />
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <p className="text-2xl sm:text-3xl font-black text-amber-600">{stats.pending}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl sm:text-3xl font-black text-amber-600 font-mono">{stats.pending}</p>
               {stats.pending > 0 && (
-                <Badge className="bg-amber-500 text-white font-mono font-bold text-[10px] animate-pulse">
-                  {tr("Action needed", "يتطلب إجراء")}
+                <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-600 font-bold rounded-full px-2">
+                  <span>{tr("Action needed", "يتطلب إجراء")}</span>
                 </Badge>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
-          <CardContent className="p-4 sm:p-5">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+          <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-bold uppercase">{tr("Restricted Courses", "مقررات مقيدة")}</span>
-              <Lock className="size-4 text-purple-600" />
+              <span className="text-xs font-bold uppercase tracking-wider whitespace-nowrap">{tr("Restricted Courses", "مقررات مقيدة")}</span>
+              <div className="size-9 grid place-items-center rounded-xl bg-indigo-500/10 text-indigo-600">
+                <Lock className="size-4" />
+              </div>
             </div>
-            <p className="mt-2 text-2xl sm:text-3xl font-black text-purple-600">
+            <p className="text-2xl sm:text-3xl font-black text-foreground font-mono">
               {courses.filter((c) => c.access_policy === "enrolled_only").length}
             </p>
           </CardContent>
@@ -475,25 +484,29 @@ export default function CourseEnrollmentManager({
 
       {/* ─── 2. PENDING REQUESTS FAST-ACTION QUEUE ───────────────────────── */}
       {pendingRequests.length > 0 && (
-        <Card className="border-amber-500/40 bg-amber-500/5 shadow-xs overflow-hidden">
-          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-amber-500/20 bg-amber-500/10">
+        <Card className="rounded-3xl border-amber-500/30 bg-amber-500/5 shadow-sm overflow-hidden">
+          <CardHeader className="p-5 sm:p-6 pb-4 border-b border-amber-500/20">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Clock className="size-5 text-amber-600" />
-                  <CardTitle className="text-base sm:text-lg font-extrabold text-amber-950 dark:text-amber-100">
-                    {tr("Pending Course Enrollment Requests", "طلبات الانضمام للمقررات قيد المراجعة والاعتماد")}
-                  </CardTitle>
-                  <Badge className="bg-amber-500 text-white font-mono font-bold text-xs">
-                    {pendingRequests.length} {tr("requests", "طلب")}
-                  </Badge>
+              <div className="flex items-center gap-3">
+                <div className="size-10 grid place-items-center rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                  <Clock className="size-5" />
                 </div>
-                <CardDescription className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-1">
-                  {tr(
-                    "Review student enrollment applications and grant or deny access to restricted courses.",
-                    "مراجعة طلبات انضمام الطلاب للمقررات المقيدة وقبولها أو رفضها بضغطة زر واحدة."
-                  )}
-                </CardDescription>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base sm:text-lg font-black text-amber-800 dark:text-amber-200">
+                      {tr("Pending Course Enrollment Requests", "طلبات الانضمام للمقررات قيد المراجعة والاعتماد")}
+                    </CardTitle>
+                    <Badge className="bg-amber-500 text-white font-mono font-bold text-xs rounded-full px-2.5">
+                      {pendingRequests.length} {tr("requests", "طلب")}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-1">
+                    {tr(
+                      "Review student enrollment applications and grant or deny access to restricted courses.",
+                      "مراجعة طلبات انضمام الطلاب للمقررات المقيدة وقبولها أو رفضها بضغطة زر واحدة."
+                    )}
+                  </CardDescription>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -501,7 +514,7 @@ export default function CourseEnrollmentManager({
                   size="sm"
                   onClick={handleApproveAllPending}
                   disabled={batchActionLoading || loading}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5 text-xs shadow-xs h-9"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 text-xs shadow-md shadow-emerald-600/20 rounded-full px-5 h-10"
                 >
                   {batchActionLoading ? (
                     <Loader2 className="size-3.5 animate-spin" />
@@ -514,8 +527,8 @@ export default function CourseEnrollmentManager({
             </div>
           </CardHeader>
 
-          <CardContent className="p-4 sm:p-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <CardContent className="p-5 sm:p-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pendingRequests.map((reqItem) => {
                 const studentName =
                   reqItem.user?.full_name ||
@@ -530,25 +543,27 @@ export default function CourseEnrollmentManager({
                 return (
                   <div
                     key={reqItem.id}
-                    className="rounded-xl border border-amber-500/30 bg-card p-3.5 space-y-3 shadow-2xs flex flex-col justify-between"
+                    className="rounded-3xl border border-amber-500/30 bg-card/90 p-4 space-y-3 shadow-sm flex flex-col justify-between"
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="grid size-8 place-items-center rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-xs shrink-0">
-                            {studentName.charAt(0).toUpperCase()}
-                          </span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Avatar className="size-8 ring-1 ring-amber-500/30 shrink-0">
+                            <AvatarFallback className="bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-xs">
+                              {studentName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
                           <div className="min-w-0">
-                            <p className="font-bold text-xs truncate">{studentName}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{reqItem.user?.email}</p>
+                            <p className="font-bold text-xs truncate text-foreground">{studentName}</p>
+                            <p className="text-[10px] text-muted-foreground truncate font-mono">{reqItem.user?.email}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className="text-[9px] border-amber-500/40 text-amber-700 dark:text-amber-300 shrink-0">
+                        <Badge variant="outline" className="text-[9px] font-bold border-amber-500/40 text-amber-700 dark:text-amber-300 shrink-0 rounded-full px-2">
                           {reqItem.enrolled_at ? new Date(reqItem.enrolled_at).toLocaleDateString() : tr("Recent", "حديث")}
                         </Badge>
                       </div>
 
-                      <div className="rounded-lg bg-muted/30 p-2 text-xs space-y-1">
+                      <div className="rounded-2xl bg-muted/40 p-2.5 text-xs space-y-1 border border-border/60">
                         <div className="flex items-center gap-1.5 font-bold text-primary truncate">
                           <BookOpen className="size-3 shrink-0" />
                           <span className="truncate">{courseTitle}</span>
@@ -566,7 +581,7 @@ export default function CourseEnrollmentManager({
                         size="sm"
                         disabled={isItemLoading}
                         onClick={() => handleApproveEnrollment(reqItem.id, studentName)}
-                        className="flex-1 h-8 text-xs font-bold gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="flex-1 h-9 text-xs font-bold gap-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                       >
                         {isItemLoading ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3.5" />}
                         <span>{tr("Accept", "قبول")}</span>
@@ -576,7 +591,7 @@ export default function CourseEnrollmentManager({
                         variant="destructive"
                         disabled={isItemLoading}
                         onClick={() => handleRejectEnrollment(reqItem.id, studentName)}
-                        className="flex-1 h-8 text-xs font-bold gap-1"
+                        className="flex-1 h-9 text-xs font-bold gap-1.5 rounded-full shadow-sm"
                       >
                         <X className="size-3.5" />
                         <span>{tr("Deny", "رفض")}</span>
@@ -591,29 +606,33 @@ export default function CourseEnrollmentManager({
       )}
 
       {/* ─── 3. ENROLLMENT PROVISIONING TOOLS (Single & Cohort) ──────────── */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Manual Single Assign */}
-        <Card className="border rounded-2xl shadow-xs">
-          <CardHeader className="pb-3 border-b bg-muted/20">
-            <div className="flex items-center gap-2">
-              <UserPlus className="size-4 text-primary" />
-              <CardTitle className="text-sm sm:text-base font-bold">
-                {tr("Enroll Individual Student", "تسجيل طالب محدد في مقرر")}
-              </CardTitle>
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+          <CardHeader className="p-6 pb-4 border-b border-border/60">
+            <div className="flex items-center gap-2.5">
+              <div className="size-9 grid place-items-center rounded-xl bg-primary/10 text-primary">
+                <UserPlus className="size-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-black text-foreground">
+                  {tr("Enroll Individual Student", "تسجيل طالب محدد في مقرر")}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {tr("Assign an active student to any course immediately with chosen status.", "إضافة طالب نشط إلى أي مقرر دراسي بشكل فوري مع تحديد الحالة.")}
+                </CardDescription>
+              </div>
             </div>
-            <CardDescription className="text-xs">
-              {tr("Assign an active student to any course immediately with chosen status.", "إضافة طالب نشط إلى أي مقرر دراسي بشكل فوري مع تحديد الحالة.")}
-            </CardDescription>
           </CardHeader>
-          <CardContent className="pt-4">
-            <form onSubmit={handleAssignStudent} className="space-y-3.5">
+          <CardContent className="p-6">
+            <form onSubmit={handleAssignStudent} className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">{tr("Select Student", "اختر الطالب")}</Label>
+                <Label className="text-xs font-bold text-foreground">{tr("Select Student", "اختر الطالب")}</Label>
                 <Select value={assignStudentId} onValueChange={setAssignStudentId}>
-                  <SelectTrigger className="text-xs h-9">
+                  <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                     <SelectValue placeholder={tr("Choose an active student...", "اختر طالبًا نشطًا...")} />
                   </SelectTrigger>
-                  <SelectContent className="max-h-60">
+                  <SelectContent className="max-h-60 rounded-2xl">
                     {students
                       .filter((s) => s.status === "active")
                       .map((s) => {
@@ -630,12 +649,12 @@ export default function CourseEnrollmentManager({
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">{tr("Target Course", "المقرر المستهدف")}</Label>
+                  <Label className="text-xs font-bold text-foreground">{tr("Target Course", "المقرر المستهدف")}</Label>
                   <Select value={assignCourseId} onValueChange={setAssignCourseId}>
-                    <SelectTrigger className="text-xs h-9">
+                    <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                       <SelectValue placeholder={tr("Select course...", "اختر المقرر...")} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-2xl">
                       {courses.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {isAr ? c.title_ar || c.title_en : c.title_en}
@@ -646,12 +665,12 @@ export default function CourseEnrollmentManager({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">{tr("Initial Status", "الحالة المبدئية")}</Label>
+                  <Label className="text-xs font-bold text-foreground">{tr("Initial Status", "الحالة المبدئية")}</Label>
                   <Select value={assignStatus} onValueChange={(val: CourseEnrollmentStatus) => setAssignStatus(val)}>
-                    <SelectTrigger className="text-xs h-9">
+                    <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-2xl">
                       <SelectItem value="active">{tr("Active (Access Granted)", "نشط (مسموح بالوصول)")}</SelectItem>
                       <SelectItem value="pending">{tr("Pending (Under Review)", "معلق (قيد المراجعة)")}</SelectItem>
                       <SelectItem value="completed">{tr("Completed Course", "مكتمل")}</SelectItem>
@@ -663,7 +682,7 @@ export default function CourseEnrollmentManager({
               <Button
                 type="submit"
                 disabled={assignLoading || !assignStudentId || !assignCourseId}
-                className="w-full h-9 text-xs font-bold gap-2 mt-2"
+                className="w-full h-11 rounded-full text-xs font-bold gap-2 shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 mt-2"
               >
                 {assignLoading ? <Loader2 className="size-3.5 animate-spin" /> : <UserPlus className="size-3.5" />}
                 <span>{tr("Enroll Student in Course", "تسجيل الطالب في المقرر")}</span>
@@ -673,31 +692,35 @@ export default function CourseEnrollmentManager({
         </Card>
 
         {/* Batch Cohort Auto-Enrollment */}
-        <Card className="border rounded-2xl shadow-xs">
-          <CardHeader className="pb-3 border-b bg-muted/20">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="size-4 text-purple-600 dark:text-purple-400" />
-              <CardTitle className="text-sm sm:text-base font-bold">
-                {tr("Batch Cohort Auto-Enrollment", "تسجيل دفعة كاملة (جامعة / كلية)")}
-              </CardTitle>
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+          <CardHeader className="p-6 pb-4 border-b border-border/60">
+            <div className="flex items-center gap-2.5">
+              <div className="size-9 grid place-items-center rounded-xl bg-indigo-500/10 text-indigo-600">
+                <GraduationCap className="size-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-black text-foreground">
+                  {tr("Batch Cohort Auto-Enrollment", "تسجيل دفعة كاملة (جامعة / كلية)")}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {tr(
+                    "Enroll all matching active students from a specific university or faculty in 1 click.",
+                    "تسجيل جميع طلاب جامعة أو كلية معينة في مقرر محدد بضغطة زر واحدة."
+                  )}
+                </CardDescription>
+              </div>
             </div>
-            <CardDescription className="text-xs">
-              {tr(
-                "Enroll all matching active students from a specific university or faculty in 1 click.",
-                "تسجيل جميع طلاب جامعة أو كلية معينة في مقرر محدد بضغطة زر واحدة."
-              )}
-            </CardDescription>
           </CardHeader>
-          <CardContent className="pt-4">
-            <form onSubmit={handleBatchCohortEnroll} className="space-y-3.5">
+          <CardContent className="p-6">
+            <form onSubmit={handleBatchCohortEnroll} className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">{tr("University Filter", "الجامعة")}</Label>
+                  <Label className="text-xs font-bold text-foreground">{tr("University Filter", "الجامعة")}</Label>
                   <Select value={cohortUni} onValueChange={setCohortUni}>
-                    <SelectTrigger className="text-xs h-9">
+                    <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-2xl">
                       <SelectItem value="all">{tr("All Universities", "جميع الجامعات")}</SelectItem>
                       {enrollmentSettings.universities?.map((u) => (
                         <SelectItem key={u.id} value={isAr ? u.name_ar : u.name_en}>
@@ -709,12 +732,12 @@ export default function CourseEnrollmentManager({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">{tr("Faculty Filter", "الكلية")}</Label>
+                  <Label className="text-xs font-bold text-foreground">{tr("Faculty Filter", "الكلية")}</Label>
                   <Select value={cohortFac} onValueChange={setCohortFac}>
-                    <SelectTrigger className="text-xs h-9">
+                    <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-2xl">
                       <SelectItem value="all">{tr("All Faculties", "جميع الكليات")}</SelectItem>
                       {enrollmentSettings.faculties?.map((f) => (
                         <SelectItem key={f.id} value={isAr ? f.name_ar : f.name_en}>
@@ -727,12 +750,12 @@ export default function CourseEnrollmentManager({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">{tr("Target Course to Enroll", "المقرر المستهدف")}</Label>
+                <Label className="text-xs font-bold text-foreground">{tr("Target Course to Enroll", "المقرر المستهدف")}</Label>
                 <Select value={cohortCourseId} onValueChange={setCohortCourseId}>
-                  <SelectTrigger className="text-xs h-9">
+                  <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                     <SelectValue placeholder={tr("Select course...", "اختر المقرر...")} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-2xl">
                     {courses.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {isAr ? c.title_ar || c.title_en : c.title_en}
@@ -742,9 +765,9 @@ export default function CourseEnrollmentManager({
                 </Select>
               </div>
 
-              <div className="rounded-xl border bg-muted/20 px-3 py-2 text-xs flex items-center justify-between">
-                <span className="text-muted-foreground">{tr("Eligible Active Students:", "عدد الطلاب المؤهلين:")}</span>
-                <span className="font-bold font-mono text-primary">
+              <div className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-xs flex items-center justify-between">
+                <span className="text-muted-foreground font-bold">{tr("Eligible Active Students:", "عدد الطلاب المؤهلين:")}</span>
+                <span className="font-black font-mono text-primary">
                   {
                     students.filter((s) => {
                       if (cohortUni !== "all" && s.university !== cohortUni) return false
@@ -759,7 +782,7 @@ export default function CourseEnrollmentManager({
               <Button
                 type="submit"
                 disabled={cohortLoading || !cohortCourseId}
-                className="w-full h-9 text-xs font-bold gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full h-11 rounded-full text-xs font-bold gap-2 shadow-md shadow-indigo-600/20 bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 {cohortLoading ? <Loader2 className="size-3.5 animate-spin" /> : <GraduationCap className="size-3.5" />}
                 <span>{tr("Batch Enroll Matching Cohort", "تسجيل الدفعة بالكامل في المقرر")}</span>
@@ -770,19 +793,21 @@ export default function CourseEnrollmentManager({
       </div>
 
       {/* ─── 4. ENROLLMENTS ROSTER & FILTERABLE TABLE ─────────────────────── */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card border rounded-2xl p-4 shadow-xs">
-          <div>
-            <div className="flex items-center gap-2">
-              <Shield className="size-5 text-primary" />
-              <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-card/90 border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm backdrop-blur-xl">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <div className="size-10 grid place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                <Shield className="size-5" />
+              </div>
+              <h3 className="text-xl font-black tracking-tight text-foreground">
                 {tr("Course Enrollments Roster", "سجل تسجيلات واشتراكات المقررات")}
               </h3>
               <Badge variant="secondary" className="text-xs font-mono font-bold">
                 {filteredEnrollments.length} {tr("records", "سجل")}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {tr(
                 "Filter, monitor, and manage student enrollment states and course authorizations.",
                 "استعراض وتصفية وإدارة جميع اشتراكات الطلاب وصلاحيات وصولهم للمقررات."
@@ -793,10 +818,10 @@ export default function CourseEnrollmentManager({
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={fetchEnrollments}
               disabled={loading}
-              className="size-9 p-0 shadow-xs shrink-0"
+              className="size-10 rounded-xl"
               title={tr("Refresh enrollments", "تحديث")}
             >
               <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -805,15 +830,15 @@ export default function CourseEnrollmentManager({
         </div>
 
         {/* Filters bar */}
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4 bg-card border rounded-2xl p-3 shadow-xs">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Course filter */}
           <div className="space-y-1">
-            <Label className="text-[11px] font-bold text-muted-foreground">{tr("Course", "المقرر")}</Label>
+            <Label className="text-xs font-bold text-foreground">{tr("Course", "المقرر")}</Label>
             <Select value={courseFilter} onValueChange={setCourseFilter}>
-              <SelectTrigger className="h-9 text-xs">
+              <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                 <SelectValue placeholder={tr("Filter by course", "تصفية حسب المقرر")} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl">
                 <SelectItem value="all">{tr("All Courses", "جميع المقررات")}</SelectItem>
                 {courses.map((course) => (
                   <SelectItem key={course.id} value={course.id}>
@@ -826,12 +851,12 @@ export default function CourseEnrollmentManager({
 
           {/* Status filter */}
           <div className="space-y-1">
-            <Label className="text-[11px] font-bold text-muted-foreground">{tr("Status", "الحالة")}</Label>
+            <Label className="text-xs font-bold text-foreground">{tr("Status", "الحالة")}</Label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 text-xs">
+              <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                 <SelectValue placeholder={tr("Filter by status", "تصفية حسب الحالة")} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl">
                 <SelectItem value="all">{tr("All Statuses", "جميع الحالات")}</SelectItem>
                 <SelectItem value="active">{tr("Active (Approved)", "نشط ومقبول")}</SelectItem>
                 <SelectItem value="pending">{tr("Pending Approval", "قيد الانتظار")}</SelectItem>
@@ -843,12 +868,12 @@ export default function CourseEnrollmentManager({
 
           {/* University filter */}
           <div className="space-y-1">
-            <Label className="text-[11px] font-bold text-muted-foreground">{tr("University", "الجامعة")}</Label>
+            <Label className="text-xs font-bold text-foreground">{tr("University", "الجامعة")}</Label>
             <Select value={universityFilter} onValueChange={setUniversityFilter}>
-              <SelectTrigger className="h-9 text-xs">
+              <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                 <SelectValue placeholder={tr("Filter by university", "تصفية حسب الجامعة")} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl">
                 <SelectItem value="all">{tr("All Universities", "جميع الجامعات")}</SelectItem>
                 {enrollmentSettings.universities?.map((u) => (
                   <SelectItem key={u.id} value={isAr ? u.name_ar : u.name_en}>
@@ -861,19 +886,19 @@ export default function CourseEnrollmentManager({
 
           {/* Search Input */}
           <div className="space-y-1">
-            <Label className="text-[11px] font-bold text-muted-foreground">{tr("Search", "بحث")}</Label>
+            <Label className="text-xs font-bold text-foreground">{tr("Search", "بحث")}</Label>
             <div className="relative">
-              <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <Input
                 placeholder={tr("Student, email, or course...", "بحث بالاسم أو البريد أو المقرر...")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="ps-8 text-xs h-9"
+                className="ps-10 rounded-xl h-11 border-border/80 bg-background/60 text-xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="size-3" />
                 </button>
@@ -884,35 +909,34 @@ export default function CourseEnrollmentManager({
 
         {/* Table */}
         {loading ? (
-          <div className="grid min-h-48 place-items-center rounded-2xl border bg-card p-8">
-            <Loader2 className="size-8 animate-spin text-primary opacity-60" />
+          <div className="py-20 text-center text-muted-foreground">
+            <Loader2 className="mx-auto size-8 animate-spin text-primary" />
+            <p className="mt-3 text-xs font-bold">{tr("Loading enrollments...", "جارٍ تحميل التسجيلات...")}</p>
           </div>
         ) : !filteredEnrollments.length ? (
-          <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed bg-card p-8 text-center text-muted-foreground">
-            <div>
-              <Shield className="mx-auto size-8 opacity-40" />
-              <p className="mt-2 font-bold text-sm">
-                {tr("No course enrollments found.", "لم يتم العثور على تسجيلات في المقررات المحددة.")}
-              </p>
-              <p className="text-xs mt-1">
-                {tr("Use the forms above to enroll individual students or cohorts.", "استخدم النماذج أعلاه لتسجيل الطلاب أو الدفعات.")}
-              </p>
-            </div>
+          <div className="py-20 text-center border border-dashed border-border/80 rounded-3xl bg-card/50">
+            <Shield className="mx-auto size-12 text-muted-foreground/40" />
+            <h3 className="mt-4 text-base font-black text-foreground">
+              {tr("No course enrollments found.", "لم يتم العثور على تسجيلات في المقررات المحددة.")}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              {tr("Use the forms above to enroll individual students or cohorts.", "استخدم النماذج أعلاه لتسجيل الطلاب أو الدفعات.")}
+            </p>
           </div>
         ) : (
-          <div className="table-container">
-            <table className="w-full text-start text-sm min-w-[650px]">
-              <thead className="border-b bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="overflow-x-auto rounded-3xl border border-border/80 bg-card/90 shadow-sm">
+            <table className="w-full text-start text-sm">
+              <thead className="border-b border-border/60 bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3.5 text-start whitespace-nowrap">{tr("Student", "الطالب")}</th>
-                  <th className="px-4 py-3.5 text-start whitespace-nowrap">{tr("Enrolled Course", "المقرر المسجل به")}</th>
-                  <th className="px-4 py-3.5 text-start whitespace-nowrap">{tr("University & Faculty", "الجامعة والكلية")}</th>
-                  <th className="px-4 py-3.5 text-start whitespace-nowrap">{tr("Status", "الحالة")}</th>
-                  <th className="px-4 py-3.5 text-start whitespace-nowrap">{tr("Date", "التاريخ")}</th>
-                  <th className="px-4 py-3.5 text-end whitespace-nowrap">{tr("Actions", "الإجراءات")}</th>
+                  <th className="px-5 py-4 text-start whitespace-nowrap">{tr("Student", "الطالب")}</th>
+                  <th className="px-5 py-4 text-start whitespace-nowrap">{tr("Enrolled Course", "المقرر المسجل به")}</th>
+                  <th className="px-5 py-4 text-start whitespace-nowrap">{tr("University & Faculty", "الجامعة والكلية")}</th>
+                  <th className="px-5 py-4 text-start whitespace-nowrap">{tr("Status", "الحالة")}</th>
+                  <th className="px-5 py-4 text-start whitespace-nowrap">{tr("Date", "التاريخ")}</th>
+                  <th className="px-5 py-4 text-end whitespace-nowrap">{tr("Actions", "الإجراءات")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-border/60">
                 {filteredEnrollments.map((item) => {
                   const studentName =
                     item.user?.full_name ||
@@ -925,85 +949,86 @@ export default function CourseEnrollmentManager({
                   const isActionLoading = actionLoadingId === item.id
 
                   return (
-                    <tr key={item.id} className="hover:bg-muted/25 transition-colors">
-                      <td className="px-4 py-3.5">
+                    <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary font-bold text-xs">
-                            {studentName.charAt(0).toUpperCase()}
-                          </span>
+                          <Avatar className="size-9 ring-2 ring-primary/20 shrink-0">
+                            <AvatarFallback className="bg-primary/10 text-primary font-black text-xs uppercase">
+                              {studentName.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
                           <div className="min-w-0">
-                            <p className="font-bold text-xs truncate">{studentName}</p>
-                            <p className="text-[11px] text-muted-foreground truncate">{item.user?.email}</p>
+                            <p className="font-bold text-foreground truncate text-xs sm:text-sm">{studentName}</p>
+                            <p className="text-xs text-muted-foreground truncate font-mono">{item.user?.email}</p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <BookOpen className="size-3.5 text-primary shrink-0" />
-                          <span className="font-semibold text-xs truncate max-w-[220px]">{courseTitle}</span>
+                          <BookOpen className="size-4 text-primary shrink-0" />
+                          <span className="font-bold text-xs truncate max-w-[220px] text-foreground">{courseTitle}</span>
                         </div>
                       </td>
 
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                        <p className="truncate max-w-[180px]">{item.user?.university || "—"}</p>
-                        <p className="text-[10px] truncate max-w-[180px]">{item.user?.faculty || "—"}</p>
+                      <td className="px-5 py-4 text-xs text-muted-foreground">
+                        <p className="font-bold text-foreground truncate max-w-[180px]">{item.user?.university || "—"}</p>
+                        <p className="text-[11px] truncate max-w-[180px]">{item.user?.faculty || "—"}</p>
                       </td>
 
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-4">
                         {item.status === "active" ? (
-                          <Badge variant="secondary" className="badge-nowrap text-[10px] gap-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold shrink-0">
-                            <Check className="size-2.5 shrink-0" />
+                          <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] rounded-full px-2.5">
+                            <Check className="size-2.5 me-1" />
                             <span>{tr("Active", "نشط ومقبول")}</span>
                           </Badge>
                         ) : item.status === "pending" ? (
-                          <Badge variant="secondary" className="badge-nowrap text-[10px] gap-1 border-amber-500/30 text-amber-700 dark:text-amber-300 font-bold animate-pulse shrink-0">
-                            <Clock className="size-2.5 shrink-0" />
+                          <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-[10px] rounded-full px-2.5 animate-pulse">
+                            <Clock className="size-2.5 me-1" />
                             <span>{tr("Pending", "قيد الانتظار")}</span>
                           </Badge>
                         ) : item.status === "rejected" ? (
-                          <Badge variant="secondary" className="badge-nowrap text-[10px] gap-1 border-destructive/30 text-destructive font-bold shrink-0">
-                            <X className="size-2.5 shrink-0" />
+                          <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive font-bold text-[10px] rounded-full px-2.5">
+                            <X className="size-2.5 me-1" />
                             <span>{tr("Rejected", "مرفوض")}</span>
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="badge-nowrap text-[10px] gap-1 border-blue-500/30 text-blue-700 dark:text-blue-300 font-bold shrink-0">
-                            <CheckCircle2 className="size-2.5 shrink-0" />
+                          <Badge variant="outline" className="border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] rounded-full px-2.5">
+                            <CheckCircle2 className="size-2.5 me-1" />
                             <span>{tr("Completed", "مكتمل")}</span>
                           </Badge>
                         )}
                       </td>
 
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground font-mono whitespace-nowrap">
+                      <td className="px-5 py-4 text-xs text-muted-foreground font-mono whitespace-nowrap">
                         {item.enrolled_at ? new Date(item.enrolled_at).toLocaleDateString() : "—"}
                       </td>
 
-                      <td className="px-4 py-3.5 text-end">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-5 py-4 text-end">
+                        <div className="flex items-center justify-end gap-1.5">
                           {item.status === "pending" && (
                             <>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="btn-nowrap h-7 px-2 text-xs font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 gap-1 shrink-0"
+                                className="h-8 px-3 text-xs font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 rounded-full"
                                 disabled={isActionLoading}
                                 onClick={() => handleApproveEnrollment(item.id, studentName)}
                                 title={tr("Approve Enrollment", "قبول")}
                               >
                                 {isActionLoading ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-                                <span>{tr("Accept", "قبول")}</span>
+                                <span className="ms-1">{tr("Accept", "قبول")}</span>
                               </Button>
 
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="btn-nowrap h-7 px-2 text-xs font-bold text-destructive border-destructive/30 hover:bg-destructive/10 gap-1 shrink-0"
+                                variant="ghost"
+                                className="size-8 p-0 text-destructive hover:bg-destructive/10 rounded-full"
                                 disabled={isActionLoading}
                                 onClick={() => handleRejectEnrollment(item.id, studentName)}
                                 title={tr("Deny Request", "رفض")}
                               >
-                                <X className="size-3" />
-                                <span>{tr("Deny", "رفض")}</span>
+                                <X className="size-3.5" />
                               </Button>
                             </>
                           )}
@@ -1012,20 +1037,20 @@ export default function CourseEnrollmentManager({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="btn-nowrap h-7 px-2 text-xs font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 gap-1 shrink-0"
+                              className="h-8 px-3 text-xs font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 rounded-full"
                               disabled={isActionLoading}
                               onClick={() => handleApproveEnrollment(item.id, studentName)}
                               title={tr("Re-Approve Enrollment", "إعادة القبول")}
                             >
                               <Check className="size-3" />
-                              <span>{tr("Re-Accept", "إعادة القبول")}</span>
+                              <span className="ms-1">{tr("Re-Accept", "إعادة القبول")}</span>
                             </Button>
                           )}
 
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="size-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            className="size-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
                             disabled={isActionLoading}
                             onClick={() => handleRemoveEnrollment(item.id, studentName)}
                             title={tr("Remove Enrollment", "حذف التسجيل")}

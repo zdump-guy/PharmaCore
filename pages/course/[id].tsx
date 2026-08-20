@@ -6,13 +6,19 @@ import { serverSideTranslations } from "next-i18next/pages/serverSideTranslation
 import {
   FiArrowLeft as ArrowLeft,
   FiArrowRight as ArrowRight,
+  FiAward as Award,
   FiBookOpen as BookOpen,
   FiCheckCircle as CheckCircle2,
+  FiCheckSquare as CheckSquare,
   FiClipboard as ClipboardCheck,
   FiClock as Clock,
-  FiLock as LockKeyhole,
-  FiPlayCircle as PlayCircle,
+  FiCpu as Cpu,
+  FiFileText as FileText,
   FiGlobe as Globe,
+  FiLayers as Layers,
+  FiLock as LockKeyhole,
+  FiMessageSquare as MessageSquare,
+  FiPlayCircle as PlayCircle,
 } from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
@@ -24,6 +30,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
+import { resolveCourseFeatures } from "@/lib/featureFlags"
+import { getDirectImageUrl } from "@/lib/utils"
 import { trackCourseView } from "@/lib/analytics"
 import type { Course, Lecture } from "@/types"
 
@@ -33,7 +41,7 @@ interface CoursePageProps {
   siteContent: SiteContent
 }
 
-export default function CoursePage({ course, lectures }: CoursePageProps) {
+export default function CoursePage({ course, lectures, siteContent }: CoursePageProps) {
   const { locale } = useRouter()
   const isAr = locale === "ar"
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
@@ -157,10 +165,12 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
   if (!course) {
     return (
       <Layout title="Course not found">
-        <div className="page-shell section-space text-center">
-          <BookOpen className="mx-auto size-12 text-muted-foreground" />
-          <h1 className="mt-5 text-3xl font-bold">{isAr ? "المقرر غير موجود" : "Course not found"}</h1>
-          <Button className="mt-6" asChild>
+        <div className="page-shell section-space text-center py-24">
+          <div className="size-16 grid place-items-center rounded-3xl bg-muted/60 text-muted-foreground mx-auto">
+            <BookOpen className="size-8" />
+          </div>
+          <h1 className="mt-6 text-3xl font-black">{isAr ? "المقرر غير موجود" : "Course not found"}</h1>
+          <Button className="mt-6 rounded-full px-6" asChild>
             <Link href="/#courses">{isAr ? "العودة للمقررات" : "Back to courses"}</Link>
           </Button>
         </div>
@@ -175,157 +185,201 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
   const needsEnrollment = isEnrolledOnly && isAuthenticated && !isEnrolled
   const needsAuthToWatch = needsAuth || needsEnrollment
 
+  const resolvedFeatures = resolveCourseFeatures(
+    siteContent?.features,
+    course.feature_overrides
+  )
+
   const title = isAr ? course.title_ar : course.title_en
   const description = (isAr ? course.description_ar : course.description_en) ?? ""
   const objectives = ((isAr ? course.objectives_ar : course.objectives_en) ?? "").split(/[.،]\s*/).filter(Boolean)
   const prerequisites = (isAr ? course.prerequisites_ar : course.prerequisites_en) ?? ""
+  const coverUrl = getDirectImageUrl(course.thumbnail_url)
 
   const progressPercent = lectures.length > 0 ? Math.round((completedLecturesCount / lectures.length) * 100) : 0
 
   const copy = isAr
     ? {
-        label: "مقرر تعليمي",
-        back: "كل المقررات",
-        lectures: "محتوى المقرر",
-        intro: "رحلة متدرجة من المفاهيم الأساسية إلى التطبيق.",
-        overview: "نظرة عامة",
-        goals: "ماذا ستتعلم",
-        req: "قبل أن تبدأ",
-        start: "ابدأ المحاضرة الأولى",
-        continue: "متابعة الدراسة",
-        startLocked: "سجل الدخول لبدء المحاضرة",
-        startEnroll: isPendingApproval ? "طلبك قيد المراجعة والاعتماد" : "اشترك في المقرر للمشاهدة",
+        label: "مقرر سريري معتمد",
+        back: "العودة إلى المقررات",
+        lectures: "المنهج والمحاضرات",
+        intro: "منهج سريري متكامل من المفاهيم الأساسية إلى التطبيق الدوائي.",
+        overview: "نظرة عامة على المنهج",
+        goals: "المخرجات التعليمية والأهداف",
+        req: "المتطلبات القبلية",
+        start: "بدء المحاضرة الأولى",
+        continue: "متابعة المحاضرات",
+        startLocked: "تسجيل الدخول لبدء المتابعة",
+        startEnroll: isPendingApproval ? "طلبك قيد المراجعة والاعتماد" : "طلب الانضمام للمقرر",
         enrollBtn: isEnrolledOnly ? "طلب الانضمام للمقرر (بانتظار الاعتماد)" : "اشترك في هذا المقرر مجانًا",
         enrolledBadge: "أنت مسجل في هذا المقرر",
-        pendingBadge: "طلب الانضمام قيد مراجعة الإدارة",
+        pendingBadge: "طلب الانضمام قيد المراجعة",
         lesson: "محاضرة",
-        mins: "دقيقة",
         open: "فتح المحاضرة",
         openLocked: "تسجيل الدخول للمشاهدة",
-        openEnroll: isPendingApproval ? "بانتظار الاعتماد" : "اشترك في المقرر",
-        progress: "تقدمك في المقرر",
-        ready: "جاهز للبدء",
-        free: "وصول مفتوح للجميع",
+        progress: "نسبة إنجازك للمقرر",
+        ready: "جاهز للبدء والتطبيق السريري",
+        free: "وصول مفتوح",
         lockedBadge: "للطلاب المسجلين",
-        enrolledOnlyBadge: "يتطلب موافقة وإذن تسجيل",
-        lockedNotice: "هذا المقرر متاح مجانًا للطلاب المسجلين. سجّل حسابك في 30 ثانية للمتابعة.",
+        enrolledOnlyBadge: "يتطلب موافقة تسجيل",
+        lockedNotice: "هذا المقرر متاح مجانًا للطلاب المسجلين. سجّل حسابك في ثوانٍ للوصول لجميع المحاضرات والاختبارات.",
         enrolledNotice: isPendingApproval
-          ? "تم إرسال طلب انضمامك إلى هذا المقرر بنجاح وهو الآن قيد مراجعة واعتماد المشرف. سيتم تفعيل وصولك فور الموافقة."
-          : "هذا المقرر مخصص للمسجلين فيه فقط. انقر على زر طلب الانضمام أدناه لإرسال طلبك لإدارة المنصة.",
+          ? "تم استلام طلب انضمامك وهو الآن قيد مراجعة المشرف الأكاديمي. سيتم تفعيل وصولك فور الاعتماد."
+          : "هذا المقرر مخصص للمسجلين فيه فقط. انقر على زر طلب الانضمام أدناه لإرسال طلبك للإدارة.",
       }
     : {
-        label: "Learning course",
-        back: "All courses",
-        lectures: "Course content",
-        intro: "A progressive journey from first principles to practical application.",
-        overview: "Overview",
-        goals: "What you will learn",
-        req: "Before you start",
-        start: "Start lecture one",
+        label: "Clinical Course",
+        back: "Back to Courses",
+        lectures: "Curriculum & Lectures",
+        intro: "A comprehensive clinical curriculum from first principles to therapeutics.",
+        overview: "Curriculum Overview",
+        goals: "Clinical Learning Objectives",
+        req: "Prerequisites",
+        start: "Start First Lecture",
         continue: "Continue Learning",
-        startLocked: "Sign in to start lecture",
-        startEnroll: isPendingApproval ? "Pending Admin Approval" : "Enroll in course to watch",
-        enrollBtn: isEnrolledOnly ? "Request Course Enrollment (Approval Required)" : "Enroll in this Course (Free)",
+        startLocked: "Sign in to watch",
+        startEnroll: isPendingApproval ? "Pending Admin Approval" : "Enroll in Course",
+        enrollBtn: isEnrolledOnly ? "Request Enrollment (Approval Required)" : "Enroll in Course (Free)",
         enrolledBadge: "Enrolled in Course",
-        pendingBadge: "Enrollment Request Pending Review",
-        lesson: "Lecture",
-        mins: "min",
-        open: "Open lecture",
-        openLocked: "Sign in to watch",
-        openEnroll: isPendingApproval ? "Pending Review" : "Enroll to watch",
-        progress: "Course progress",
-        ready: "Ready to begin",
-        free: "Open access for all",
+        pendingBadge: "Enrollment Pending Review",
+        lesson: "Lectures",
+        open: "Open Lecture",
+        openLocked: "Sign In to Watch",
+        progress: "Course Completion Progress",
+        ready: "Ready for clinical application",
+        free: "Open Access",
         lockedBadge: "Registered Students Only",
         enrolledOnlyBadge: "Approval Required",
         lockedNotice: "This course is free for registered students. Create your free account to access all lectures and quizzes.",
         enrolledNotice: isPendingApproval
-          ? "Your enrollment request has been submitted and is currently pending admin review. You will receive access once approved."
-          : "This course is restricted to enrolled students. Click Request Enrollment below to submit your access request.",
+          ? "Your enrollment request is pending review by the academic supervisor. Access will be granted upon approval."
+          : "This course requires approved enrollment. Click below to submit your access request.",
       }
 
   return (
     <Layout title={`${title} — PharmaCore`} description={description}>
-      <section className="border-b bg-muted/45">
-        <div className="page-shell py-8 sm:py-10 lg:py-14">
-          <Button variant="ghost" className="-ms-4 mb-6 sm:mb-8" asChild>
+      {/* ─── COURSE HERO HEADER ───────────────────────────────────────────── */}
+      <section className="relative border-b border-border/70 bg-muted/30">
+        <div className="hero-glow pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
+        <div className="page-shell py-8 sm:py-12 lg:py-16 relative">
+          {/* Back Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ms-3 mb-6 rounded-full text-xs font-bold gap-1.5 text-muted-foreground hover:text-foreground"
+            asChild
+          >
             <Link href="/#courses">
-              <DirectionArrow className="size-4" />
+              <DirectionArrow className="size-3.5 shrink-0" />
               <span>{copy.back}</span>
             </Link>
           </Button>
 
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
-            <div className="min-w-0">
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_.85fr] lg:items-center">
+            {/* Left Header Content */}
+            <div className="space-y-4 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="badge-nowrap gap-2 bg-card">
+                <Badge variant="outline" className="gap-1.5 bg-background/80 backdrop-blur-md text-primary font-bold">
                   <GraduationCap className="size-3.5 shrink-0" />
                   <span>{copy.label}</span>
                 </Badge>
+
                 {isEnrolledOnly ? (
-                  <Badge variant="secondary" className="badge-nowrap gap-1.5 border-purple-500/30 bg-purple-500/10 text-purple-800 dark:text-purple-300 font-bold">
+                  <Badge variant="warning" className="gap-1">
                     <LockKeyhole className="size-3 shrink-0" />
                     <span>{copy.enrolledOnlyBadge}</span>
                   </Badge>
                 ) : isStudentsOnly ? (
-                  <Badge variant="secondary" className="badge-nowrap gap-1.5 border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold">
+                  <Badge variant="secondary" className="gap-1">
                     <LockKeyhole className="size-3 shrink-0" />
                     <span>{copy.lockedBadge}</span>
                   </Badge>
                 ) : (
-                  <Badge variant="secondary" className="badge-nowrap gap-1.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-bold">
+                  <Badge variant="success" className="gap-1">
                     <Globe className="size-3 shrink-0" />
                     <span>{copy.free}</span>
                   </Badge>
                 )}
 
                 {isEnrolled && (
-                  <Badge className="badge-nowrap bg-emerald-600 hover:bg-emerald-600 text-white font-bold gap-1 text-xs">
+                  <Badge variant="success" className="gap-1 font-bold">
                     <CheckCircle2 className="size-3 shrink-0" />
                     <span>{copy.enrolledBadge}</span>
                   </Badge>
                 )}
 
                 {isPendingApproval && (
-                  <Badge className="badge-nowrap bg-amber-500 hover:bg-amber-500 text-white font-bold gap-1 text-xs animate-pulse">
+                  <Badge variant="warning" className="gap-1 font-bold animate-pulse">
                     <Clock className="size-3 shrink-0" />
                     <span>{copy.pendingBadge}</span>
                   </Badge>
                 )}
               </div>
 
-              <h1 className="mt-4 sm:mt-5 max-w-4xl text-balance text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl break-words">
+              <h1 className="text-balance text-3xl font-black leading-tight sm:text-4xl lg:text-5xl text-foreground">
                 {title}
               </h1>
-              <p className="body-lead mt-4 sm:mt-5 break-words">{description}</p>
 
-              <div className="mt-6 sm:mt-7 flex flex-wrap gap-2.5 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
-                <span className="flex min-h-9 sm:min-h-10 items-center gap-2 rounded-full border bg-card px-3 sm:px-4 whitespace-nowrap shrink-0">
-                  <BookOpen className="size-3.5 sm:size-4 text-primary shrink-0" />
+              <p className="body-lead text-base sm:text-lg text-muted-foreground leading-relaxed">
+                {description}
+              </p>
+
+              {/* Course Badges */}
+              <div className="flex flex-wrap gap-2.5 pt-2 text-xs font-semibold text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3.5 py-1.5 shadow-2xs">
+                  <Layers className="size-3.5 text-primary shrink-0" />
                   <span>{lectures.length} {copy.lesson}</span>
                 </span>
-                <span className="flex min-h-9 sm:min-h-10 items-center gap-2 rounded-full border bg-card px-3 sm:px-4 whitespace-nowrap shrink-0">
-                  {isEnrolledOnly ? (
-                    <LockKeyhole className="size-3.5 sm:size-4 text-purple-600 shrink-0" />
-                  ) : isStudentsOnly ? (
-                    <LockKeyhole className="size-3.5 sm:size-4 text-amber-600 shrink-0" />
-                  ) : (
-                    <Globe className="size-3.5 sm:size-4 text-emerald-600 shrink-0" />
-                  )}
-                  <span className="truncate">{isEnrolledOnly ? copy.enrolledOnlyBadge : isStudentsOnly ? copy.lockedBadge : copy.free}</span>
-                </span>
+                {resolvedFeatures.certificates && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-card px-3.5 py-1.5 shadow-2xs">
+                    <Award className="size-3.5 text-primary shrink-0" />
+                    <span>{isAr ? "شهادة إتمام عند النجاح" : "Certificate on Completion"}</span>
+                  </span>
+                )}
+                {resolvedFeatures.ai_assistant && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/5 text-purple-700 dark:text-purple-300 px-3.5 py-1.5 shadow-2xs font-semibold">
+                    <Cpu className="size-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
+                    <span>{isAr ? "المساعد الإكلينيكي الذكي" : "AI Clinical Assistant"}</span>
+                  </span>
+                )}
+                {resolvedFeatures.practice_mode && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300 px-3.5 py-1.5 shadow-2xs font-semibold">
+                    <CheckSquare className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>{isAr ? "وضع التدريب والتعليلات" : "Practice Mode & Rationales"}</span>
+                  </span>
+                )}
+                {resolvedFeatures.community_qa && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/5 text-blue-700 dark:text-blue-300 px-3.5 py-1.5 shadow-2xs font-semibold">
+                    <MessageSquare className="size-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>{isAr ? "مجتمع النقاش والأسئلة" : "Mentor & Peer Q&A"}</span>
+                  </span>
+                )}
               </div>
             </div>
 
-            <Card className="border-primary/20 shadow-none">
-              <CardContent className="p-5 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between text-xs sm:text-sm">
-                  <span className="font-bold whitespace-nowrap">{copy.progress}</span>
-                  <span className="font-mono font-bold text-primary whitespace-nowrap">{progressPercent}% ({completedLecturesCount}/{lectures.length})</span>
+            {/* Right Card: Sticky Progress & Enrollment */}
+            <Card className="border-border/80 bg-card/95 backdrop-blur-xl shadow-xl shadow-primary/5 rounded-3xl overflow-hidden">
+              {coverUrl && (
+                <div
+                  className="h-44 bg-cover bg-center relative border-b border-border/60"
+                  style={{ backgroundImage: `url(${coverUrl})` }}
+                  role="img"
+                  aria-label={`${title} cover`}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
                 </div>
-                <Progress value={progressPercent} className="h-2.5" />
+              )}
 
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <CardContent className="p-6 space-y-5">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">{copy.progress}</span>
+                    <span className="font-mono text-primary font-black">{progressPercent}% ({completedLecturesCount}/{lectures.length})</span>
+                  </div>
+                  <Progress value={progressPercent} className="h-2.5" />
+                </div>
+
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   {needsAuth
                     ? copy.lockedNotice
                     : isPendingApproval
@@ -333,13 +387,13 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                     : needsEnrollment
                     ? copy.enrolledNotice
                     : isEnrolled
-                    ? (isAr ? `أنت مسجل في هذا المقرر. أنجزت ${completedLecturesCount} من ${lectures.length} محاضرة.` : `You are enrolled in this course. You have completed ${completedLecturesCount} of ${lectures.length} lectures.`)
+                    ? (isAr ? `أنت مسجل في هذا المقرر. أنجزت ${completedLecturesCount} من أصل ${lectures.length} محاضرة.` : `You are enrolled in this course. You have completed ${completedLecturesCount} of ${lectures.length} lectures.`)
                     : copy.intro}
                 </p>
 
-                {/* Enrollment Action CTA */}
+                {/* Enrollment Button */}
                 {isAuthenticated && !isEnrolled && !isPendingApproval && (
-                  <>
+                  <div className="space-y-2.5">
                     <Turnstile
                       ref={turnstileRef}
                       action="course_enroll"
@@ -352,29 +406,34 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                       onClick={handleEnroll}
                       disabled={enrolling}
                       size="lg"
-                      className="btn-nowrap w-full font-bold shadow-xs gap-2"
+                      className="w-full rounded-full font-bold shadow-md shadow-primary/20 gap-2 bg-primary hover:bg-primary/90 h-12"
                     >
                       <ClipboardCheck className="size-4 shrink-0" />
                       <span>{enrolling ? (isAr ? "جارٍ إرسال الطلب..." : "Submitting...") : copy.enrollBtn}</span>
                     </Button>
-                  </>
+                  </div>
                 )}
 
                 {isPendingApproval && (
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center text-xs font-bold text-amber-800 dark:text-amber-200 flex items-center justify-center gap-2">
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-center text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center justify-center gap-2">
                     <Clock className="size-4 animate-spin shrink-0" />
-                    <span>{isAr ? "طلبك قيد المراجعة من الإدارة — سنعلمك فور اعتماده" : "Enrollment request submitted — awaiting administrator review"}</span>
+                    <span>{isAr ? "طلبك قيد مراجعة واعتماد الإدارة" : "Enrollment request submitted — pending review"}</span>
                   </div>
                 )}
 
                 {enrollMessage && (
-                  <p className="text-xs font-bold text-primary text-center bg-primary/10 p-2.5 rounded-xl">
+                  <p className="text-xs font-bold text-primary text-center bg-primary/10 p-3 rounded-2xl border border-primary/20">
                     {enrollMessage}
                   </p>
                 )}
 
                 {lectures[0] && (
-                  <Button size="lg" variant={isEnrolled ? "default" : "outline"} className="btn-nowrap w-full font-bold" asChild>
+                  <Button
+                    size="lg"
+                    variant={isEnrolled ? "default" : "outline"}
+                    className="w-full rounded-full font-bold h-12 gap-2 shadow-xs"
+                    asChild
+                  >
                     <Link
                       href={
                         needsAuth
@@ -393,12 +452,14 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
         </div>
       </section>
 
+      {/* ─── SYLLABUS & OBJECTIVES GRID ───────────────────────────────────── */}
       <section className="section-space">
-        <div className="page-shell grid gap-10 lg:grid-cols-[1fr_340px] lg:gap-14">
-          <div>
-            <div className="mb-6">
+        <div className="page-shell grid gap-10 lg:grid-cols-[1fr_360px] lg:gap-14">
+          {/* Main Column: Accordion Syllabus */}
+          <div className="space-y-6">
+            <div>
               <span className="eyebrow">{copy.overview}</span>
-              <h2 className="mt-4 text-3xl font-bold">{copy.lectures}</h2>
+              <h2 className="section-title mt-3">{copy.lectures}</h2>
             </div>
 
             <Accordion type="single" collapsible defaultValue={lectures[0]?.id} className="space-y-3">
@@ -413,27 +474,33 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                   <AccordionItem
                     key={lecture.id}
                     value={lecture.id}
-                    className="rounded-xl border bg-card px-5 data-[state=open]:border-primary/35"
+                    className="rounded-2xl border border-border/80 bg-card/90 px-5 shadow-2xs data-[state=open]:border-primary/50 data-[state=open]:shadow-md transition-all"
                   >
                     <AccordionTrigger className="min-h-20 gap-4 py-4 text-start hover:no-underline">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-secondary font-bold text-primary">
+                      <div className="size-11 shrink-0 grid place-items-center rounded-xl bg-primary/10 text-primary font-black text-sm border border-primary/20">
                         {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="flex-1 flex items-center justify-between gap-3 min-w-0">
-                        <span className="block text-base font-bold truncate">{lectureTitle}</span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-between gap-3 min-w-0">
+                        <span className="text-base font-bold text-foreground truncate">{lectureTitle}</span>
                         {needsAuthToWatch && (
-                          <Badge variant="outline" className="badge-nowrap text-[10px] gap-1 text-muted-foreground border-amber-500/30">
-                            <LockKeyhole className="size-2.5 text-amber-600 shrink-0" />
-                            <span>{isAr ? "مغلق للزوار" : "Locked"}</span>
+                          <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400 shrink-0">
+                            <LockKeyhole className="size-2.5" />
+                            <span>{isAr ? "مغلق" : "Locked"}</span>
                           </Badge>
                         )}
-                      </span>
+                      </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pb-5 ps-14">
+
+                    <AccordionContent className="pb-5 ps-15 space-y-4 border-t border-border/40 pt-4">
                       <p className="text-sm text-muted-foreground leading-relaxed">{details}</p>
-                      <Button variant={needsAuthToWatch ? "default" : "outline"} className="btn-nowrap mt-4" asChild>
+                      <Button
+                        variant={needsAuthToWatch ? "default" : "outline"}
+                        size="sm"
+                        className="rounded-full px-5 text-xs font-bold gap-2"
+                        asChild
+                      >
                         <Link href={targetHref}>
-                          {needsAuthToWatch ? <LockKeyhole className="shrink-0" /> : <PlayCircle className="shrink-0" />}
+                          {needsAuthToWatch ? <LockKeyhole className="size-3.5" /> : <PlayCircle className="size-3.5" />}
                           <span>{needsAuthToWatch ? copy.openLocked : copy.open}</span>
                         </Link>
                       </Button>
@@ -444,38 +511,46 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
             </Accordion>
           </div>
 
-          <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
-            <Card className="shadow-none">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <span className="icon-tile size-10">
+          {/* Sidebar Column: Learning Objectives & Prerequisites */}
+          <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2.5 text-base">
+                  <div className="size-8 grid place-items-center rounded-lg bg-primary/10 text-primary">
                     <ClipboardCheck className="size-4" />
-                  </span>
-                  {copy.goals}
+                  </div>
+                  <span>{copy.goals}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 text-xs leading-relaxed">
                 {objectives.map((item) => (
-                  <div key={item} className="flex gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" />
+                  <div key={item} className="flex gap-2.5 text-muted-foreground">
+                    <CheckCircle2 className="size-4 shrink-0 text-primary mt-0.5" />
                     <span>{item}</span>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            <Card className="shadow-none">
-              <CardHeader>
-                <CardTitle className="text-lg">{copy.req}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{prerequisites}</p>
-              </CardContent>
-            </Card>
+            {prerequisites && (
+              <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2.5 text-base">
+                    <div className="size-8 grid place-items-center rounded-lg bg-amber-500/10 text-amber-600">
+                      <FileText className="size-4" />
+                    </div>
+                    <span>{copy.req}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{prerequisites}</p>
+                </CardContent>
+              </Card>
+            )}
 
-            <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-secondary/60 p-4 text-sm">
-              <CheckCircle2 className="size-5 text-primary" />
-              <span className="font-semibold">{copy.ready}</span>
+            <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4 text-xs font-bold text-primary">
+              <CheckCircle2 className="size-5 shrink-0" />
+              <span>{copy.ready}</span>
             </div>
           </aside>
         </div>

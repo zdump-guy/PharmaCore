@@ -17,10 +17,11 @@ import {
   FiMail as Mail,
   FiPlayCircle as PlayCircle,
   FiSave as Save,
+  FiShield as Shield,
   FiUser as UserIcon,
-  FiZap as Zap,
+  FiZap as Zap
 } from "react-icons/fi"
-import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
+import { FaGraduationCap as GraduationCap, FaFire as Flame } from "react-icons/fa6"
 import Layout from "@/components/Layout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -28,11 +29,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Progress } from "@/components/ui/progress"
+import CertificateCard from "@/components/certificates/CertificateCard"
+import StreakBadgeCard from "@/components/certificates/StreakBadgeCard"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { resetUser } from "@/lib/analytics"
-import { Progress } from "@/components/ui/progress"
-import type { UserProfile, EnrolledCourseProgress } from "@/types"
+import {
+  getUserCertificates,
+  getUserStreak,
+  getUserBadges
+} from "@/lib/certificates"
+import type {
+  UserProfile,
+  EnrolledCourseProgress,
+  CertificateRecord,
+  UserStreak,
+  UserBadge
+} from "@/types"
 
 interface ProfilePageProps {
   siteContent: SiteContent
@@ -44,6 +59,7 @@ interface ProfileMetrics {
   hoursStudied: number
   streakDays: number
   coursesEnrolled: number
+  certificatesEarned?: number
 }
 
 export default function ProfilePage({ siteContent }: ProfilePageProps) {
@@ -52,8 +68,8 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
   const isAr = locale === "ar"
   const tr = (en: string, ar: string) => (isAr ? ar : en)
 
-  const [activeTab, setActiveTab] = useState<"info" | "learning" | "security">(
-    (query.tab as "info" | "learning" | "security") || "info"
+  const [activeTab, setActiveTab] = useState<"info" | "learning" | "certificates" | "streaks" | "security">(
+    (query.tab as "info" | "learning" | "certificates" | "streaks" | "security") || "info"
   )
 
   const [loading, setLoading] = useState(true)
@@ -64,8 +80,20 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     hoursStudied: 0,
     streakDays: 1,
     coursesEnrolled: 0,
+    certificatesEarned: 0
   })
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourseProgress[]>([])
+  const [certificates, setCertificates] = useState<CertificateRecord[]>([])
+  const [streak, setStreak] = useState<UserStreak>({
+    user_id: "",
+    current_streak: 1,
+    longest_streak: 1,
+    last_activity_date: new Date().toISOString().split("T")[0],
+    updated_at: new Date().toISOString()
+  })
+  const [badges, setBadges] = useState<UserBadge[]>([])
+  const [claimingCourseId, setClaimingCourseId] = useState<string | null>(null)
+  const [claimNotice, setClaimNotice] = useState<{ error?: boolean; text: string } | null>(null)
 
   // Form State
   const [firstName, setFirstName] = useState("")
@@ -88,7 +116,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
   const universitiesList = siteContent.enrollment_settings?.universities || []
   const facultiesList = siteContent.enrollment_settings?.faculties || []
 
-  // Load Session, Profile & Real Course Enrollments
+  // Load Session, Profile, Enrollments, Certificates & Streaks
   useEffect(() => {
     if (!supabase) {
       setLoading(false)
@@ -99,7 +127,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
       setLoading(true)
       try {
         const {
-          data: { session },
+          data: { session }
         } = await supabase!.auth.getSession()
 
         if (!session) {
@@ -107,13 +135,16 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           return
         }
 
-        const [profileRes, enrollmentsRes] = await Promise.all([
+        const [profileRes, enrollmentsRes, certsRes] = await Promise.all([
           fetch("/api/profile", {
-            headers: { Authorization: `Bearer ${session.access_token}` },
+            headers: { Authorization: `Bearer ${session.access_token}` }
           }),
           fetch("/api/students/enrollments", {
-            headers: { Authorization: `Bearer ${session.access_token}` },
+            headers: { Authorization: `Bearer ${session.access_token}` }
           }),
+          fetch("/api/certificates", {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          })
         ])
 
         if (!profileRes.ok) {
@@ -123,11 +154,36 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
         const data = await profileRes.json()
         const userProf = data.profile as UserProfile
         setProfile(userProf)
-        if (data.metrics) setMetrics(data.metrics)
 
         if (enrollmentsRes.ok) {
           const enrollData = await enrollmentsRes.json()
           setEnrolledCourses(enrollData.enrollments || [])
+        }
+
+        let userCerts: CertificateRecord[] = []
+        if (certsRes.ok) {
+          const certData = await certsRes.json()
+          userCerts = certData.certificates || []
+          setCertificates(userCerts)
+        } else {
+          userCerts = await getUserCertificates(userProf.id)
+          setCertificates(userCerts)
+        }
+
+        // Fetch Streak & Badges
+        const [userStreakData, userBadgesData] = await Promise.all([
+          getUserStreak(userProf.id),
+          getUserBadges(userProf.id)
+        ])
+        setStreak(userStreakData)
+        setBadges(userBadgesData)
+
+        if (data.metrics) {
+          setMetrics({
+            ...data.metrics,
+            streakDays: userStreakData.current_streak || data.metrics.streakDays || 1,
+            certificatesEarned: userCerts.length
+          })
         }
 
         // Populate fields
@@ -141,7 +197,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
       } catch (err: unknown) {
         setProfileNotice({
           error: true,
-          text: err instanceof Error ? err.message : tr("Failed to fetch profile.", "تعذر تحميل الملف الشخصي."),
+          text: err instanceof Error ? err.message : tr("Failed to fetch profile.", "تعذر تحميل الملف الشخصي.")
         })
       } finally {
         setLoading(false)
@@ -149,7 +205,6 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     }
 
     fetchStudentProfile()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   // Calculate academic year
@@ -164,7 +219,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
     try {
       const {
-        data: { session },
+        data: { session }
       } = await supabase.auth.getSession()
       if (!session) throw new Error(tr("Session expired", "انتهت الجلسة"))
 
@@ -172,7 +227,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           first_name: firstName.trim(),
@@ -182,8 +237,8 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           faculty: faculty || null,
           start_year: Number(startYear),
           predicted_end_year: Number(predictedEndYear),
-          current_year: calculatedYear,
-        }),
+          current_year: calculatedYear
+        })
       })
 
       const data = await res.json()
@@ -192,15 +247,63 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
       setProfile(data.profile)
       setProfileNotice({
         error: false,
-        text: tr("Profile information updated successfully!", "تم تحديث بيانات الملف الشخصي بنجاح!"),
+        text: tr("Profile information updated successfully!", "تم تحديث بيانات الملف الشخصي بنجاح!")
       })
     } catch (err: unknown) {
       setProfileNotice({
         error: true,
-        text: err instanceof Error ? err.message : tr("Could not update profile.", "تعذر تحديث البيانات."),
+        text: err instanceof Error ? err.message : tr("Could not update profile.", "تعذر تحديث البيانات.")
       })
     } finally {
       setSavingProfile(false)
+    }
+  }
+
+  // Handle Certificate Claim
+  const handleClaimCertificate = async (courseId: string, courseTitle: string) => {
+    if (!supabase) return
+    setClaimingCourseId(courseId)
+    setClaimNotice(null)
+
+    try {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession()
+      if (!session) throw new Error(tr("Session expired", "انتهت الجلسة"))
+
+      const res = await fetch("/api/certificates/issue", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          course_id: courseId,
+          student_name: profile?.full_name || [firstName, lastName].filter(Boolean).join(" ") || "Student"
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || tr("Mastery criteria not yet met.", "لم يتم استيفاء شروط الإتقان بعد."))
+      }
+
+      const newCert = data.certificate as CertificateRecord
+      setCertificates((prev) => [newCert, ...prev.filter((c) => c.course_id !== courseId)])
+      setClaimNotice({
+        error: false,
+        text: tr(
+          `Congratulations! Certificate issued for "${courseTitle}".`,
+          `مبروك! تم إصدار شهادة الإتقان لمقرر "${courseTitle}".`
+        )
+      })
+    } catch (err: unknown) {
+      setClaimNotice({
+        error: true,
+        text: err instanceof Error ? err.message : tr("Could not claim certificate.", "تعذر إصدار الشهادة.")
+      })
+    } finally {
+      setClaimingCourseId(null)
     }
   }
 
@@ -212,7 +315,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     if (newPassword.length < 8) {
       setPasswordNotice({
         error: true,
-        text: tr("Password must be at least 8 characters.", "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."),
+        text: tr("Password must be at least 8 characters.", "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.")
       })
       return
     }
@@ -220,7 +323,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     if (newPassword !== confirmPassword) {
       setPasswordNotice({
         error: true,
-        text: tr("Passwords do not match.", "كلمات المرور غير متطابقة."),
+        text: tr("Passwords do not match.", "كلمات المرور غير متطابقة.")
       })
       return
     }
@@ -234,12 +337,12 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
       setConfirmPassword("")
       setPasswordNotice({
         error: false,
-        text: tr("Password updated successfully!", "تم تحديث كلمة المرور بنجاح!"),
+        text: tr("Password updated successfully!", "تم تحديث كلمة المرور بنجاح!")
       })
     } catch (err: unknown) {
       setPasswordNotice({
         error: true,
-        text: err instanceof Error ? err.message : tr("Failed to update password.", "تعذر تغيير كلمة المرور."),
+        text: err instanceof Error ? err.message : tr("Failed to update password.", "تعذر تغيير كلمة المرور.")
       })
     } finally {
       setUpdatingPassword(false)
@@ -274,44 +377,51 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
         `${profile?.full_name || "الطالب"} — الملف الشخصي`
       )}
       description={tr(
-        "Manage your PharmaCore student profile, track study progress, and update academic credentials.",
-        "إدارة ملفك الأكاديمي في فارما كور، ومتابعة تقدم الدراسة وتحديث البيانات."
+        "Manage your PharmaCore student profile, track study progress, download verified certificates, and review milestone achievements.",
+        "إدارة ملفك الأكاديمي في فارما كور، ومتابعة التقدم الدراسي، وتحميل الشهادات المعتمدة، ومراجعة أوسمة الإنجاز."
       )}
     >
       <div className="page-shell section-space space-y-8" dir={isAr ? "rtl" : "ltr"}>
         {/* ─── Top Hero / Profile Banner Card ──────────────────────────────── */}
-        <div className="rounded-3xl border bg-card p-6 sm:p-8 shadow-xs relative overflow-hidden">
-          <div className="absolute top-0 end-0 size-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="rounded-3xl border border-border/80 bg-card/90 p-6 sm:p-8 shadow-sm relative overflow-hidden backdrop-blur-xl">
+          <div className="absolute top-0 end-0 size-80 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between relative z-10">
             {/* Avatar & Identifiers */}
             <div className="flex items-center gap-4">
-              <div className="size-20 rounded-2xl bg-gradient-to-tr from-primary to-primary/60 text-primary-foreground font-black text-3xl grid place-items-center shadow-lg uppercase">
-                {profile?.full_name ? profile.full_name[0] : "S"}
-              </div>
+              <Avatar className="size-20 ring-2 ring-primary/30 shadow-md">
+                <AvatarFallback className="bg-primary text-primary-foreground font-black text-2xl uppercase">
+                  {profile?.full_name ? profile.full_name[0] : "S"}
+                </AvatarFallback>
+              </Avatar>
+
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
                     {profile?.full_name || tr("Student Learner", "طالب صيدلي")}
                   </h1>
-                  <Badge
-                    className={`badge-nowrap ${
-                      profile?.status === "active"
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500/30"
-                        : "bg-amber-500/15 text-amber-600 font-bold"
-                    }`}
-                  >
+                  <Badge variant={profile?.status === "active" ? "success" : "warning"} className="font-bold">
                     {profile?.status === "active"
                       ? tr("Active Student", "طالب مفعل")
                       : profile?.status === "needs_setup"
                       ? tr("Setup Required", "يتطلب استكمال البيانات")
                       : tr("Enrolled", "مسجل")}
                   </Badge>
+                  {certificates.length > 0 && (
+                    <Badge variant="default" className="font-bold bg-emerald-600/90 text-white gap-1 text-[11px]">
+                      <Shield className="size-3" />
+                      <span>
+                        {certificates.length} {tr("Certificates", "شهادات معتمدة")}
+                      </span>
+                    </Badge>
+                  )}
                 </div>
+
                 <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 truncate">
                   <Mail className="size-3.5 shrink-0" />
                   <span className="truncate">{profile?.email}</span>
                 </p>
+
                 {(profile?.university || profile?.faculty) && (
                   <p className="text-xs text-primary font-bold flex items-center gap-1.5 pt-0.5">
                     <GraduationCap className="size-4 shrink-0" />
@@ -329,7 +439,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleSignOut}
-                className="btn-nowrap gap-2 font-bold text-xs rounded-xl shadow-xs"
+                className="gap-2 font-bold text-xs rounded-full shadow-xs border-border/80 hover:bg-muted"
               >
                 <LogOut className="size-3.5 text-muted-foreground shrink-0" />
                 <span>{tr("Sign Out", "تسجيل الخروج")}</span>
@@ -339,61 +449,74 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
         </div>
 
         {/* ─── Metric Highlight Cards ───────────────────────────────────────── */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <Card className="card-interactive card-equal shadow-none">
-            <CardContent className="p-4 sm:p-5 space-y-1">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm transition-transform hover:-translate-y-0.5">
+            <CardContent className="p-5 space-y-1.5">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Study Hours", "ساعات التعلم")}</span>
+                <span className="text-xs font-bold uppercase tracking-wider">{tr("Study Hours", "ساعات التعلم")}</span>
                 <Clock className="size-4 text-primary shrink-0" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.hoursStudied}h</p>
-              <p className="text-[11px] text-muted-foreground truncate">{tr("Watched video lectures", "مشاهدة شروحات الفيديو")}</p>
+              <p className="text-3xl font-black font-mono text-foreground">{metrics.hoursStudied}h</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Video lecture hours", "مشاهدة شروحات الفيديو")}</p>
             </CardContent>
           </Card>
 
-          <Card className="card-interactive card-equal shadow-none">
-            <CardContent className="p-4 sm:p-5 space-y-1">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm transition-transform hover:-translate-y-0.5">
+            <CardContent className="p-5 space-y-1.5">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Videos Watched", "المحاضرات المكتملة")}</span>
-                <BookOpen className="size-4 text-blue-500 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider">{tr("Lectures", "المحاضرات")}</span>
+                <BookOpen className="size-4 text-teal-500 shrink-0" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.videosWatched}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{tr("Completed lecture sessions", "محاضرة تم اجتيازها")}</p>
+              <p className="text-3xl font-black font-mono text-foreground">{metrics.videosWatched}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Completed sessions", "محاضرة تم اجتيازها")}</p>
             </CardContent>
           </Card>
 
-          <Card className="card-interactive card-equal shadow-none">
-            <CardContent className="p-4 sm:p-5 space-y-1">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm transition-transform hover:-translate-y-0.5">
+            <CardContent className="p-5 space-y-1.5">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Quizzes Solved", "الاختبارات")}</span>
+                <span className="text-xs font-bold uppercase tracking-wider">{tr("Assessments", "الاختبارات")}</span>
                 <Award className="size-4 text-emerald-500 shrink-0" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.quizzesTaken}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{tr("Self-assessment tests", "اختبارات تقييم ذاتي")}</p>
+              <p className="text-3xl font-black font-mono text-foreground">{metrics.quizzesTaken}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Solved quizzes", "اختبارات تم إنجازها")}</p>
             </CardContent>
           </Card>
 
-          <Card className="card-interactive card-equal shadow-none">
-            <CardContent className="p-4 sm:p-5 space-y-1">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm transition-transform hover:-translate-y-0.5">
+            <CardContent className="p-5 space-y-1.5">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Study Streak", "المواظبة")}</span>
-                <Zap className="size-4 text-amber-500 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider">{tr("Study Streak", "المواظبة")}</span>
+                <Flame className="size-4 text-amber-500 shrink-0" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.streakDays} {tr("Days", "أيام")}</p>
+              <p className="text-3xl font-black font-mono text-foreground">
+                {streak.current_streak || metrics.streakDays} {tr("d", "يوم")}
+              </p>
               <p className="text-[11px] text-muted-foreground truncate">{tr("Consecutive active days", "أيام متتالية من التعلم")}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm transition-transform hover:-translate-y-0.5 col-span-2 lg:col-span-1">
+            <CardContent className="p-5 space-y-1.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-xs font-bold uppercase tracking-wider">{tr("Certificates", "الشهادات")}</span>
+                <Shield className="size-4 text-emerald-600 shrink-0" />
+              </div>
+              <p className="text-3xl font-black font-mono text-foreground">{certificates.length}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Verified credentials", "شهادات معتمدة وموثقة")}</p>
             </CardContent>
           </Card>
         </div>
 
         {/* ─── Profile Tabs Navigation ──────────────────────────────────────── */}
-        <div className="flex items-center gap-2 border-b pb-2 overflow-x-auto w-full">
+        <div className="flex items-center gap-2 border-b border-border/60 pb-3 overflow-x-auto w-full">
           <button
             type="button"
             onClick={() => setActiveTab("info")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === "info"
-                ? "bg-primary text-primary-foreground shadow-2xs"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
             }`}
           >
             <UserIcon className="size-4 shrink-0" />
@@ -403,10 +526,10 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           <button
             type="button"
             onClick={() => setActiveTab("learning")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === "learning"
-                ? "bg-primary text-primary-foreground shadow-2xs"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
             }`}
           >
             <Activity className="size-4 shrink-0" />
@@ -415,15 +538,46 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
           <button
             type="button"
+            onClick={() => setActiveTab("certificates")}
+            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+              activeTab === "certificates"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            }`}
+          >
+            <Award className="size-4 shrink-0" />
+            <span>{tr("Verifiable Certificates", "الشهادات المعتمدة")}</span>
+            {certificates.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-background/20 font-mono">
+                {certificates.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("streaks")}
+            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
+              activeTab === "streaks"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            }`}
+          >
+            <Zap className="size-4 shrink-0" />
+            <span>{tr("Study Streaks & Badges", "المواظبة والأوسمة")}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("security")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === "security"
-                ? "bg-primary text-primary-foreground shadow-2xs"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
             }`}
           >
             <Lock className="size-4 shrink-0" />
-            <span>{tr("Security & Password", "الأمان وتغيير كلمة المرور")}</span>
+            <span>{tr("Security & Password", "الأمان وكلمة المرور")}</span>
           </button>
         </div>
 
@@ -443,7 +597,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               </div>
             )}
 
-            <Card className="shadow-none">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold">
                   {tr("Personal Details", "البيانات الشخصية")}
@@ -455,47 +609,50 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               <CardContent className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("First Name", "الاسم الأول")}</Label>
+                    <Label className="text-xs font-bold">{tr("First Name", "الاسم الأول")}</Label>
                     <Input
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="Ahmed"
                       required
+                      className="rounded-xl h-11"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Last Name", "اسم العائلة / اللقب")}</Label>
+                    <Label className="text-xs font-bold">{tr("Last Name", "اسم العائلة / اللقب")}</Label>
                     <Input
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Hassan"
                       required
+                      className="rounded-xl h-11"
                     />
                   </div>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Email Address", "البريد الإلكتروني")}</Label>
+                    <Label className="text-xs font-bold">{tr("Email Address", "البريد الإلكتروني")}</Label>
                     <div className="relative">
-                      <Input value={profile?.email || ""} disabled className="bg-muted text-muted-foreground pe-8" />
+                      <Input value={profile?.email || ""} disabled className="bg-muted text-muted-foreground pe-8 rounded-xl h-11" />
                       <Check className="size-4 text-emerald-500 absolute end-2.5 top-1/2 -translate-y-1/2" />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Phone Number", "رقم الهاتف")}</Label>
+                    <Label className="text-xs font-bold">{tr("Phone Number", "رقم الهاتف")}</Label>
                     <Input
                       type="tel"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="+20 100 000 0000"
+                      className="rounded-xl h-11"
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="shadow-none">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold">
                   {tr("Academic Affiliation & Timeline", "البيانات الأكاديمية والمرحلة الدراسية")}
@@ -507,12 +664,12 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               <CardContent className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("University", "الجامعة")}</Label>
+                    <Label className="text-xs font-bold">{tr("University", "الجامعة")}</Label>
                     <Select value={university} onValueChange={setUniversity}>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full rounded-xl h-11">
                         <SelectValue placeholder={tr("Select University", "اختر الجامعة")} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-2xl">
                         {universitiesList.map((u) => (
                           <SelectItem key={u.id} value={isAr ? u.name_ar : u.name_en}>
                             {isAr ? u.name_ar : u.name_en}
@@ -523,12 +680,12 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Faculty / Department", "الكلية / البرنامج")}</Label>
+                    <Label className="text-xs font-bold">{tr("Faculty / Department", "الكلية / البرنامج")}</Label>
                     <Select value={faculty} onValueChange={setFaculty}>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full rounded-xl h-11">
                         <SelectValue placeholder={tr("Select Faculty", "اختر الكلية")} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-2xl">
                         {facultiesList.map((f) => (
                           <SelectItem key={f.id} value={isAr ? f.name_ar : f.name_en}>
                             {isAr ? f.name_ar : f.name_en}
@@ -541,34 +698,36 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Start Year", "سنة بدء الدراسة")}</Label>
+                    <Label className="text-xs font-bold">{tr("Start Year", "سنة بدء الدراسة")}</Label>
                     <Input
                       type="number"
                       min={2015}
                       max={2030}
                       value={startYear}
                       onChange={(e) => setStartYear(Number(e.target.value))}
+                      className="rounded-xl h-11"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Predicted Graduation Year", "سنة التخرج المتوقعة")}</Label>
+                    <Label className="text-xs font-bold">{tr("Predicted Graduation Year", "سنة التخرج المتوقعة")}</Label>
                     <Input
                       type="number"
                       min={2020}
                       max={2035}
                       value={predictedEndYear}
                       onChange={(e) => setPredictedEndYear(Number(e.target.value))}
+                      className="rounded-xl h-11"
                     />
                   </div>
                 </div>
 
                 {/* Academic Year Computed Badge */}
-                <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs">
+                <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs">
                   <span className="font-semibold text-muted-foreground">
                     {tr("Current Academic Stage:", "السنة الدراسية الحالية:")}
                   </span>
-                  <Badge className="bg-primary text-primary-foreground font-bold">
+                  <Badge variant="default" className="font-bold">
                     {tr(`Year ${calculatedYear}`, `الفرقة ${calculatedYear}`)}
                   </Badge>
                 </div>
@@ -579,7 +738,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               type="submit"
               size="lg"
               disabled={savingProfile}
-              className="gap-2 font-bold w-full sm:w-auto rounded-xl shadow-xs"
+              className="gap-2 font-bold w-full sm:w-auto rounded-full px-8 shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 h-12"
             >
               {savingProfile ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               <span>{savingProfile ? tr("Saving Profile...", "جارٍ الحفظ...") : tr("Save Changes", "حفظ التعديلات")}</span>
@@ -590,8 +749,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
         {/* ─── 2. LEARNING ACTIVITY & ENROLLED COURSES TAB ──────────────────── */}
         {activeTab === "learning" && (
           <div className="space-y-6 max-w-4xl">
-            {/* My Enrolled Courses Section */}
-            <Card className="shadow-none">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -610,16 +768,16 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 {enrolledCourses.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed rounded-2xl p-6 bg-muted/20">
+                  <div className="text-center py-12 border border-dashed border-border/80 rounded-3xl p-6 bg-muted/20 space-y-3">
                     <BookOpen className="size-10 text-muted-foreground/50 mx-auto" />
-                    <h4 className="mt-3 text-sm font-bold">{tr("No enrolled courses yet", "لم تشترك في أي مقرر بعد")}</h4>
-                    <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto">
+                    <h4 className="text-sm font-bold text-foreground">{tr("No enrolled courses yet", "لم تشترك في أي مقرر بعد")}</h4>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
                       {tr(
                         "Browse our available curriculum and enroll in courses to begin your academic learning track.",
                         "استعرض المقررات المتاحة واشترك في المساقات لبدء رحلتك التعليمية."
                       )}
                     </p>
-                    <Button size="sm" className="mt-4 font-bold" asChild>
+                    <Button size="sm" className="mt-2 rounded-full px-6 font-bold" asChild>
                       <Link href="/#courses">{tr("Explore Courses", "استعراض المقررات")}</Link>
                     </Button>
                   </div>
@@ -630,26 +788,21 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                       const nextLectureHref = item.lastActiveLectureId
                         ? `/lecture/${item.lastActiveLectureId}`
                         : `/course/${item.courseId}`
+                      const hasCert = certificates.some((c) => c.course_id === item.courseId)
 
                       return (
                         <div
                           key={item.enrollmentId}
-                          className="rounded-2xl border bg-card p-4 flex flex-col justify-between space-y-3 hover:border-primary/40 transition-colors shadow-2xs card-equal"
+                          className="rounded-3xl border border-border/80 bg-card/90 p-5 flex flex-col justify-between space-y-4 hover:border-primary/50 transition-all shadow-2xs"
                         >
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div className="flex items-start justify-between gap-2">
-                              <span className="font-bold text-sm leading-snug line-clamp-2">{courseTitle}</span>
+                              <span className="font-bold text-sm leading-snug line-clamp-2 text-foreground">{courseTitle}</span>
                               <Badge
-                                variant="outline"
-                                className={`badge-nowrap text-[10px] font-bold shrink-0 ${
-                                  item.status === "completed"
-                                    ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/10"
-                                    : item.status === "pending"
-                                    ? "border-amber-500/30 text-amber-700 dark:text-amber-300 bg-amber-500/10 animate-pulse"
-                                    : "border-primary/30 text-primary bg-primary/10"
-                                }`}
+                                variant={item.status === "completed" || item.progressPercent === 100 ? "success" : item.status === "pending" ? "warning" : "default"}
+                                className="text-[10px] font-bold shrink-0"
                               >
-                                {item.status === "completed"
+                                {item.status === "completed" || item.progressPercent === 100
                                   ? tr("Completed", "مكتمل")
                                   : item.status === "pending"
                                   ? tr("Pending Approval", "قيد المراجعة")
@@ -658,40 +811,59 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                             </div>
 
                             <div className="space-y-1.5 pt-1">
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span className="whitespace-nowrap">{tr("Course Progress", "نسبة الإنجاز")}</span>
-                                <span className="font-mono font-bold text-foreground whitespace-nowrap">{item.progressPercent}%</span>
+                              <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold">
+                                <span>{tr("Course Progress", "نسبة الإنجاز")}</span>
+                                <span className="font-mono font-bold text-primary">{item.progressPercent}%</span>
                               </div>
                               <Progress value={item.progressPercent} className="h-2" />
                             </div>
 
                             <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground pt-1">
-                              <span className="whitespace-nowrap">
+                              <span>
                                 {item.completedLectures} / {item.totalLectures} {tr("Lectures watched", "محاضرة مكتملة")}
                               </span>
                               {item.totalQuizzes > 0 && (
-                                <span className="whitespace-nowrap">
+                                <span>
                                   • {item.completedQuizzes} / {item.totalQuizzes} {tr("Quizzes", "اختبار")}
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          {item.status === "pending" ? (
-                            <Button size="sm" variant="outline" className="btn-nowrap w-full font-bold text-xs gap-1.5 h-8 mt-2 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10" asChild>
-                              <Link href={`/course/${item.courseId}`}>
-                                <Clock className="size-3.5 shrink-0" />
-                                <span>{tr("Pending Approval", "قيد مراجعة الإدارة")}</span>
-                              </Link>
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="default" className="btn-nowrap w-full font-bold text-xs gap-1.5 h-8 mt-2" asChild>
-                              <Link href={nextLectureHref}>
-                                <PlayCircle className="size-3.5 shrink-0" />
-                                <span>{item.completedLectures > 0 ? tr("Resume Learning", "متابعة الدراسة") : tr("Start Course", "بدء المقرر")}</span>
-                              </Link>
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2 pt-1">
+                            {item.status === "pending" ? (
+                              <Button size="sm" variant="outline" className="w-full rounded-full font-bold text-xs gap-1.5 h-9 border-amber-500/30 text-amber-700 dark:text-amber-300" asChild>
+                                <Link href={`/course/${item.courseId}`}>
+                                  <Clock className="size-3.5 shrink-0" />
+                                  <span>{tr("Pending Approval", "قيد مراجعة الإدارة")}</span>
+                                </Link>
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="w-full rounded-full font-bold text-xs gap-1.5 h-9 shadow-xs" asChild>
+                                <Link href={nextLectureHref}>
+                                  <PlayCircle className="size-3.5 shrink-0" />
+                                  <span>{item.completedLectures > 0 ? tr("Resume Learning", "متابعة الدراسة") : tr("Start Course", "بدء المقرر")}</span>
+                                </Link>
+                              </Button>
+                            )}
+
+                            {item.progressPercent === 100 && !hasCert && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleClaimCertificate(item.courseId, courseTitle)}
+                                disabled={claimingCourseId === item.courseId}
+                                className="rounded-full font-bold text-xs gap-1.5 h-9 px-3 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+                              >
+                                {claimingCourseId === item.courseId ? (
+                                  <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
+                                  <Award className="size-3.5" />
+                                )}
+                                <span>{tr("Claim Cert", "إصدار الشهادة")}</span>
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       )
                     })}
@@ -699,42 +871,85 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                 )}
               </CardContent>
             </Card>
-
-            {/* Quick Analytics & Milestones Summary */}
-            <Card className="shadow-none">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-bold">
-                  {tr("Learning Summary & Engagement", "ملخص النشاط والتفاعل")}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {tr("Aggregated overview of your study engagement and learning streak.", "نظرة عامة على نشاطك ومشاركتك المستمرة في المنصة.")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
-                    <p className="text-lg font-bold font-mono text-primary">{metrics.videosWatched}</p>
-                    <p className="text-[11px] text-muted-foreground">{tr("Videos Watched", "فيديو تمت مشاهدته")}</p>
-                  </div>
-                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
-                    <p className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">{metrics.quizzesTaken}</p>
-                    <p className="text-[11px] text-muted-foreground">{tr("Quizzes Taken", "اختبار مكتمل")}</p>
-                  </div>
-                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
-                    <p className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400">{metrics.hoursStudied}h</p>
-                    <p className="text-[11px] text-muted-foreground">{tr("Study Time", "ساعات التعلم")}</p>
-                  </div>
-                  <div className="p-3 rounded-2xl border bg-muted/20 text-center">
-                    <p className="text-lg font-bold font-mono text-purple-600 dark:text-purple-400">{metrics.streakDays} {tr("days", "أيام")}</p>
-                    <p className="text-[11px] text-muted-foreground">{tr("Active Streak", "أيام النشاط")}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
 
-        {/* ─── 3. SECURITY & PASSWORD TAB ──────────────────────────────────── */}
+        {/* ─── 3. VERIFIABLE CERTIFICATES TAB ──────────────────────────────── */}
+        {activeTab === "certificates" && (
+          <div className="space-y-6 max-w-4xl">
+            {claimNotice && (
+              <div
+                className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
+                  claimNotice.error
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
+                }`}
+              >
+                {claimNotice.error ? <Lock className="size-4" /> : <CheckCircle2 className="size-4" />}
+                <span>{claimNotice.text}</span>
+              </div>
+            )}
+
+            <div className="rounded-3xl border border-border/80 bg-card/90 p-6 sm:p-7 shadow-sm relative overflow-hidden backdrop-blur-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Shield className="size-5 text-emerald-600 dark:text-emerald-400" />
+                    <h3 className="text-base font-black text-foreground">
+                      {tr("My Clinical Mastery Certificates", "شهادات الإتقان السريري المعتمدة")}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground max-w-xl">
+                    {tr(
+                      "Official credentials issued upon completing 100% of course lectures and achieving >= 80% on clinical assessments. Each certificate contains a unique verifiable QR code.",
+                      "شهادات رسمية تصدر آليًا فور إتمام 100% من المحاضرات وتحقيق 80% فأعلى في التقييمات السريرية. تتضمن كل شهادة رمز QR موثقًا للتحقق الفوري."
+                    )}
+                  </p>
+                </div>
+
+                <Badge variant="success" className="font-mono font-bold text-xs self-start sm:self-center px-3 py-1">
+                  {certificates.length} {tr("Issued", "شهادة صادرة")}
+                </Badge>
+              </div>
+            </div>
+
+            {certificates.length === 0 ? (
+              <div className="text-center py-12 border border-dashed border-border/80 rounded-3xl p-8 bg-muted/20 space-y-4">
+                <Award className="size-12 text-muted-foreground/40 mx-auto" />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-foreground">
+                    {tr("No certificates earned yet", "لم يتم الحصول على أي شهادة حتى الآن")}
+                  </h4>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+                    {tr(
+                      "To earn your official PharmaCore certificate, complete 100% of the video lectures in an enrolled course and achieve at least 80% average on the quizzes.",
+                      "للحصول على شهادتك المعتمدة، أكمل 100% من محاضرات المقرر المسجل به وحقق 80% على الأقل في الاختبارات."
+                    )}
+                  </p>
+                </div>
+
+                <Button size="sm" className="rounded-full px-6 font-bold" asChild>
+                  <Link href="/#courses">{tr("Start Learning", "بدء التعلم")}</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {certificates.map((cert) => (
+                  <CertificateCard key={cert.id} certificate={cert} locale={locale} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── 4. STUDY STREAKS & BADGES TAB ───────────────────────────────── */}
+        {activeTab === "streaks" && (
+          <div className="space-y-6 max-w-4xl">
+            <StreakBadgeCard streak={streak} badges={badges} locale={locale} />
+          </div>
+        )}
+
+        {/* ─── 5. SECURITY & PASSWORD TAB ──────────────────────────────────── */}
         {activeTab === "security" && (
           <form onSubmit={handleUpdatePassword} className="space-y-6 max-w-xl">
             {passwordNotice && (
@@ -750,7 +965,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               </div>
             )}
 
-            <Card className="shadow-none">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold">
                   {tr("Change Account Password", "تغيير كلمة المرور")}
@@ -761,24 +976,26 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{tr("New Password", "كلمة المرور الجديدة")}</Label>
+                  <Label className="text-xs font-bold">{tr("New Password", "كلمة المرور الجديدة")}</Label>
                   <Input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
                     required
+                    className="rounded-xl h-11"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{tr("Confirm New Password", "تأكيد كلمة المرور الجديدة")}</Label>
+                  <Label className="text-xs font-bold">{tr("Confirm New Password", "تأكيد كلمة المرور الجديدة")}</Label>
                   <Input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
                     required
+                    className="rounded-xl h-11"
                   />
                 </div>
               </CardContent>
@@ -788,7 +1005,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               type="submit"
               size="lg"
               disabled={updatingPassword}
-              className="gap-2 font-bold w-full sm:w-auto rounded-xl shadow-xs"
+              className="gap-2 font-bold w-full sm:w-auto rounded-full px-8 shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 h-12"
             >
               {updatingPassword ? <Loader2 className="size-4 animate-spin" /> : <Key className="size-4" />}
               <span>{updatingPassword ? tr("Updating Password...", "جارٍ التحديث...") : tr("Update Password", "تحديث كلمة المرور")}</span>
@@ -805,7 +1022,7 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
   return {
     props: {
       siteContent,
-      ...(await serverSideTranslations(locale ?? "en", ["common"])),
-    },
+      ...(await serverSideTranslations(locale ?? "en", ["common"]))
+    }
   }
 }

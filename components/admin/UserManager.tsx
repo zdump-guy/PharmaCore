@@ -10,9 +10,9 @@ import {
   FiShield as ShieldCheck,
   FiSlash as SuspendIcon,
   FiTrash2 as Trash2,
-  FiUser as UserIcon,
   FiUserPlus as UserPlus,
   FiUsers as UsersIcon,
+  FiX as X,
 } from "react-icons/fi"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { UserProfile, UserRole } from "@/types"
 
 export type ManagedUser = UserProfile & {
@@ -92,13 +93,15 @@ export default function UserManager({
   return (
     <div className="space-y-6" dir={isAr ? "rtl" : "ltr"}>
       {/* Top Header & Role Metric Summary */}
-      <div className="flex flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5 shadow-xs lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-3xl border border-border/80 bg-card/90 p-5 sm:p-6 shadow-sm backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <UsersIcon className="size-5 text-primary" />
-            <h3 className="text-xl font-bold tracking-tight">{tr("Team & Administrative Access", "فريق العمل وإدارة الصلاحيات")}</h3>
+          <div className="flex items-center gap-2.5">
+            <div className="size-10 grid place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+              <UsersIcon className="size-5" />
+            </div>
+            <h3 className="text-xl font-black tracking-tight text-foreground">{tr("Team & Administrative Access", "فريق العمل وإدارة الصلاحيات")}</h3>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {tr(
               "Provision accounts, assign roles (Developer, Super Admin, Mentor), and manage permissions.",
               "إنشاء الحسابات، وتحديد الأدوار (مطور، مشرف عام، مرشد)، وإدارة صلاحيات الفريق."
@@ -107,21 +110,21 @@ export default function UserManager({
         </div>
 
         {/* Quick Role Badges */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <Badge variant="outline" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className="text-xs gap-1.5 py-1 px-3 bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 font-bold">
             <span className="size-2 rounded-full bg-purple-500 shrink-0" />
             <span>{devsCount} {tr("Devs", "مطورين")}</span>
           </Badge>
-          <Badge variant="outline" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+          <Badge variant="outline" className="text-xs gap-1.5 py-1 px-3 bg-primary/10 text-primary border-primary/30 font-bold">
             <span className="size-2 rounded-full bg-primary shrink-0" />
             <span>{superAdminsCount} {tr("Super Admins", "مشرفين عامين")}</span>
           </Badge>
-          <Badge variant="outline" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+          <Badge variant="outline" className="text-xs gap-1.5 py-1 px-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold">
             <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
             <span>{mentorsCount} {tr("Mentors", "مرشدين")}</span>
           </Badge>
           {suspendedCount > 0 && (
-            <Badge variant="destructive" className="badge-nowrap text-xs gap-1.5 py-1 shrink-0">
+            <Badge variant="destructive" className="text-xs gap-1.5 py-1 px-3 font-bold">
               <span>{suspendedCount} {tr("Suspended", "موقوف")}</span>
             </Badge>
           )}
@@ -129,18 +132,18 @@ export default function UserManager({
       </div>
 
       {/* 2-Column Layout: Create User Form + User Directory */}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.35fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.3fr)]">
         {/* Create User Form */}
-        <Card className="shadow-none border-primary/20">
-          <CardContent className="p-4 sm:p-6">
-            <div className="mb-4 sm:mb-5 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+          <CardContent className="p-6 sm:p-7 space-y-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 grid place-items-center rounded-xl bg-primary/10 text-primary">
                   <UserPlus className="size-4" />
-                </span>
-                <h4 className="font-bold text-base">{tr("Add Staff Member", "إضافة عضو جديد")}</h4>
+                </div>
+                <h4 className="font-black text-base text-foreground">{tr("Add Staff Member", "إضافة عضو جديد")}</h4>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 {tr(
                   "Create credentials for immediate access to dashboard tools.",
                   "إنشاء حساب بصلاحيات محددة للوصول الفوري إلى لوحة التحكم."
@@ -150,7 +153,7 @@ export default function UserManager({
 
             <form onSubmit={onCreateUser} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="new-user-name" className="text-xs font-semibold">
+                <Label htmlFor="new-user-name" className="text-xs font-bold text-foreground">
                   {tr("Full Name", "الاسم الكامل")}
                 </Label>
                 <Input
@@ -159,13 +162,13 @@ export default function UserManager({
                   onChange={(e) => setUserForm((prev) => ({ ...prev, full_name: e.target.value }))}
                   placeholder={tr("e.g. Dr. Sarah Ahmed", "مثال: د. سارة أحمد")}
                   autoComplete="name"
-                  className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                  className="rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="new-user-email" className="text-xs font-semibold">
+                <Label htmlFor="new-user-email" className="text-xs font-bold text-foreground">
                   {tr("Email Address", "البريد الإلكتروني")}
                 </Label>
                 <Input
@@ -175,13 +178,13 @@ export default function UserManager({
                   onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))}
                   placeholder="mentor@pharmacore.com"
                   autoComplete="email"
-                  className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                  className="rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="new-user-password" className="text-xs font-semibold">
+                <Label htmlFor="new-user-password" className="text-xs font-bold text-foreground">
                   {tr("Temporary Password", "كلمة المرور المؤقتة")}
                 </Label>
                 <Input
@@ -192,7 +195,7 @@ export default function UserManager({
                   onChange={(e) => setUserForm((prev) => ({ ...prev, password: e.target.value }))}
                   placeholder="••••••••"
                   autoComplete="new-password"
-                  className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                  className="rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                   required
                 />
                 <p className="text-[11px] text-muted-foreground">
@@ -201,15 +204,15 @@ export default function UserManager({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">{tr("Role & Access Level", "الدور ومستوى الصلاحيات")}</Label>
+                <Label className="text-xs font-bold text-foreground">{tr("Role & Access Level", "الدور ومستوى الصلاحيات")}</Label>
                 <Select
                   value={userForm.role}
                   onValueChange={(role) => setUserForm((prev) => ({ ...prev, role: role as UserRole }))}
                 >
-                  <SelectTrigger className="text-xs min-h-[40px] sm:min-h-[36px]">
+                  <SelectTrigger className="rounded-xl h-11 border-border/80 bg-background/60 text-xs">
                     <SelectValue placeholder={tr("Select role", "اختر الدور")} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-2xl">
                     <SelectItem value="mentor">
                       {tr("Mentor (Courses, Quizzes, Q&A)", "مرشد (المناهج والاختبارات والأسئلة)")}
                     </SelectItem>
@@ -225,43 +228,51 @@ export default function UserManager({
 
               <Button
                 type="submit"
-                className="w-full gap-2 font-bold text-xs min-h-[40px] sm:min-h-[36px]"
+                className="w-full gap-2 font-bold text-xs h-11 rounded-full shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 mt-2"
                 disabled={creatingUser}
               >
                 {creatingUser ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-                {creatingUser ? tr("Creating account...", "جارٍ إنشاء الحساب...") : tr("Create Staff Account", "إنشاء الحساب")}
+                <span>{creatingUser ? tr("Creating account...", "جارٍ إنشاء الحساب...") : tr("Create Staff Account", "إنشاء الحساب")}</span>
               </Button>
             </form>
           </CardContent>
         </Card>
 
         {/* User Directory List */}
-        <Card className="shadow-none min-w-0">
-          <CardContent className="p-4 sm:p-6 space-y-4">
-            <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm min-w-0">
+          <CardContent className="p-6 sm:p-7 space-y-5">
+            <div className="flex flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-base">{tr("Staff Directory", "دليل أعضاء الفريق")}</h4>
-                <Badge variant="secondary" className="text-xs">
+                <h4 className="font-black text-base text-foreground">{tr("Staff Directory", "دليل أعضاء الفريق")}</h4>
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
                   {managedUsers.length}
                 </Badge>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="relative flex-1 sm:w-40">
-                  <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <div className="relative flex-1 sm:w-48">
+                  <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="search"
                     value={localSearch}
                     onChange={(e) => setLocalSearch(e.target.value)}
-                    placeholder={tr("Filter...", "بحث...")}
-                    className="h-9 sm:h-8 ps-7 pe-2 text-xs w-full"
+                    placeholder={tr("Filter staff...", "بحث في الكادر...")}
+                    className="h-9 ps-9 pe-7 rounded-xl text-xs bg-background/60"
                   />
+                  {localSearch && (
+                    <button
+                      onClick={() => setLocalSearch("")}
+                      className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 <Button
                   variant="outline"
                   size="icon"
-                  className="size-9 sm:size-8 shrink-0"
+                  className="size-9 rounded-xl shrink-0"
                   onClick={onLoadUsers}
                   disabled={loadingUsers}
                   title={tr("Refresh users list", "تحديث قائمة المستخدمين")}
@@ -293,32 +304,34 @@ export default function UserManager({
                   return (
                     <div
                       key={user.id}
-                      className={`rounded-xl border p-3.5 sm:p-4 space-y-3 transition-colors ${
-                        suspended ? "bg-destructive/5 border-destructive/20" : "bg-card hover:border-primary/40"
+                      className={`rounded-2xl border p-4 space-y-3 transition-all ${
+                        suspended ? "bg-destructive/5 border-destructive/20" : "bg-card/95 border-border/80 hover:border-primary/40 shadow-xs"
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <span className="grid size-9 sm:size-10 shrink-0 place-items-center rounded-full bg-secondary text-primary font-bold text-sm">
-                          <UserIcon className="size-4" />
-                        </span>
+                        <Avatar className="size-10 ring-2 ring-primary/20 shrink-0">
+                          <AvatarFallback className="bg-primary/10 text-primary font-black text-sm uppercase">
+                            {user.full_name ? user.full_name[0] : "U"}
+                          </AvatarFallback>
+                        </Avatar>
 
                         <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                            <p className="font-extrabold text-sm text-foreground truncate">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-black text-sm text-foreground truncate">
                               {user.full_name || tr("Unnamed staff", "عضو بدون اسم")}
                             </p>
                             {isCurrent && (
-                              <Badge variant="outline" className="badge-nowrap text-[10px] bg-primary/5 text-primary border-primary/30 shrink-0">
+                              <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/30 shrink-0 font-bold">
                                 <span>{tr("You", "أنت")}</span>
                               </Badge>
                             )}
-                            <Badge variant="outline" className={`badge-nowrap text-[10px] capitalize shrink-0 ${roleBadgeColor}`}>
+                            <Badge variant="outline" className={`text-[10px] capitalize shrink-0 font-bold ${roleBadgeColor}`}>
                               <ShieldCheck className="size-3 me-1 shrink-0" />
                               <span>{user.role.replace("_", " ")}</span>
                             </Badge>
                             <Badge
                               variant={suspended ? "destructive" : "secondary"}
-                              className="badge-nowrap text-[10px] shrink-0"
+                              className="text-[10px] shrink-0 font-bold"
                             >
                               <span>{suspended ? tr("Suspended", "موقوف") : tr("Active", "نشط")}</span>
                             </Badge>
@@ -343,11 +356,11 @@ export default function UserManager({
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+                      <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-border/60">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="btn-nowrap h-8 text-xs font-semibold gap-1 px-2.5 shrink-0"
+                          className="h-8 text-xs font-bold gap-1 px-3 rounded-full hover:bg-muted"
                           onClick={() => onOpenEditUser(user)}
                           disabled={isBusy}
                         >
@@ -358,7 +371,7 @@ export default function UserManager({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`btn-nowrap h-8 text-xs font-semibold gap-1 px-2.5 shrink-0 ${
+                          className={`h-8 text-xs font-bold gap-1 px-3 rounded-full hover:bg-muted ${
                             suspended ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
                           }`}
                           onClick={() => onToggleSuspendUser(user)}
@@ -371,7 +384,7 @@ export default function UserManager({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="btn-nowrap h-8 text-xs font-semibold gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive ms-auto px-2.5 shrink-0"
+                          className="h-8 text-xs font-bold gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive ms-auto px-3 rounded-full"
                           onClick={() => onOpenDeleteUser(user)}
                           disabled={isBusy || isCurrent}
                         >
@@ -385,9 +398,9 @@ export default function UserManager({
               )}
 
               {!loadingUsers && !filteredUsers.length && (
-                <div className="grid min-h-32 place-items-center rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+                <div className="grid min-h-36 place-items-center rounded-2xl border border-dashed border-border/80 p-6 text-center text-muted-foreground">
                   <div>
-                    <UsersIcon className="mx-auto size-6 opacity-40" />
+                    <UsersIcon className="mx-auto size-7 opacity-40" />
                     <p className="mt-2 text-xs font-bold">{tr("No staff accounts match the filter.", "لا يوجد مستخدمون يطابقون البحث.")}</p>
                   </div>
                 </div>

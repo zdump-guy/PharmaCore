@@ -7,6 +7,7 @@ import Layout from "@/components/Layout"
 import AdminSidebar from "@/components/admin/AdminSidebar"
 import AdminTopNav from "@/components/admin/AdminTopNav"
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard"
+import FacultyGradebook from "@/components/admin/FacultyGradebook"
 import CurriculumManager from "@/components/admin/CurriculumManager"
 import CommunityManager from "@/components/admin/CommunityManager"
 import UserManager, { type ManagedUser, type UserForm } from "@/components/admin/UserManager"
@@ -91,6 +92,10 @@ const emptyQuestion: QuestionForm = {
   optionsText: "",
   correct_answer: "",
   order: 1,
+  explanation_en: "",
+  explanation_ar: "",
+  clinical_reference: "",
+  difficulty: "medium",
 }
 
 const emptyUser: UserForm = {
@@ -440,7 +445,14 @@ export default function AdminPage() {
       return
     }
 
-    const payload = { ...form, options }
+    const payload = {
+      ...form,
+      options,
+      explanation_en: form.explanation_en?.trim() || null,
+      explanation_ar: form.explanation_ar?.trim() || null,
+      clinical_reference: form.clinical_reference?.trim() || null,
+      difficulty: form.difficulty || "medium",
+    }
     const res = id
       ? await supabase.from("questions").update(payload).eq("id", id).select().single()
       : await supabase.from("questions").insert([payload]).select().single()
@@ -740,6 +752,7 @@ export default function AdminPage() {
             thumbnail_url: x.thumbnail_url ?? "",
             is_locked: x.is_locked,
             access_policy: x.access_policy || (x.is_locked ? "students_only" : "open"),
+            feature_overrides: x.feature_overrides ?? null,
           }
         : emptyCourse
     )
@@ -810,6 +823,10 @@ export default function AdminPage() {
             optionsText: x.options?.join("\n") ?? "",
             correct_answer: x.correct_answer,
             order: x.order,
+            explanation_en: x.explanation_en ?? "",
+            explanation_ar: x.explanation_ar ?? "",
+            clinical_reference: x.clinical_reference ?? "",
+            difficulty: x.difficulty ?? "medium",
           }
         : {
             ...emptyQuestion,
@@ -918,6 +935,17 @@ export default function AdminPage() {
                 quizzes={quizzes}
                 questions={questions}
                 unansweredQuestionsCount={unansweredCommunity.length}
+              />
+            )}
+
+            {/* 1.5 Faculty Gradebook & Cohort Performance */}
+            {activePage === "gradebook" && (
+              <FacultyGradebook
+                isAr={isAr}
+                courses={courses}
+                lectures={lectures}
+                quizzes={quizzes}
+                questions={questions}
               />
             )}
 

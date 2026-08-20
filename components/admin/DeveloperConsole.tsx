@@ -2,21 +2,29 @@ import { useState, useEffect, useMemo } from "react"
 import {
   FiActivity as Activity,
   FiAlertTriangle as AlertTriangle,
+  FiAward as Award,
+  FiBarChart2 as BarChart2,
   FiBookOpen as BookOpen,
+  FiCheck as Check,
   FiCheckCircle as CheckCircle2,
+  FiCheckSquare as CheckSquare,
   FiCode as Code,
   FiCompass as Compass,
   FiCopy as Copy,
+  FiCpu as Cpu,
   FiDownload as Download,
   FiEye as Eye,
   FiKey as Key,
   FiLock as LockKeyhole,
+  FiMessageSquare as MessageSquare,
   FiPause as Pause,
   FiPlay as Play,
   FiRefreshCw as RefreshCw,
+  FiSave as Save,
   FiSearch as Search,
   FiServer as Server,
   FiShield as ShieldCheck,
+  FiSliders as Sliders,
   FiTerminal as Terminal,
   FiTrash2 as Trash2,
   FiX as X,
@@ -41,9 +49,14 @@ import {
   type AnalyticsEvent,
 } from "@/lib/analytics"
 import type { SiteContent, MaintenanceModeConfig } from "@/lib/siteContent"
-import type { Course, Lecture, Question, Quiz } from "@/types"
+import {
+  FEATURE_FLAG_DEFINITIONS,
+  FEATURE_FLAG_KEYS,
+  defaultFeatureFlags,
+} from "@/lib/featureFlags"
+import type { Course, FeatureFlagsConfig, Lecture, Question, Quiz } from "@/types"
 
-export type DevSubTab = "logs" | "system" | "maintenance"
+export type DevSubTab = "logs" | "system" | "flags" | "maintenance"
 
 interface DeveloperConsoleProps {
   isAr: boolean
@@ -67,6 +80,72 @@ export default function DeveloperConsole({
   questions,
 }: DeveloperConsoleProps) {
   const tr = (en: string, ar: string) => (isAr ? ar : en)
+
+  const [internalSubTab, setInternalSubTab] = useState<DevSubTab>(subTab || "logs")
+  useEffect(() => {
+    if (subTab) setInternalSubTab(subTab)
+  }, [subTab])
+
+  // ─── FEATURE FLAGS STATE ────────────────────────────────────────────────
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlagsConfig>(
+    siteContent.features || defaultFeatureFlags
+  )
+  const [savingFlags, setSavingFlags] = useState(false)
+  const [flagsSavedSuccess, setFlagsSavedSuccess] = useState(false)
+
+  useEffect(() => {
+    if (siteContent.features) {
+      setFeatureFlags(siteContent.features)
+    }
+  }, [siteContent.features])
+
+  const handleToggleFlag = (key: keyof FeatureFlagsConfig) => {
+    setFeatureFlags((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
+  }
+
+  const handleEnableAllFlags = () => {
+    setFeatureFlags({
+      ai_assistant: true,
+      practice_mode: true,
+      certificates: true,
+      community_qa: true,
+      gradebook: true,
+    })
+  }
+
+  const handleDisableAllFlags = () => {
+    setFeatureFlags({
+      ai_assistant: false,
+      practice_mode: false,
+      certificates: false,
+      community_qa: false,
+      gradebook: false,
+    })
+  }
+
+  const handleResetDefaultFlags = () => {
+    setFeatureFlags(defaultFeatureFlags)
+  }
+
+  const handleSaveFeatureFlags = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    setSavingFlags(true)
+    setFlagsSavedSuccess(false)
+    try {
+      const updatedSiteContent: SiteContent = {
+        ...siteContent,
+        features: featureFlags,
+      }
+      await onSaveSiteContent(updatedSiteContent)
+      setFlagsSavedSuccess(true)
+      setTimeout(() => setFlagsSavedSuccess(false), 4000)
+    } finally {
+      setSavingFlags(false)
+    }
+  }
 
   // ─── LOGS STATE ──────────────────────────────────────────────────────────
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
@@ -245,15 +324,81 @@ export default function DeveloperConsole({
 
   return (
     <div className="space-y-6" dir={isAr ? "rtl" : "ltr"}>
+      {/* Dev Console Sub-Navigation Tabs */}
+      <div className="flex items-center gap-1.5 p-1.5 bg-card/90 border border-border/80 rounded-2xl shadow-xs overflow-x-auto custom-scrollbar">
+        <button
+          type="button"
+          onClick={() => setInternalSubTab("logs")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            internalSubTab === "logs"
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <Terminal className="size-3.5" />
+          <span>{tr("Live Logs & Telemetry", "سجل التتبع والأحداث")}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setInternalSubTab("system")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            internalSubTab === "system"
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <Server className="size-3.5" />
+          <span>{tr("System Diagnostics", "فحص النظام والبيئة")}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setInternalSubTab("flags")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            internalSubTab === "flags"
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <Sliders className="size-3.5" />
+          <span>{tr("Feature Matrix & Flags", "مصفوفة تفعيل الميزات")}</span>
+          <Badge
+            variant={Object.values(featureFlags).every(Boolean) ? "outline" : "secondary"}
+            className="text-[10px] px-1.5 py-0 font-mono font-bold ms-1"
+          >
+            {Object.values(featureFlags).filter(Boolean).length}/{FEATURE_FLAG_KEYS.length}
+          </Badge>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setInternalSubTab("maintenance")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            internalSubTab === "maintenance"
+              ? "bg-amber-500 text-white shadow-sm shadow-amber-500/20"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <LockKeyhole className="size-3.5" />
+          <span>{tr("Maintenance Mode", "وضع الصيانة والتحديث")}</span>
+          {maintenanceEnabled && (
+            <span className="size-2 rounded-full bg-amber-400 animate-pulse ms-1" />
+          )}
+        </button>
+      </div>
+
       {/* ─── 1. LIVE EVENT LOGS VIEW ───────────────────────────────────────── */}
-      {subTab === "logs" && (
-        <div className="space-y-4">
+      {internalSubTab === "logs" && (
+        <div className="space-y-6">
           {/* Header & Stream Controls */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card/90 border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm backdrop-blur-xl">
             <div>
-              <div className="flex items-center gap-2">
-                <Terminal className="size-5 text-purple-600 dark:text-purple-400" />
-                <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+              <div className="flex items-center gap-2.5">
+                <div className="size-10 grid place-items-center rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                  <Terminal className="size-5" />
+                </div>
+                <h3 className="text-xl font-black tracking-tight text-foreground">
                   {tr("Live Event Stream & Log Explorer", "سجل التتبع والأحداث المباشر")}
                 </h3>
                 <span className="flex size-2 relative ms-1">
@@ -268,11 +413,11 @@ export default function DeveloperConsole({
                     }`}
                   />
                 </span>
-                <Badge variant="secondary" className="badge-nowrap text-xs font-mono font-bold ms-1 shrink-0">
+                <Badge variant="secondary" className="text-xs font-mono font-bold ms-1 shrink-0">
                   {filteredEvents.length} {tr("events", "حدث")}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 {tr(
                   "Real-time telemetry stream capturing client actions, pageviews, video telemetry, and security events.",
                   "تدفق مباشر لبيانات القياس عن بُعد يرصد تفاعلات المستخدمين، والمشاهدات، وأحداث الأمان في المنصة."
@@ -285,8 +430,8 @@ export default function DeveloperConsole({
                 variant="outline"
                 size="sm"
                 onClick={() => setLiveStreamActive(!liveStreamActive)}
-                className={`btn-nowrap gap-1.5 text-xs font-bold shadow-xs h-9 shrink-0 ${
-                  liveStreamActive ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600"
+                className={`gap-1.5 text-xs font-bold rounded-full h-10 px-4 shrink-0 ${
+                  liveStreamActive ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/30" : "text-amber-600 border-amber-500/30"
                 }`}
               >
                 {liveStreamActive ? <Pause className="size-3.5 shrink-0" /> : <Play className="size-3.5 shrink-0" />}
@@ -298,7 +443,7 @@ export default function DeveloperConsole({
                 size="sm"
                 onClick={handleExportCSV}
                 disabled={!filteredEvents.length}
-                className="btn-nowrap gap-1.5 text-xs font-bold shadow-xs h-9 shrink-0"
+                className="gap-1.5 text-xs font-bold rounded-full h-10 px-4 shrink-0"
               >
                 <Download className="size-3.5 shrink-0" />
                 <span>CSV</span>
@@ -309,7 +454,7 @@ export default function DeveloperConsole({
                 size="sm"
                 onClick={handleExportJSON}
                 disabled={!filteredEvents.length}
-                className="btn-nowrap gap-1.5 text-xs font-bold shadow-xs h-9 shrink-0"
+                className="gap-1.5 text-xs font-bold rounded-full h-10 px-4 shrink-0"
               >
                 <Code className="size-3.5 shrink-0" />
                 <span>JSON</span>
@@ -317,26 +462,26 @@ export default function DeveloperConsole({
 
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => setEvents([])}
-                className="size-9 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                className="size-10 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
                 title={tr("Clear buffer", "مسح السجل المحلي")}
               >
-                <Trash2 className="size-3.5 shrink-0" />
+                <Trash2 className="size-4 shrink-0" />
               </Button>
             </div>
           </div>
 
           {/* Sub-Category Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-muted/20 border rounded-2xl p-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card/90 border border-border/80 rounded-3xl p-3.5 shadow-sm">
             {/* Filter Tabs */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
               <button
                 type="button"
                 onClick={() => setLogCategory("all")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                   logCategory === "all"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
@@ -345,9 +490,9 @@ export default function DeveloperConsole({
               <button
                 type="button"
                 onClick={() => setLogCategory("nav")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                   logCategory === "nav"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
@@ -357,9 +502,9 @@ export default function DeveloperConsole({
               <button
                 type="button"
                 onClick={() => setLogCategory("auth")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                   logCategory === "auth"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
@@ -369,9 +514,9 @@ export default function DeveloperConsole({
               <button
                 type="button"
                 onClick={() => setLogCategory("curriculum")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                   logCategory === "curriculum"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
@@ -381,9 +526,9 @@ export default function DeveloperConsole({
               <button
                 type="button"
                 onClick={() => setLogCategory("errors")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                className={`px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                   logCategory === "errors"
-                    ? "bg-rose-500 text-white shadow-2xs"
+                    ? "bg-rose-500 text-white shadow-sm shadow-rose-500/20"
                     : "text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
                 }`}
               >
@@ -393,37 +538,37 @@ export default function DeveloperConsole({
             </div>
 
             {/* Search Box */}
-            <div className="relative w-full sm:w-64">
-              <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-full sm:w-72">
+              <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={tr("Filter payload, user, distinct_id...", "بحث في البيانات، المستخدم...")}
-                className="h-8 ps-8 pe-8 text-xs bg-background"
+                className="rounded-xl h-10 ps-9 pe-8 text-xs border-border/80 bg-background/60"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
                 >
-                  <X className="size-3" />
+                  <X className="size-3.5" />
                 </button>
               )}
             </div>
           </div>
 
           {/* Event Stream Terminal Box */}
-          <div className="rounded-2xl border bg-card overflow-hidden shadow-xs">
+          <div className="rounded-3xl border border-border/80 bg-card/90 overflow-hidden shadow-sm">
             <div className="overflow-x-auto custom-scrollbar max-h-[580px]">
               <table className="w-full text-start text-xs font-mono">
-                <thead className="border-b bg-muted/50 text-[11px] font-bold text-muted-foreground uppercase sticky top-0 backdrop-blur-md z-10">
+                <thead className="border-b border-border/60 bg-muted/50 text-[11px] font-bold text-muted-foreground uppercase sticky top-0 backdrop-blur-md z-10">
                   <tr>
-                    <th className="px-4 py-2.5 text-start w-32">{tr("Time", "الوقت")}</th>
-                    <th className="px-4 py-2.5 text-start w-48">{tr("Event Name", "اسم الحدث")}</th>
-                    <th className="px-4 py-2.5 text-start w-36">{tr("Visitor / User", "المستخدم")}</th>
-                    <th className="px-4 py-2.5 text-start">{tr("Payload Preview", "معاينة البيانات")}</th>
-                    <th className="px-4 py-2.5 text-end w-20">{tr("Details", "التفاصيل")}</th>
+                    <th className="px-5 py-3.5 text-start w-32">{tr("Time", "الوقت")}</th>
+                    <th className="px-5 py-3.5 text-start w-48">{tr("Event Name", "اسم الحدث")}</th>
+                    <th className="px-5 py-3.5 text-start w-36">{tr("Visitor / User", "المستخدم")}</th>
+                    <th className="px-5 py-3.5 text-start">{tr("Payload Preview", "معاينة البيانات")}</th>
+                    <th className="px-5 py-3.5 text-end w-20">{tr("Details", "التفاصيل")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
@@ -446,42 +591,42 @@ export default function DeveloperConsole({
                           isError ? "bg-rose-500/5 text-rose-600 dark:text-rose-300" : ""
                         }`}
                       >
-                        <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">{timeStr}</td>
-                        <td className="px-4 py-2.5 font-bold whitespace-nowrap">
+                        <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">{timeStr}</td>
+                        <td className="px-5 py-3 font-bold whitespace-nowrap">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded-md text-[10px] ${
+                            className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
                               isError
-                                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
                                 : isAuth
-                                ? "bg-purple-500/15 text-purple-600 dark:text-purple-400"
+                                ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20"
                                 : isVideo
-                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20"
                                 : isQuiz
-                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                                 : "bg-muted text-foreground"
                             }`}
                           >
                             {evt.name}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground truncate max-w-[140px]">
+                        <td className="px-5 py-3 text-muted-foreground truncate max-w-[140px]">
                           {evt.user_id ? (
                             <span className="text-primary font-bold">User:{evt.user_id.slice(0, 8)}</span>
                           ) : (
                             <span className="text-muted-foreground/70">{evt.distinct_id ? evt.distinct_id.slice(0, 10) : "anon"}</span>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-muted-foreground truncate max-w-md font-sans">
+                        <td className="px-5 py-3 text-muted-foreground truncate max-w-md font-sans text-xs">
                           {JSON.stringify(evt.properties || {})}
                         </td>
-                        <td className="px-4 py-2.5 text-end whitespace-nowrap">
+                        <td className="px-5 py-3 text-end whitespace-nowrap">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedEvent(evt)}
-                            className="h-7 px-2 text-[11px] gap-1 font-sans"
+                            className="h-8 px-3 text-xs gap-1.5 font-sans font-bold rounded-full hover:bg-primary/10 hover:text-primary"
                           >
-                            <Eye className="size-3" />
+                            <Eye className="size-3.5" />
                             <span>{tr("Inspect", "فحص")}</span>
                           </Button>
                         </td>
@@ -492,9 +637,9 @@ export default function DeveloperConsole({
               </table>
 
               {!filteredEvents.length && (
-                <div className="py-16 text-center text-muted-foreground">
-                  <Terminal className="mx-auto size-8 opacity-40" />
-                  <p className="mt-2 text-xs font-bold font-sans">
+                <div className="py-20 text-center text-muted-foreground">
+                  <Terminal className="mx-auto size-12 opacity-30 text-primary" />
+                  <p className="mt-3 text-xs font-bold font-sans">
                     {tr("No events captured yet", "لم يتم التقاط أحداث تطابق التصفية")}
                   </p>
                 </div>
@@ -505,17 +650,19 @@ export default function DeveloperConsole({
       )}
 
       {/* ─── 2. SYSTEM HEALTH & DIAGNOSTICS VIEW ───────────────────────────── */}
-      {subTab === "system" && (
+      {internalSubTab === "system" && (
         <div className="space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card/90 border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm backdrop-blur-xl">
             <div>
-              <div className="flex items-center gap-2">
-                <Server className="size-5 text-primary" />
-                <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+              <div className="flex items-center gap-2.5">
+                <div className="size-10 grid place-items-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                  <Server className="size-5" />
+                </div>
+                <h3 className="text-xl font-black tracking-tight text-foreground">
                   {tr("System Diagnostics & Telemetry", "فحص النظام والبيئة التشغيلية")}
                 </h3>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 {tr(
                   "Infrastructure health, database latency benchmarks, real-time connectivity, and entity metrics.",
                   "مؤشرات صحة البنية التحتية، وزمن استجابة قاعدة البيانات، وعدد السجلات عبر المنصة."
@@ -523,109 +670,143 @@ export default function DeveloperConsole({
               </p>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={runPingTest}
-              disabled={testingPing}
-              className="gap-1.5 text-xs font-bold shadow-xs h-9"
-            >
-              <RefreshCw className={`size-3.5 ${testingPing ? "animate-spin" : ""}`} />
-              <span>{tr("Run Diagnostics Ping", "إعادة فحص الاتصال")}</span>
-            </Button>
+            <div className="flex items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setInternalSubTab("flags")}
+                className="gap-2 text-xs font-bold rounded-full h-10 px-4 shadow-sm"
+              >
+                <Sliders className="size-3.5" />
+                <span>{tr("Manage Feature Flags", "إدارة مصفوفة الميزات")}</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={runPingTest}
+                disabled={testingPing}
+                className="gap-2 text-xs font-bold rounded-full h-10 px-5 shadow-sm"
+              >
+                <RefreshCw className={`size-3.5 ${testingPing ? "animate-spin" : ""}`} />
+                <span>{tr("Run Diagnostics Ping", "إعادة فحص الاتصال")}</span>
+              </Button>
+            </div>
           </div>
 
           {/* Metric Cards Grid */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Latency */}
-            <Card className="shadow-none">
-              <CardContent className="p-4 sm:p-5 space-y-1">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
                 <div className="flex items-center justify-between text-muted-foreground">
-                  <span className="text-xs font-bold uppercase">{tr("Database Latency", "زمن استجابة DB")}</span>
-                  <Zap className="size-4 text-amber-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider">{tr("Database Latency", "زمن استجابة DB")}</span>
+                  <div className="size-9 grid place-items-center rounded-xl bg-amber-500/10 text-amber-600">
+                    <Zap className="size-4" />
+                  </div>
                 </div>
-                <p className="text-2xl font-black font-mono">
-                  {pingMs !== null ? `${pingMs}ms` : "-"}
-                </p>
-                <Badge
-                  variant="outline"
-                  className={`text-[10px] font-bold ${
-                    dbStatus === "healthy"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
-                      : "border-destructive/30 bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  {dbStatus === "healthy" ? tr("Optimal (<200ms)", "استجابة ممتازة") : tr("Degraded", "استجابة منخفضة")}
-                </Badge>
+                <div>
+                  <p className="text-2xl sm:text-3xl font-black font-mono text-foreground">
+                    {pingMs !== null ? `${pingMs}ms` : "-"}
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={`mt-1 text-[10px] font-bold rounded-full px-2 ${
+                      dbStatus === "healthy"
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                        : "border-destructive/30 bg-destructive/10 text-destructive"
+                    }`}
+                  >
+                    {dbStatus === "healthy" ? tr("Optimal (<200ms)", "استجابة ممتازة") : tr("Degraded", "استجابة منخفضة")}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
 
             {/* Supabase Status */}
-            <Card className="shadow-none">
-              <CardContent className="p-4 sm:p-5 space-y-1">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
                 <div className="flex items-center justify-between text-muted-foreground">
-                  <span className="text-xs font-bold uppercase">{tr("Database Engine", "قاعدة البيانات")}</span>
-                  <Server className="size-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-wider">{tr("Database Engine", "قاعدة البيانات")}</span>
+                  <div className="size-9 grid place-items-center rounded-xl bg-primary/10 text-primary">
+                    <Server className="size-4" />
+                  </div>
                 </div>
-                <p className="text-lg font-black truncate">Supabase Postgres</p>
-                <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold">
-                  <CheckCircle2 className="size-3.5" />
-                  <span>{tr("Connected & Active", "متصل ومتاح")}</span>
+                <div>
+                  <p className="text-lg font-black truncate text-foreground">Supabase Postgres</p>
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold mt-1">
+                    <CheckCircle2 className="size-3.5" />
+                    <span>{tr("Connected & Active", "متصل ومتاح")}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Realtime Stream */}
-            <Card className="shadow-none">
-              <CardContent className="p-4 sm:p-5 space-y-1">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm">
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
                 <div className="flex items-center justify-between text-muted-foreground">
-                  <span className="text-xs font-bold uppercase">{tr("Realtime WebSocket", "تدفق WebSocket")}</span>
-                  <Activity className="size-4 text-purple-500" />
+                  <span className="text-xs font-bold uppercase tracking-wider">{tr("Realtime WebSocket", "تدفق WebSocket")}</span>
+                  <div className="size-9 grid place-items-center rounded-xl bg-purple-500/10 text-purple-600">
+                    <Activity className="size-4" />
+                  </div>
                 </div>
-                <p className="text-lg font-black truncate">Supabase Realtime</p>
-                <span className="inline-block text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-sm bg-purple-500/15 text-purple-600 dark:text-purple-400">
-                  Channel Subscribed
-                </span>
+                <div>
+                  <p className="text-lg font-black truncate text-foreground">Supabase Realtime</p>
+                  <Badge variant="outline" className="mt-1 text-[10px] font-bold border-purple-500/30 text-purple-700 dark:text-purple-300 rounded-full px-2">
+                    Channel Subscribed
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Telemetry Events Recorded */}
-            <Card className="shadow-none">
-              <CardContent className="p-4 sm:p-5 space-y-1">
+            {/* Feature Flags Active */}
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm cursor-pointer hover:border-primary/50 transition-all" onClick={() => setInternalSubTab("flags")}>
+              <CardContent className="p-5 flex flex-col justify-between h-full space-y-3">
                 <div className="flex items-center justify-between text-muted-foreground">
-                  <span className="text-xs font-bold uppercase">{tr("Total Logged Events", "إجمالي الأحداث")}</span>
-                  <Terminal className="size-4 text-primary" />
+                  <span className="text-xs font-bold uppercase tracking-wider">{tr("Feature Flags", "الميزات النشطة")}</span>
+                  <div className="size-9 grid place-items-center rounded-xl bg-indigo-500/10 text-indigo-600">
+                    <Sliders className="size-4" />
+                  </div>
                 </div>
-                <p className="text-2xl font-black font-mono">{totalEventsCount || events.length}</p>
-                <p className="text-[10px] text-muted-foreground">{tr("Captured in database", "مسجلة في قاعدة البيانات")}</p>
+                <div>
+                  <p className="text-2xl sm:text-3xl font-black font-mono text-foreground">
+                    {Object.values(featureFlags).filter(Boolean).length} / {FEATURE_FLAG_KEYS.length}
+                  </p>
+                  <p className="text-[10px] text-primary font-bold mt-0.5">{tr("Click to configure matrix", "انقر لتعديل المصفوفة")}</p>
+                </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Database Entity Counter Table */}
-          <Card className="shadow-none">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold">
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+            <CardHeader className="p-6 pb-4 border-b border-border/60">
+              <CardTitle className="text-base font-black text-foreground">
                 {tr("Entity Inventory & Platform Metrics", "إحصائيات جداول المنصة")}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs font-mono">
-                <div className="p-3 rounded-xl border bg-muted/20 flex items-center justify-between">
-                  <span className="text-muted-foreground font-sans font-semibold">{tr("Published Courses", "المقررات")}</span>
-                  <span className="text-base font-bold">{courses.length}</span>
+            <CardContent className="p-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 text-xs font-mono">
+                <div className="p-4 rounded-2xl border border-border/70 bg-background/60 flex items-center justify-between">
+                  <span className="text-muted-foreground font-sans font-bold">{tr("Published Courses", "المقررات")}</span>
+                  <span className="text-lg font-black text-foreground">{courses.length}</span>
                 </div>
-                <div className="p-3 rounded-xl border bg-muted/20 flex items-center justify-between">
-                  <span className="text-muted-foreground font-sans font-semibold">{tr("Lecture Videos", "المحاضرات")}</span>
-                  <span className="text-base font-bold">{lectures.length}</span>
+                <div className="p-4 rounded-2xl border border-border/70 bg-background/60 flex items-center justify-between">
+                  <span className="text-muted-foreground font-sans font-bold">{tr("Lecture Videos", "المحاضرات")}</span>
+                  <span className="text-lg font-black text-foreground">{lectures.length}</span>
                 </div>
-                <div className="p-3 rounded-xl border bg-muted/20 flex items-center justify-between">
-                  <span className="text-muted-foreground font-sans font-semibold">{tr("Quizzes & MCQs", "الاختبارات")}</span>
-                  <span className="text-base font-bold">{quizzes.length}</span>
+                <div className="p-4 rounded-2xl border border-border/70 bg-background/60 flex items-center justify-between">
+                  <span className="text-muted-foreground font-sans font-bold">{tr("Quizzes & MCQs", "الاختبارات")}</span>
+                  <span className="text-lg font-black text-foreground">{quizzes.length}</span>
                 </div>
-                <div className="p-3 rounded-xl border bg-muted/20 flex items-center justify-between">
-                  <span className="text-muted-foreground font-sans font-semibold">{tr("Question Items", "الأسئلة")}</span>
-                  <span className="text-base font-bold">{questions.length}</span>
+                <div className="p-4 rounded-2xl border border-border/70 bg-background/60 flex items-center justify-between">
+                  <span className="text-muted-foreground font-sans font-bold">{tr("Question Items", "الأسئلة")}</span>
+                  <span className="text-lg font-black text-foreground">{questions.length}</span>
+                </div>
+                <div className="p-4 rounded-2xl border border-border/70 bg-background/60 flex items-center justify-between">
+                  <span className="text-muted-foreground font-sans font-bold">{tr("Logged Events", "الأحداث")}</span>
+                  <span className="text-lg font-black text-foreground">{totalEventsCount || events.length}</span>
                 </div>
               </div>
             </CardContent>
@@ -633,17 +814,201 @@ export default function DeveloperConsole({
         </div>
       )}
 
-      {/* ─── 3. MAINTENANCE MODE CONTROLLER VIEW ───────────────────────────── */}
-      {subTab === "maintenance" && (
+      {/* ─── 3. FEATURE MATRIX & MODULAR ACTIVATION VIEW ───────────────────── */}
+      {internalSubTab === "flags" && (
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card/90 border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm backdrop-blur-xl">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <div className="size-10 grid place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  <Sliders className="size-5" />
+                </div>
+                <h3 className="text-xl font-black tracking-tight text-foreground">
+                  {tr("Feature Matrix & Modular Activation Engine", "مصفوفة تفعيل الميزات والوحدات البرمجية")}
+                </h3>
+                <Badge variant="outline" className="text-xs font-mono font-bold ms-1">
+                  {Object.values(featureFlags).filter(Boolean).length}/{FEATURE_FLAG_KEYS.length} {tr("Active", "مفعّل")}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {tr(
+                  "Configure global feature toggles stored in site_content.features. These settings establish default platform behavior across all courses.",
+                  "التحكم في تفعيل وإلغاء ميزات المنصة العامة. تسري هذه الإعدادات كقيم افتراضية لجميع المقررات ما لم يتم تخصيص استثناء على مستوى المقرر."
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleEnableAllFlags}
+                className="gap-1.5 text-xs font-bold rounded-full h-10 px-4 shrink-0"
+              >
+                <Check className="size-3.5 shrink-0 text-emerald-600" />
+                <span>{tr("Enable All", "تفعيل الكل")}</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDisableAllFlags}
+                className="gap-1.5 text-xs font-bold rounded-full h-10 px-4 shrink-0"
+              >
+                <X className="size-3.5 shrink-0 text-rose-600" />
+                <span>{tr("Disable All", "تعطيل الكل")}</span>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleResetDefaultFlags}
+                className="gap-1.5 text-xs font-bold rounded-full h-10 px-4 shrink-0"
+              >
+                <RefreshCw className="size-3.5 shrink-0" />
+                <span>{tr("Reset Defaults", "القيم الافتراضية")}</span>
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleSaveFeatureFlags}
+                disabled={savingFlags}
+                className="gap-2 font-bold text-xs h-10 px-6 rounded-full shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+              >
+                {savingFlags ? <RefreshCw className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                <span>{savingFlags ? tr("Saving...", "جارٍ الحفظ...") : tr("Save Global Flags", "حفظ الإعدادات العامة")}</span>
+              </Button>
+            </div>
+          </div>
+
+          {flagsSavedSuccess && (
+            <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-600" />
+              <span>{tr("Global feature flags saved successfully and broadcast to all clients!", "تم حفظ مصفوفة الميزات بنجاح ونشر التحديث لجميع المتصفحات!")}</span>
+            </div>
+          )}
+
+          {/* Feature Flags Grid */}
+          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {FEATURE_FLAG_DEFINITIONS.map((def) => {
+              const isEnabled = Boolean(featureFlags[def.key])
+              const categoryIcons: Record<string, typeof Cpu> = {
+                ai: Cpu,
+                assessment: CheckSquare,
+                gamification: Award,
+                collaboration: MessageSquare,
+                analytics: BarChart2,
+              }
+              const IconComp = categoryIcons[def.category] || Sliders
+
+              const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
+                ai: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", border: "border-purple-500/20" },
+                assessment: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/20" },
+                gamification: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", border: "border-amber-500/20" },
+                collaboration: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/20" },
+                analytics: { bg: "bg-indigo-500/10", text: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-500/20" },
+              }
+              const color = categoryColors[def.category] || categoryColors.ai
+
+              return (
+                <Card
+                  key={def.key}
+                  className={`rounded-3xl border-2 transition-all overflow-hidden flex flex-col justify-between ${
+                    isEnabled
+                      ? "border-primary/40 bg-card/95 shadow-sm shadow-primary/5"
+                      : "border-border/60 bg-muted/20 opacity-85"
+                  }`}
+                >
+                  <CardHeader className="p-5 pb-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`size-11 grid place-items-center rounded-2xl ${color.bg} ${color.text} border ${color.border}`}>
+                          <IconComp className="size-5" />
+                        </div>
+                        <div>
+                          <Badge variant="outline" className={`text-[10px] font-bold uppercase tracking-wider ${color.text} border-transparent bg-transparent p-0`}>
+                            {def.category}
+                          </Badge>
+                          <CardTitle className="text-sm font-black leading-snug text-foreground">
+                            {isAr ? def.title_ar : def.title_en}
+                          </CardTitle>
+                        </div>
+                      </div>
+
+                      <Badge
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold shrink-0 ${
+                          isEnabled
+                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                            : "bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30"
+                        }`}
+                      >
+                        {isEnabled ? tr("Active / ON", "مفعل") : tr("Disabled / OFF", "معطل")}
+                      </Badge>
+                    </div>
+
+                    <CardDescription className="text-xs mt-2 leading-relaxed text-muted-foreground line-clamp-3">
+                      {isAr ? def.description_ar : def.description_en}
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="p-5 pt-0">
+                    <div className="flex items-center justify-between pt-3 border-t border-border/60">
+                      <span className="font-mono text-[11px] text-muted-foreground font-semibold">
+                        {def.key}
+                      </span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={() => handleToggleFlag(def.key)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      </label>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+
+          <div className="p-4 rounded-2xl border border-border/80 bg-card/60 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span className="leading-relaxed">
+              {tr(
+                "Tip: Course authors can override any of these flags in the Course Editor (Inherit, Force Enable, or Force Disable).",
+                "معلومة: يمكن لمدير المقرر استثناء وتخصيص أي ميزة لكل مقرر بشكل منفصل عبر نافذة تعديل المقرر."
+              )}
+            </span>
+            <Button
+              type="button"
+              onClick={handleSaveFeatureFlags}
+              disabled={savingFlags}
+              size="sm"
+              className="gap-1.5 font-bold text-xs rounded-full h-9 px-5 shrink-0 shadow-xs bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {savingFlags ? <RefreshCw className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+              <span>{savingFlags ? tr("Saving...", "جارٍ الحفظ...") : tr("Apply Global Flags", "تطبيق التغييرات")}</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 4. MAINTENANCE MODE CONTROLLER VIEW ───────────────────────────── */}
+      {internalSubTab === "maintenance" && (
         <div className="space-y-6 max-w-3xl">
-          <div className="bg-card border rounded-2xl p-4 shadow-xs">
-            <div className="flex items-center gap-2">
-              <LockKeyhole className="size-5 text-amber-500" />
-              <h3 className="text-lg sm:text-xl font-bold tracking-tight">
+          <div className="bg-card/90 border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm backdrop-blur-xl">
+            <div className="flex items-center gap-2.5">
+              <div className="size-10 grid place-items-center rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                <LockKeyhole className="size-5" />
+              </div>
+              <h3 className="text-xl font-black tracking-tight text-foreground">
                 {tr("Maintenance Mode & Platform Lock", "وضع الصيانة والتحديث العام")}
               </h3>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
               {tr(
                 "When enabled, general visitors and students are blocked and presented with the maintenance screen. Staff & administrators can bypass and access /admin normally.",
                 "عند تفعيل هذا الوضع، يُحظر وصول الزوار والطلاب وتظهر شاشة الصيانة، بينما يحتفظ الكادر والإدارة بالوصول الكامل للوحة التحكم."
@@ -660,24 +1025,24 @@ export default function DeveloperConsole({
 
           <form onSubmit={handleSaveMaintenance} className="space-y-6">
             {/* Toggle Card */}
-            <Card className={`shadow-none border-2 transition-all ${maintenanceEnabled ? "border-amber-500 bg-amber-500/5" : ""}`}>
-              <CardContent className="p-5 flex items-center justify-between gap-4">
+            <Card className={`rounded-3xl border-2 transition-all overflow-hidden ${maintenanceEnabled ? "border-amber-500 bg-amber-500/5" : "border-border/80 bg-card/90"}`}>
+              <CardContent className="p-6 flex items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-base">
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-black text-base text-foreground">
                       {tr("Global Maintenance Mode", "تفعيل وضع الصيانة العام")}
                     </span>
                     <Badge
-                      className={
+                      className={`rounded-full px-3 text-xs font-bold ${
                         maintenanceEnabled
-                          ? "bg-amber-500 text-white font-bold"
-                          : "bg-muted text-muted-foreground font-bold"
-                      }
+                          ? "bg-amber-500 text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}
                     >
                       {maintenanceEnabled ? tr("ACTIVE / ON", "مفعل") : tr("INACTIVE / OFF", "معطل")}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     {tr(
                       "Block public learners and direct them to the maintenance page.",
                       "حظر وصول الطلاب والزوار وتوجيههم لشاشة الصيانة والتحديث."
@@ -690,38 +1055,40 @@ export default function DeveloperConsole({
                   id="toggle-maintenance"
                   checked={maintenanceEnabled}
                   onChange={(e) => setMaintenanceEnabled(e.target.checked)}
-                  className="size-6 rounded-md text-amber-500 focus:ring-amber-500 cursor-pointer"
+                  className="size-6 rounded text-amber-500 focus:ring-amber-500 cursor-pointer"
                 />
               </CardContent>
             </Card>
 
             {/* Custom Messages Card */}
-            <Card className="shadow-none">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-bold">
+            <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/60">
+                <CardTitle className="text-base font-black text-foreground">
                   {tr("Maintenance Screen Messages", "نصوص ورسائل شاشة الصيانة")}
                 </CardTitle>
                 <CardDescription className="text-xs">
                   {tr("Customize the headline and explanation shown to learners.", "تخصيص العنوان والرسالة الظاهرة للطلاب عند فتح المنصة.")}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-6 space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Title (English)", "العنوان بالإنجليزية")}</Label>
+                    <Label className="text-xs font-bold text-foreground">{tr("Title (English)", "العنوان بالإنجليزية")}</Label>
                     <Input
                       value={titleEn}
                       onChange={(e) => setTitleEn(e.target.value)}
                       placeholder="Scheduled Platform Maintenance"
+                      className="rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                       required
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Title (Arabic)", "العنوان بالعربية")}</Label>
+                    <Label className="text-xs font-bold text-foreground">{tr("Title (Arabic)", "العنوان بالعربية")}</Label>
                     <Input
                       value={titleAr}
                       onChange={(e) => setTitleAr(e.target.value)}
                       placeholder="أعمال صيانة وتحديث مجدولة"
+                      className="rounded-xl h-11 border-border/80 bg-background/60 text-xs"
                       required
                     />
                   </div>
@@ -729,31 +1096,32 @@ export default function DeveloperConsole({
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Message (English)", "الرسالة بالإنجليزية")}</Label>
+                    <Label className="text-xs font-bold text-foreground">{tr("Message (English)", "الرسالة بالإنجليزية")}</Label>
                     <textarea
                       value={msgEn}
                       onChange={(e) => setMsgEn(e.target.value)}
-                      className="w-full min-h-[80px] rounded-xl border bg-background p-3 text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                      className="w-full min-h-[88px] rounded-2xl border border-border/80 bg-background/60 p-3 text-xs leading-relaxed focus:ring-2 focus:ring-primary/20 focus:outline-none"
                       required
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{tr("Message (Arabic)", "الرسالة بالعربية")}</Label>
+                    <Label className="text-xs font-bold text-foreground">{tr("Message (Arabic)", "الرسالة بالعربية")}</Label>
                     <textarea
                       value={msgAr}
                       onChange={(e) => setMsgAr(e.target.value)}
-                      className="w-full min-h-[80px] rounded-xl border bg-background p-3 text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+                      className="w-full min-h-[88px] rounded-2xl border border-border/80 bg-background/60 p-3 text-xs leading-relaxed focus:ring-2 focus:ring-primary/20 focus:outline-none"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{tr("Estimated Completion Time (Optional)", "الوقت المتوقع للانتهاء (اختياري)")}</Label>
+                  <Label className="text-xs font-bold text-foreground">{tr("Estimated Completion Time (Optional)", "الوقت المتوقع للانتهاء (اختياري)")}</Label>
                   <Input
                     value={estimatedUntil}
                     onChange={(e) => setEstimatedUntil(e.target.value)}
                     placeholder="e.g. 2 hours / 04:00 AM UTC"
+                    className="rounded-xl h-11 border-border/80 bg-background/60 text-xs font-mono"
                   />
                 </div>
               </CardContent>
@@ -763,7 +1131,7 @@ export default function DeveloperConsole({
               type="submit"
               size="lg"
               disabled={savingMaintenance}
-              className="w-full font-bold gap-2 shadow-xs"
+              className="w-full h-12 font-bold gap-2 rounded-full shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
             >
               {savingMaintenance ? <RefreshCw className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
               <span>{savingMaintenance ? tr("Saving...", "جارٍ الحفظ...") : tr("Apply Maintenance Settings", "تطبيق إعدادات الصيانة")}</span>
@@ -775,28 +1143,28 @@ export default function DeveloperConsole({
       {/* ─── INSPECT EVENT JSON MODAL ─────────────────────────────────────── */}
       {selectedEvent && (
         <Dialog open={!!selectedEvent} onOpenChange={(open) => !open && setSelectedEvent(null)}>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar p-6 sm:p-8 rounded-3xl border border-border/80 bg-card/95 backdrop-blur-2xl shadow-2xl">
+            <DialogHeader className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <DialogTitle className="text-base font-bold font-mono">
+                <DialogTitle className="text-base font-bold font-mono text-foreground">
                   {selectedEvent.name}
                 </DialogTitle>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => copyToClipboard(JSON.stringify(selectedEvent, null, 2))}
-                  className="gap-1.5 text-xs font-bold h-8"
+                  className="gap-1.5 text-xs font-bold h-8 rounded-full"
                 >
                   <Copy className="size-3.5" />
                   <span>{copied ? tr("Copied!", "تم النسخ!") : tr("Copy JSON", "نسخ JSON")}</span>
                 </Button>
               </div>
-              <DialogDescription className="text-xs">
+              <DialogDescription className="text-xs text-muted-foreground font-mono">
                 Timestamp: {selectedEvent.timestamp} | Distinct ID: {selectedEvent.distinct_id || "None"}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="rounded-xl border bg-muted/40 p-4 font-mono text-xs overflow-x-auto custom-scrollbar">
+            <div className="rounded-2xl border border-border/80 bg-muted/40 p-4 font-mono text-xs overflow-x-auto custom-scrollbar">
               <pre>{JSON.stringify(selectedEvent, null, 2)}</pre>
             </div>
           </DialogContent>
