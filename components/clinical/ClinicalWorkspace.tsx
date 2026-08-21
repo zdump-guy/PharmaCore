@@ -15,6 +15,8 @@ import {
   FiUser as User,
   FiZap as Zap,
   FiBookOpen as BookOpen,
+  FiTarget as Target,
+  FiInfo as InfoIcon,
 } from "react-icons/fi"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -264,9 +266,10 @@ export default function ClinicalWorkspace({
               {objectives.slice(0, 2).map((obj, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center text-[10px] rounded-md bg-background/80 px-2 py-0.5 border text-muted-foreground truncate max-w-xs"
+                  className="inline-flex items-center gap-1 text-[10px] rounded-md bg-background/80 px-2 py-0.5 border text-muted-foreground truncate max-w-xs"
                 >
-                  🎯 {obj}
+                  <Target className="size-2.5 text-primary shrink-0" />
+                  <span className="truncate">{obj}</span>
                 </span>
               ))}
             </div>
@@ -734,8 +737,9 @@ export default function ClinicalWorkspace({
                     </Alert>
                   )}
 
-                  <p className="text-[11px] text-muted-foreground bg-muted/40 p-2.5 rounded-xl border">
-                    📝 {pedResult.notes}
+                  <p className="text-[11px] text-muted-foreground bg-muted/40 p-2.5 rounded-xl border flex items-center gap-1.5">
+                    <InfoIcon className="size-3 text-primary shrink-0" />
+                    <span>{pedResult.notes}</span>
                   </p>
                 </div>
               )}

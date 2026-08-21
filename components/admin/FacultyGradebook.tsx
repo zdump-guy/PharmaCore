@@ -45,9 +45,9 @@ interface FacultyGradebookProps {
 export default function FacultyGradebook({
   isAr,
   courses,
-  lectures,
-  quizzes,
-  questions,
+  lectures = [],
+  quizzes = [],
+  questions = [],
   students = [],
   lectureProgress = [],
   quizSubmissions = [],
@@ -62,39 +62,28 @@ export default function FacultyGradebook({
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"roster" | "analytics">("roster")
 
-  // Fallback demo students if no active students enrolled yet
-  const effectiveStudents: GradebookStudent[] = useMemo(() => {
-    if (students.length > 0) return students
-    return [
-      { id: "s1", name: "Zaid Al-Harbi", email: "zaid@ksu.edu.sa", university: "King Saud University", cohort: "PharmD-2026" },
-      { id: "s2", name: "Mona El-Sayed", email: "mona@cu.edu.eg", university: "Cairo University", cohort: "PharmD-2026" },
-      { id: "s3", name: "Omar Khaled", email: "omar@ksu.edu.sa", university: "King Saud University", cohort: "BSc-2027" },
-      { id: "s4", name: "Fatima Al-Mansoor", email: "fatima@squ.edu.om", university: "Sultan Qaboos University", cohort: "PharmD-2025" },
-    ]
-  }, [students])
-
   // Filter lectures and quizzes for the selected course
   const courseLectures = useMemo(() => {
-    if (selectedCourseId === "all") return lectures
-    return lectures.filter((l) => l.course_id === selectedCourseId)
+    if (selectedCourseId === "all") return lectures || []
+    return (lectures || []).filter((l) => l.course_id === selectedCourseId)
   }, [lectures, selectedCourseId])
 
   const courseQuizzes = useMemo(() => {
-    if (selectedCourseId === "all") return quizzes
-    return quizzes.filter((q) => q.course_id === selectedCourseId)
+    if (selectedCourseId === "all") return quizzes || []
+    return (quizzes || []).filter((q) => q.course_id === selectedCourseId)
   }, [quizzes, selectedCourseId])
 
-  // Generate Matrix
+  // Generate Matrix using real students roster
   const gradebookRows: GradebookRow[] = useMemo(() => {
     return generateGradebookMatrix({
-      students: effectiveStudents,
+      students,
       lectures: courseLectures,
       lecture_progress: lectureProgress,
       quizzes: courseQuizzes,
       quiz_submissions: quizSubmissions,
       certificates: certificates,
     })
-  }, [effectiveStudents, courseLectures, lectureProgress, courseQuizzes, quizSubmissions, certificates])
+  }, [students, courseLectures, lectureProgress, courseQuizzes, quizSubmissions, certificates])
 
   // Extract unique universities and cohorts for filter dropdowns
   const universitiesList = useMemo(() => {
@@ -548,8 +537,8 @@ export default function FacultyGradebook({
                 const completedCount = lectureProgress.filter(
                   (lp) => lp.lecture_id === lec.id && lp.completed
                 ).length
-                const total = effectiveStudents.length || 1
-                const percent = Math.round((completedCount / total) * 100)
+                const total = students.length || 1
+                const percent = students.length > 0 ? Math.round((completedCount / total) * 100) : 0
 
                 return (
                   <div key={lec.id} className="space-y-1.5">

@@ -1,6 +1,7 @@
 import {
   FiAward as Award,
   FiBarChart2 as BarChart2,
+  FiCalendar as Calendar,
   FiCheckSquare as CheckSquare,
   FiCpu as Cpu,
   FiGlobe as Globe,
@@ -12,7 +13,9 @@ import {
   FiSave as Save,
   FiShare2 as Share2,
   FiSliders as Sliders,
+  FiTag as Tag,
   FiTrash2 as Trash2,
+  FiZap as Zap,
 } from "react-icons/fi"
 import {
   FaDiscord,
@@ -36,11 +39,15 @@ import {
   contentGroups,
   contentLabel,
   defaultFeatureFlags,
+  defaultMarketingBanner,
+  defaultLeadMagnet,
   type SiteContent,
   type SiteLocale,
   type SiteLocaleContent,
   type SocialLink,
   type SocialPlatform,
+  type MarketingBannerConfig,
+  type LeadMagnetConfig,
 } from "@/lib/siteContent"
 import {
   FEATURE_FLAG_DEFINITIONS,
@@ -123,6 +130,28 @@ export default function SiteContentManager({
     }))
   }
 
+  const updateMarketingBanner = (updates: Partial<MarketingBannerConfig>) => {
+    setSiteContent((prev) => ({
+      ...prev,
+      marketing_banner: {
+        ...defaultMarketingBanner,
+        ...(prev.marketing_banner || {}),
+        ...updates,
+      },
+    }))
+  }
+
+  const updateLeadMagnet = (updates: Partial<LeadMagnetConfig>) => {
+    setSiteContent((prev) => ({
+      ...prev,
+      lead_magnet: {
+        ...defaultLeadMagnet,
+        ...(prev.lead_magnet || {}),
+        ...updates,
+      },
+    }))
+  }
+
   const removeSocialLink = (id: string) => {
     setSiteContent((prev) => ({
       ...prev,
@@ -165,10 +194,304 @@ export default function SiteContentManager({
       {/* Accordion grouped content */}
       <Accordion
         type="multiple"
-        defaultValue={["Hero", "About section", "Courses and CTA", "Footer & Attribution", "Community Social Links", "Feature Flags"]}
+        defaultValue={["Marketing & Announcements", "Feature Flags", "Community Social Links", "Hero section", "About section", "Courses and CTA", "Footer & Attribution"]}
         className="space-y-4"
       >
-        {/* ─── 0. GLOBAL FEATURE FLAGS & MODULAR ACTIVATION ──────────── */}
+        {/* ─── 0. MARKETING ENGINE & TOP PROMO ANNOUNCEMENTS ──────── */}
+        <AccordionItem
+          value="Marketing & Announcements"
+          className="rounded-3xl border border-amber-500/30 bg-card/90 px-5 sm:px-6 shadow-sm overflow-hidden"
+        >
+          <AccordionTrigger className="hover:no-underline py-4 sm:py-5">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                <Zap className="size-5" />
+              </span>
+              <div className="text-start">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-black text-sm sm:text-base text-foreground leading-none">
+                    {tr("Marketing Engine & In-App Announcements", "إدارة الإعلانات الترويجية والعروض")}
+                  </h4>
+                  <Badge
+                    className={`text-xs font-mono font-bold shrink-0 ${
+                      siteContent.marketing_banner?.enabled
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {siteContent.marketing_banner?.enabled
+                      ? tr("Banner Active", "الشريط مفعل")
+                      : tr("Banner Inactive", "الشريط معطل")}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {tr(
+                    "Configure the top frosted promo bar, live countdown clock, coupon codes, and guest lead magnet preview modal.",
+                    "التحكم في شريط الإعلانات العلوي، والعد التنازلي المباشر، ورموز الخصم، ونافذة تحويل الزوار المجانية."
+                  )}
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+
+          <AccordionContent className="pt-2 pb-6 space-y-6">
+            {/* Top Promo Banner Controls Card */}
+            <div className="rounded-2xl border border-border/80 bg-background/60 p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Tag className="size-4 text-primary" />
+                    <h5 className="font-black text-xs sm:text-sm text-foreground">
+                      {tr("Dynamic Top Promo Announcement Bar", "شريط الإعلانات الترويجي العلوي")}
+                    </h5>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {tr(
+                      "Displays at the very top of all public pages with live countdown and coupon copy.",
+                      "يظهر في أعلى صفحات الموقع مع عداد زمني وزر نسخ رمز الخصم."
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {siteContent.marketing_banner?.enabled ? tr("Enabled", "مفعل") : tr("Disabled", "معطل")}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(siteContent.marketing_banner?.enabled)}
+                      onChange={(e) => updateMarketingBanner({ enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Banner Details Fields */}
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
+                {/* Badge EN */}
+                <div className="space-y-1.5" dir="ltr">
+                  <Label className="text-xs font-bold text-foreground">Badge Tag (English)</Label>
+                  <Input
+                    value={siteContent.marketing_banner?.badge_en || ""}
+                    onChange={(e) => updateMarketingBanner({ badge_en: e.target.value })}
+                    placeholder="LIMITED OFFER / 20% OFF"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+
+                {/* Badge AR */}
+                <div className="space-y-1.5" dir="rtl">
+                  <Label className="text-xs font-bold text-foreground">وسم العرض (بالعربية)</Label>
+                  <Input
+                    value={siteContent.marketing_banner?.badge_ar || ""}
+                    onChange={(e) => updateMarketingBanner({ badge_ar: e.target.value })}
+                    placeholder="عرض حصري / خصم 20%"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+
+                {/* Banner Text EN */}
+                <div className="space-y-1.5 sm:col-span-2" dir="ltr">
+                  <Label className="text-xs font-bold text-foreground">Announcement Copy (English)</Label>
+                  <Input
+                    value={siteContent.marketing_banner?.text_en || ""}
+                    onChange={(e) => updateMarketingBanner({ text_en: e.target.value })}
+                    placeholder="Master Clinical Pharmacology with 20% off all certifications! Use code"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+
+                {/* Banner Text AR */}
+                <div className="space-y-1.5 sm:col-span-2" dir="rtl">
+                  <Label className="text-xs font-bold text-foreground">نص الإعلان الترويجي (بالعربية)</Label>
+                  <Input
+                    value={siteContent.marketing_banner?.text_ar || ""}
+                    onChange={(e) => updateMarketingBanner({ text_ar: e.target.value })}
+                    placeholder="أتقن علم الأدوية السريري بخصم 20% على كافة الشهادات المهنية! استخدم الكوبون"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+
+                {/* Coupon Code */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">{tr("Coupon Code", "رمز الكوبون")}</Label>
+                  <div className="relative">
+                    <Tag className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={siteContent.marketing_banner?.coupon_code || ""}
+                      onChange={(e) => updateMarketingBanner({ coupon_code: e.target.value.toUpperCase() })}
+                      placeholder="PHARMA2026"
+                      className="ps-10 rounded-xl h-11 border-border/80 bg-background/80 text-xs font-mono font-bold uppercase"
+                    />
+                  </div>
+                </div>
+
+                {/* Countdown Target Date */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">
+                    {tr("Countdown Target Deadline (ISO / UTC)", "تاريخ ونهاية العد التنازلي")}
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={siteContent.marketing_banner?.target_date || ""}
+                      onChange={(e) => updateMarketingBanner({ target_date: e.target.value })}
+                      placeholder="2026-09-01T00:00:00Z"
+                      className="ps-10 rounded-xl h-11 border-border/80 bg-background/80 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* CTA URL */}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="text-xs font-bold text-foreground">{tr("CTA Link Target URL", "رابط زر الدعوة للعمل (CTA)")}</Label>
+                  <div className="relative">
+                    <LinkIcon className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={siteContent.marketing_banner?.cta_url || ""}
+                      onChange={(e) => updateMarketingBanner({ cta_url: e.target.value })}
+                      placeholder="/courses or /course/special-bundle"
+                      className="ps-10 rounded-xl h-11 border-border/80 bg-background/80 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* CTA Text EN */}
+                <div className="space-y-1.5" dir="ltr">
+                  <Label className="text-xs font-bold text-foreground">CTA Button Label (English)</Label>
+                  <Input
+                    value={siteContent.marketing_banner?.cta_text_en || ""}
+                    onChange={(e) => updateMarketingBanner({ cta_text_en: e.target.value })}
+                    placeholder="Explore Courses"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+
+                {/* CTA Text AR */}
+                <div className="space-y-1.5" dir="rtl">
+                  <Label className="text-xs font-bold text-foreground">نص زر الدعوة للعمل (بالعربية)</Label>
+                  <Input
+                    value={siteContent.marketing_banner?.cta_text_ar || ""}
+                    onChange={(e) => updateMarketingBanner({ cta_text_ar: e.target.value })}
+                    placeholder="استكشف المقررات"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Lead Magnet Preview Mode Card */}
+            <div className="rounded-2xl border border-border/80 bg-background/60 p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Award className="size-4 text-emerald-600" />
+                    <h5 className="font-black text-xs sm:text-sm text-foreground">
+                      {tr("Guest Lead Magnet & Preview Conversion Modal", "نافذة تحويل الزوار والمحاضرات التجريبية")}
+                    </h5>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {tr(
+                      "Enables sample lesson previews and displays a high-converting registration modal upon completion.",
+                      "تتيح للزوار مشاهدة عينات تجريبية من المحاضرات، وتظهر نافذة للتسجيل المجاني عند إتمام الدرس."
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground">
+                      {siteContent.lead_magnet?.enabled ? tr("Enabled", "مفعل") : tr("Disabled", "معطل")}
+                    </span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(siteContent.lead_magnet?.enabled)}
+                        onChange={(e) => updateLeadMagnet({ enabled: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview All First Lectures Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-muted/20">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-foreground">
+                    {tr("Unlock First Lecture of All Courses as Free Preview", "فتح المحاضرة الأولى من كل مقرر كمعاينة مجانية")}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {tr(
+                      "Guests can watch lecture #1 without requiring immediate enrollment.",
+                      "يمكن للزوار مشاهدة المحاضرة الأولى تلقائياً دون اشتراط تسجيل مسبق."
+                    )}
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(siteContent.lead_magnet?.preview_all_first_lectures)}
+                    onChange={(e) => updateLeadMagnet({ preview_all_first_lectures: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* Modal Titles & Copy */}
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5" dir="ltr">
+                  <Label className="text-xs font-bold text-foreground">Modal Title (English)</Label>
+                  <Input
+                    value={siteContent.lead_magnet?.modal_title_en || ""}
+                    onChange={(e) => updateLeadMagnet({ modal_title_en: e.target.value })}
+                    placeholder="Unlock the Full Clinical Curriculum"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5" dir="rtl">
+                  <Label className="text-xs font-bold text-foreground">عنوان النافذة (بالعربية)</Label>
+                  <Input
+                    value={siteContent.lead_magnet?.modal_title_ar || ""}
+                    onChange={(e) => updateLeadMagnet({ modal_title_ar: e.target.value })}
+                    placeholder="افتح كامل المنهج الإكلينيكي المعتمد"
+                    className="rounded-xl h-11 border-border/80 bg-background/80 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5" dir="ltr">
+                  <Label className="text-xs font-bold text-foreground">Modal Body Copy (English)</Label>
+                  <Textarea
+                    rows={3}
+                    value={siteContent.lead_magnet?.modal_body_en || ""}
+                    onChange={(e) => updateLeadMagnet({ modal_body_en: e.target.value })}
+                    placeholder="Join 5,000+ medical and pharmacy students. Create your free account..."
+                    className="rounded-2xl border-border/80 bg-background/80 text-xs leading-relaxed p-3 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="space-y-1.5" dir="rtl">
+                  <Label className="text-xs font-bold text-foreground">نص الرسالة التوضيحية (بالعربية)</Label>
+                  <Textarea
+                    rows={3}
+                    value={siteContent.lead_magnet?.modal_body_ar || ""}
+                    onChange={(e) => updateLeadMagnet({ modal_body_ar: e.target.value })}
+                    placeholder="انضم إلى أكثر من 5,000 طالب وطبيبة صيدلانية. أنشئ حسابك المجاني..."
+                    className="rounded-2xl border-border/80 bg-background/80 text-xs leading-relaxed p-3 focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ─── 1. GLOBAL FEATURE FLAGS & MODULAR ACTIVATION ──────────── */}
         <AccordionItem
           value="Feature Flags"
           className="rounded-3xl border border-indigo-500/30 bg-card/90 px-5 sm:px-6 shadow-sm overflow-hidden"

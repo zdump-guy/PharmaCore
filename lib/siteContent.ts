@@ -1,6 +1,15 @@
 import { supabase } from "@/lib/supabaseClient"
-import type { University, Faculty, EnrollmentSettings, FeatureFlagsConfig } from "@/types"
+import type {
+  University,
+  Faculty,
+  EnrollmentSettings,
+  FeatureFlagsConfig,
+  MarketingBannerConfig,
+  LeadMagnetConfig,
+} from "@/types"
 import { defaultFeatureFlags } from "./featureFlags"
+
+export type { MarketingBannerConfig, LeadMagnetConfig }
 
 export type SiteLocale = "en" | "ar"
 
@@ -71,6 +80,30 @@ export interface MaintenanceModeConfig {
   estimated_until?: string
 }
 
+export const defaultMarketingBanner: MarketingBannerConfig = {
+  enabled: true,
+  badge_en: "LIMITED OFFER",
+  badge_ar: "عرض حصري",
+  text_en: "Master Clinical Pharmacology with 20% off all certifications! Use code",
+  text_ar: "أتقن علم الأدوية السريري بخصم 20% على كافة الشهادات المهنية! استخدم الكوبون",
+  coupon_code: "PHARMA2026",
+  target_date: "2026-09-01T00:00:00Z",
+  cta_text_en: "Explore Courses",
+  cta_text_ar: "استكشف المقررات",
+  cta_url: "/courses",
+}
+
+export const defaultLeadMagnet: LeadMagnetConfig = {
+  enabled: true,
+  preview_all_first_lectures: true,
+  modal_title_en: "Unlock the Full Clinical Curriculum",
+  modal_title_ar: "افتح كامل المنهج الإكلينيكي المعتمد",
+  modal_body_en:
+    "Join 5,000+ medical and pharmacy students. Create your free account to access interactive clinical vignettes, board-certified quizzes, verifiable PDF certificates, and in-lecture note-taking.",
+  modal_body_ar:
+    "انضم إلى أكثر من 5,000 طالب وطبيبة صيدلانية. أنشئ حسابك المجاني للوصول إلى الحالات الإكلينيكية، والاختبارات التفاعلية، والشهادات المعتمدة برمز QR، وتدوين الملاحظات المتزامنة.",
+}
+
 export interface SiteContent {
   en: SiteLocaleContent
   ar: SiteLocaleContent
@@ -78,6 +111,8 @@ export interface SiteContent {
   enrollment_settings?: EnrollmentSettings
   maintenance_mode?: MaintenanceModeConfig
   features?: FeatureFlagsConfig
+  marketing_banner?: MarketingBannerConfig
+  lead_magnet?: LeadMagnetConfig
 }
 
 export const defaultSocialLinks: SocialLink[] = [
@@ -219,6 +254,8 @@ export const defaultSiteContent: SiteContent = {
   social_links: defaultSocialLinks,
   enrollment_settings: defaultEnrollmentSettings,
   features: defaultFeatureFlags,
+  marketing_banner: defaultMarketingBanner,
+  lead_magnet: defaultLeadMagnet,
 }
 
 export const contentSections: Array<{
@@ -333,9 +370,26 @@ export const mergeSiteContent = (content?: Partial<SiteContent> | null): SiteCon
     ...defaultFeatureFlags,
     ...(content?.features ?? {}),
   },
+  marketing_banner: {
+    ...defaultMarketingBanner,
+    ...(content?.marketing_banner ?? {}),
+  },
+  lead_magnet: {
+    ...defaultLeadMagnet,
+    ...(content?.lead_magnet ?? {}),
+  },
 })
 
+let cachedSiteContent: SiteContent | null = null
+let cacheTimestamp = 0
+const CACHE_TTL_MS = 60 * 1000 // 60 seconds
+
 export async function loadSiteContent(): Promise<SiteContent> {
+  const now = Date.now()
+  if (cachedSiteContent && now - cacheTimestamp < CACHE_TTL_MS) {
+    return cachedSiteContent
+  }
+
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -344,7 +398,10 @@ export async function loadSiteContent(): Promise<SiteContent> {
         .eq("id", "main")
         .single()
       if (!error && data?.content) {
-        return mergeSiteContent(data.content as Partial<SiteContent>)
+        const merged = mergeSiteContent(data.content as Partial<SiteContent>)
+        cachedSiteContent = merged
+        cacheTimestamp = now
+        return merged
       }
     } catch {}
   }

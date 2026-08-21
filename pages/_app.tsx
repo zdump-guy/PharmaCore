@@ -15,10 +15,11 @@ import "@/styles/globals.css"
 function AppContent({ Component, pageProps }: { Component: AppProps["Component"]; pageProps: AppProps["pageProps"] }) {
   const router = useRouter()
   const siteContent = useSiteContent()
+  const isMaintenanceActive = Boolean(siteContent?.maintenance_mode?.enabled)
   const [isStaffUser, setIsStaffUser] = useState(false)
 
   useEffect(() => {
-    if (!supabase) return
+    if (!supabase || !isMaintenanceActive) return
 
     async function checkAuth() {
       try {
@@ -45,11 +46,10 @@ function AppContent({ Component, pageProps }: { Component: AppProps["Component"]
     }
 
     checkAuth()
-  }, [])
+  }, [isMaintenanceActive])
 
   const path = router.pathname || ""
   const asPath = router.asPath || ""
-  const isMaintenanceActive = Boolean(siteContent?.maintenance_mode?.enabled)
   const isAdminRoute =
     path === "/admin" ||
     path.startsWith("/admin/") ||
@@ -96,8 +96,12 @@ function App({ Component, pageProps }: AppProps) {
           <AppContent Component={Component} pageProps={pageProps} />
         </SiteContentProvider>
       </ThemeProvider>
-      <Analytics />
-      <SpeedInsights />
+      {process.env.NEXT_PUBLIC_VERCEL_ENV && (
+        <>
+          <Analytics />
+          <SpeedInsights />
+        </>
+      )}
     </div>
   )
 }

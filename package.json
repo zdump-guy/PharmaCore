@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node scripts/run-expansion-tests.mjs",
+    "test:e2e": "node scripts/run-e2e-tests.mjs",
+    "test:all": "node scripts/run-e2e-tests.mjs && node scripts/run-expansion-tests.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.20",

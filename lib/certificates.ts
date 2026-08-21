@@ -69,51 +69,6 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   }
 ]
 
-// Fallback demo certificate database
-const DEMO_CERTIFICATES: CertificateRecord[] = [
-  {
-    id: "cert_demo_001",
-    certificate_code: "PHARMA-2026-A1B2-C3D4",
-    user_id: "usr_demo_1",
-    course_id: "crs_demo_1",
-    student_name: "Dr. Tariq Hassan",
-    course_title_en: "Advanced Neuropharmacology",
-    course_title_ar: "علم الأدوية العصبية المتقدم",
-    issue_date: "2026-08-20T12:00:00Z",
-    final_score: 88,
-    watch_completion_rate: 100,
-    status: "valid",
-    metadata: { honors: "Clinical Excellence" }
-  },
-  {
-    id: "cert_demo_002",
-    certificate_code: "PHARMA-2026-REEM-0001",
-    user_id: "usr_demo_2",
-    course_id: "crs_demo_2",
-    student_name: "Reem Al-Ghamdi",
-    course_title_en: "Clinical Hemostasis & Anticoagulation",
-    course_title_ar: "علم الأدوية السريرية لتخثر الدم ومضادات التجلط",
-    issue_date: "2026-08-20T14:30:00Z",
-    final_score: 95,
-    watch_completion_rate: 100,
-    status: "valid",
-    metadata: { honors: "High Distinction" }
-  },
-  {
-    id: "cert_demo_003",
-    certificate_code: "PHARMA-2026-REV0-0001",
-    user_id: "usr_demo_3",
-    course_id: "crs_demo_3",
-    student_name: "Revoked Student",
-    course_title_en: "Basic Pharmacokinetics",
-    course_title_ar: "الحركية الدوائية الأساسية",
-    issue_date: "2026-01-10T10:00:00Z",
-    final_score: 80,
-    watch_completion_rate: 100,
-    status: "revoked"
-  }
-]
-
 /**
  * Evaluates whether a student meets the strict mastery criteria for certificate issuance:
  * - Exactly 100% video/lecture watch completion rate (watchCompletionRate === 100)
@@ -459,25 +414,6 @@ export async function lookupCertificateByCode(code: string): Promise<{
     }
   }
 
-  // 2. Check demo fallback
-  const demoMatch = DEMO_CERTIFICATES.find(
-    (c) => c.certificate_code.toUpperCase() === normalizedCode
-  )
-  if (demoMatch) {
-    if (demoMatch.status === "revoked") {
-      return {
-        verified: false,
-        certificate: demoMatch,
-        error: "This certificate has been revoked by administration"
-      }
-    }
-    return {
-      verified: true,
-      certificate: demoMatch,
-      error: null
-    }
-  }
-
   return {
     verified: false,
     certificate: null,
@@ -486,7 +422,7 @@ export async function lookupCertificateByCode(code: string): Promise<{
 }
 
 /**
- * Fetch all certificates for a specific user
+ * Fetch all certificates for a specific user from live database
  */
 export async function getUserCertificates(userId: string): Promise<CertificateRecord[]> {
   if (!userId) return []
@@ -508,19 +444,18 @@ export async function getUserCertificates(userId: string): Promise<CertificateRe
     }
   }
 
-  // Demo fallback
-  return DEMO_CERTIFICATES.filter((c) => c.user_id === userId)
+  return []
 }
 
 /**
- * Fetch user streak record
+ * Fetch user streak record from live database
  */
 export async function getUserStreak(userId: string): Promise<UserStreak> {
   const defaultStreak: UserStreak = {
     user_id: userId,
-    current_streak: 1,
-    longest_streak: 1,
-    last_activity_date: new Date().toISOString().split("T")[0],
+    current_streak: 0,
+    longest_streak: 0,
+    last_activity_date: null,
     updated_at: new Date().toISOString()
   }
 
@@ -547,7 +482,7 @@ export async function getUserStreak(userId: string): Promise<UserStreak> {
 }
 
 /**
- * Fetch user earned badges
+ * Fetch user earned badges from live database
  */
 export async function getUserBadges(userId: string): Promise<UserBadge[]> {
   if (!userId) return []
@@ -569,12 +504,5 @@ export async function getUserBadges(userId: string): Promise<UserBadge[]> {
     }
   }
 
-  return [
-    {
-      id: "badge_1",
-      user_id: userId,
-      badge_type: "streak_3",
-      awarded_at: new Date(Date.now() - 86400000 * 3).toISOString()
-    }
-  ]
+  return []
 }

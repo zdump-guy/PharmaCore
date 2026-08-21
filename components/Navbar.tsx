@@ -2,12 +2,13 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/router"
 import {
+  FiActivity as Activity,
+  FiAward as Award,
   FiBookOpen as BookOpen,
   FiChevronDown as ChevronDown,
   FiChevronRight as ChevronRight,
   FiGlobe as Languages,
   FiHome as HomeIcon,
-  FiInfo as InfoIcon,
   FiLogIn as LogIn,
   FiLogOut as LogOut,
   FiMenu as Menu,
@@ -165,34 +166,33 @@ export default function Navbar() {
     router.push("/")
   }
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, sectionId: "home" | "about" | "courses") => {
-    if (pathname === "/") {
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+    _sectionId: string
+  ) => {
+    if (href === "/" && pathname === "/") {
       e.preventDefault()
-      if (sectionId === "home") {
-        window.scrollTo({ top: 0, behavior: "smooth" })
-        window.history.replaceState(null, "", "/")
-      } else {
-        const el = document.getElementById(sectionId)
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth" })
-          window.history.replaceState(null, "", `#${sectionId}`)
-        }
-      }
-      setActiveSection(sectionId)
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      window.history.replaceState(null, "", "/")
+      setActiveSection("home")
     }
   }
 
   const nav = [
-    { href: "/", label: isAr ? "الرئيسية" : "Home", icon: HomeIcon, sectionId: "home" as const },
-    { href: "/#about", label: isAr ? "عن المنصة" : "About", icon: InfoIcon, sectionId: "about" as const },
-    { href: "/#courses", label: isAr ? "المقررات" : "Courses", icon: BookOpen, sectionId: "courses" as const },
+    { href: "/", label: isAr ? "الرئيسية" : "Home", icon: HomeIcon, sectionId: "home" },
+    { href: "/courses", label: isAr ? "دليل المقررات" : "Courses", icon: BookOpen, sectionId: "courses_catalog" },
+    { href: "/leaderboard", label: isAr ? "المتصدرون" : "Leaderboard", icon: Award, sectionId: "leaderboard" },
+    ...(authUser
+      ? [{ href: "/dashboard", label: isAr ? "لوحة التعلم" : "Dashboard", icon: Activity, sectionId: "dashboard" }]
+      : []),
   ]
 
-  const isNavActive = (sectionId: "home" | "about" | "courses", href: string) => {
-    if (pathname === "/") {
-      return activeSection === sectionId
+  const isNavActive = (_sectionId: string, href: string) => {
+    if (href === "/") {
+      return pathname === "/" && activeSection === "home"
     }
-    return asPath.startsWith(href)
+    return pathname.startsWith(href)
   }
 
   const tr = (en: string, ar: string) => (isAr ? ar : en)
@@ -323,16 +323,30 @@ export default function Navbar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
-                    <UserIcon className="size-4 text-primary" />
-                    <span>{tr("My Profile & Progress", "ملفي الأكاديمي والتقدم")}</span>
+                  <Link href="/dashboard" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
+                    <Activity className="size-4 text-primary" />
+                    <span>{tr("Student Dashboard", "لوحة تحكم الطالب")}</span>
                   </Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
-                  <Link href="/#courses" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
+                  <Link href="/profile" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
+                    <UserIcon className="size-4 text-primary" />
+                    <span>{tr("My Profile & Badges", "الملف الشخصي والأوسمة")}</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link href="/leaderboard" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
+                    <Award className="size-4 text-primary" />
+                    <span>{tr("Leaderboard Rankings", "لوحة المتصدرين")}</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link href="/courses" className="flex items-center gap-2.5 py-2 cursor-pointer font-semibold">
                     <BookOpen className="size-4 text-primary" />
-                    <span>{tr("Browse Courses", "استعراض المقررات")}</span>
+                    <span>{tr("Courses Catalog", "دليل المقررات الكامل")}</span>
                   </Link>
                 </DropdownMenuItem>
 

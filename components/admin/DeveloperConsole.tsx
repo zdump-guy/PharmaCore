@@ -5,6 +5,7 @@ import {
   FiAward as Award,
   FiBarChart2 as BarChart2,
   FiBookOpen as BookOpen,
+  FiCalendar as Calendar,
   FiCheck as Check,
   FiCheckCircle as CheckCircle2,
   FiCheckSquare as CheckSquare,
@@ -25,6 +26,7 @@ import {
   FiServer as Server,
   FiShield as ShieldCheck,
   FiSliders as Sliders,
+  FiTag as Tag,
   FiTerminal as Terminal,
   FiTrash2 as Trash2,
   FiX as X,
@@ -48,15 +50,22 @@ import {
   subscribeToEvents,
   type AnalyticsEvent,
 } from "@/lib/analytics"
-import type { SiteContent, MaintenanceModeConfig } from "@/lib/siteContent"
+import {
+  defaultMarketingBanner,
+  type SiteContent,
+  type MaintenanceModeConfig,
+  type MarketingBannerConfig,
+} from "@/lib/siteContent"
 import {
   FEATURE_FLAG_DEFINITIONS,
   FEATURE_FLAG_KEYS,
   defaultFeatureFlags,
 } from "@/lib/featureFlags"
 import type { Course, FeatureFlagsConfig, Lecture, Question, Quiz } from "@/types"
+import TopPromoBanner from "@/components/TopPromoBanner"
+import LeadMagnetModal from "@/components/LeadMagnetModal"
 
-export type DevSubTab = "logs" | "system" | "flags" | "maintenance"
+export type DevSubTab = "logs" | "system" | "flags" | "maintenance" | "marketing"
 
 interface DeveloperConsoleProps {
   isAr: boolean
@@ -178,6 +187,57 @@ export default function DeveloperConsole({
   const [estimatedUntil, setEstimatedUntil] = useState(siteContent.maintenance_mode?.estimated_until || "")
   const [savingMaintenance, setSavingMaintenance] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
+
+  // ─── MARKETING TEST BENCH STATE ──────────────────────────────────────────
+  const [testBannerConfig, setTestBannerConfig] = useState<MarketingBannerConfig>(
+    siteContent.marketing_banner || defaultMarketingBanner
+  )
+  const [testLeadMagnetOpen, setTestLeadMagnetOpen] = useState(false)
+  const [testClipboardFeedback, setTestClipboardFeedback] = useState(false)
+  const [savingMarketingTest, setSavingMarketingTest] = useState(false)
+  const [marketingSavedSuccess, setMarketingSavedSuccess] = useState(false)
+
+  useEffect(() => {
+    if (siteContent.marketing_banner) {
+      setTestBannerConfig(siteContent.marketing_banner)
+    }
+  }, [siteContent.marketing_banner])
+
+  const setTestExpirationOffset = (hoursFromNow: number) => {
+    const target = new Date(Date.now() + hoursFromNow * 3600 * 1000).toISOString()
+    setTestBannerConfig((prev) => ({
+      ...prev,
+      target_date: target,
+    }))
+  }
+
+  const handleTestCopyCoupon = async () => {
+    if (!testBannerConfig.coupon_code) return
+    try {
+      await navigator.clipboard.writeText(testBannerConfig.coupon_code)
+      setTestClipboardFeedback(true)
+      setTimeout(() => setTestClipboardFeedback(false), 2500)
+    } catch {
+      setTestClipboardFeedback(true)
+      setTimeout(() => setTestClipboardFeedback(false), 2500)
+    }
+  }
+
+  const handleSaveMarketingTest = async () => {
+    setSavingMarketingTest(true)
+    setMarketingSavedSuccess(false)
+    try {
+      const updatedSiteContent: SiteContent = {
+        ...siteContent,
+        marketing_banner: testBannerConfig,
+      }
+      await onSaveSiteContent(updatedSiteContent)
+      setMarketingSavedSuccess(true)
+      setTimeout(() => setMarketingSavedSuccess(false), 4000)
+    } finally {
+      setSavingMarketingTest(false)
+    }
+  }
 
   // Initialize event stream and subscribe
   useEffect(() => {
@@ -384,6 +444,22 @@ export default function DeveloperConsole({
           <span>{tr("Maintenance Mode", "وضع الصيانة والتحديث")}</span>
           {maintenanceEnabled && (
             <span className="size-2 rounded-full bg-amber-400 animate-pulse ms-1" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setInternalSubTab("marketing")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            internalSubTab === "marketing"
+              ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <Zap className="size-3.5" />
+          <span>{tr("Marketing Test Bench", "منصة اختبار العروض")}</span>
+          {testBannerConfig.enabled && (
+            <span className="size-2 rounded-full bg-emerald-400 animate-pulse ms-1" />
           )}
         </button>
       </div>
@@ -1139,6 +1215,227 @@ export default function DeveloperConsole({
           </form>
         </div>
       )}
+
+      {/* ─── 5. MARKETING ENGINE TEST BENCH VIEW ──────────────────────────── */}
+      {internalSubTab === "marketing" && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-card/90 border border-border/80 rounded-3xl p-5 sm:p-6 shadow-sm backdrop-blur-xl">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <div className="size-10 grid place-items-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <Zap className="size-5" />
+                </div>
+                <h3 className="text-xl font-black tracking-tight text-foreground">
+                  {tr("Marketing Engine Test Bench & Live Simulation", "منصة اختبار ومحاكاة محرك العروض")}
+                </h3>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {tr(
+                  "Interactive test bench to simulate announcement bar states, countdown deadlines, clipboard copying, and guest lead magnet modals.",
+                  "بيئة تفاعلية لاختبار ومحاكاة شريط الإعلانات، ومواعيد العد التنازلي، ونسخ الكوبونات، ونوافذ تحويل الزوار."
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <Button
+                type="button"
+                onClick={handleSaveMarketingTest}
+                disabled={savingMarketingTest}
+                className="gap-2 font-bold text-xs h-10 px-6 rounded-full shadow-md shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                {savingMarketingTest ? <RefreshCw className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                <span>{savingMarketingTest ? tr("Saving to CMS...", "جارٍ الحفظ...") : tr("Publish to Live Site", "نشر للموقع الحي")}</span>
+              </Button>
+            </div>
+          </div>
+
+          {marketingSavedSuccess && (
+            <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-600" />
+              <span>{tr("Marketing banner settings published to live platform successfully!", "تم نشر إعدادات شريط العروض للمنصة الحية بنجاح!")}</span>
+            </div>
+          )}
+
+          {/* 1. Live Sandbox Banner Preview */}
+          <Card className="rounded-3xl border-2 border-emerald-500/30 bg-card/90 shadow-sm overflow-hidden">
+            <CardHeader className="p-5 pb-3 border-b border-border/60 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-black text-foreground flex items-center gap-2">
+                  <Tag className="size-4 text-emerald-600" />
+                  <span>{tr("Live Announcement Bar Sandbox Preview", "معاينة حية لشريط الإعلانات")}</span>
+                </CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  {tr("Rendered directly in sandbox mode (forced preview enabled)", "معاينة فورية للشريط كما يظهر في أعلى صفحات المنصة")}
+                </CardDescription>
+              </div>
+
+              <Badge
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                  testBannerConfig.enabled
+                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                    : "bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30"
+                }`}
+              >
+                {testBannerConfig.enabled ? tr("Active Status", "حالة: مفعل") : tr("Inactive Status", "حالة: معطل")}
+              </Badge>
+            </CardHeader>
+
+            <div className="p-4 bg-muted/40 border-b border-border/60">
+              <div className="rounded-2xl overflow-hidden border border-border/80 shadow-md">
+                <TopPromoBanner config={testBannerConfig} isPreview={true} />
+              </div>
+            </div>
+
+            <CardContent className="p-5 space-y-4">
+              {/* Quick Preset Controls */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-foreground">
+                  {tr("Countdown Timer Simulation Presets", "محاكاة العد التنازلي ومواعيد الانتهاء")}
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTestExpirationOffset(2)}
+                    className="h-9 px-3.5 text-xs font-bold rounded-xl gap-1.5"
+                  >
+                    <Calendar className="size-3.5 text-emerald-600" />
+                    <span>{tr("Set +2 Hours (Active Countdown)", "تحديد بعد ساعتين (عد نشط)")}</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTestExpirationOffset(24)}
+                    className="h-9 px-3.5 text-xs font-bold rounded-xl gap-1.5"
+                  >
+                    <Calendar className="size-3.5 text-blue-600" />
+                    <span>{tr("Set +24 Hours (1 Day)", "تحديد بعد 24 ساعة")}</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTestExpirationOffset(-1)}
+                    className="h-9 px-3.5 text-xs font-bold rounded-xl gap-1.5 text-rose-600 hover:text-rose-700"
+                  >
+                    <AlertTriangle className="size-3.5" />
+                    <span>{tr("Set Expired (-1 Hour)", "محاكاة انتهاء الوقت")}</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Banner Configuration Input Row */}
+              <div className="grid gap-3 sm:grid-cols-3 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">{tr("Coupon Code", "رمز الكوبون")}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={testBannerConfig.coupon_code || ""}
+                      onChange={(e) =>
+                        setTestBannerConfig((prev) => ({
+                          ...prev,
+                          coupon_code: e.target.value.toUpperCase(),
+                        }))
+                      }
+                      className="rounded-xl h-10 border-border/80 bg-background text-xs font-mono uppercase font-bold"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTestCopyCoupon}
+                      className="h-10 px-3 shrink-0 rounded-xl text-xs font-bold gap-1"
+                    >
+                      {testClipboardFeedback ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                      <span>{testClipboardFeedback ? tr("Copied!", "تم!") : tr("Test Copy", "اختبار")}</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">{tr("Target Date-Time (ISO)", "التاريخ والوقت")}</Label>
+                  <Input
+                    value={testBannerConfig.target_date || ""}
+                    onChange={(e) =>
+                      setTestBannerConfig((prev) => ({
+                        ...prev,
+                        target_date: e.target.value,
+                      }))
+                    }
+                    className="rounded-xl h-10 border-border/80 bg-background text-xs font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-foreground">{tr("CTA Destination URL", "رابط الزر")}</Label>
+                  <Input
+                    value={testBannerConfig.cta_url || ""}
+                    onChange={(e) =>
+                      setTestBannerConfig((prev) => ({
+                        ...prev,
+                        cta_url: e.target.value,
+                      }))
+                    }
+                    className="rounded-xl h-10 border-border/80 bg-background text-xs font-mono"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 2. Lead Magnet Conversion Modal Tester */}
+          <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm overflow-hidden">
+            <CardHeader className="p-5 pb-3 border-b border-border/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-black text-foreground flex items-center gap-2">
+                    <Award className="size-4 text-emerald-600" />
+                    <span>{tr("Guest Lead Magnet Modal Test Suite", "اختبار نافذة تحويل الزوار")}</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    {tr(
+                      "Test non-intrusive conversion dialog triggered when guests complete preview lectures or access locked resources.",
+                      "اختبار ظهور نافذة التسجيل عند إتمام المحاضرة التجريبية للزوار."
+                    )}
+                  </CardDescription>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={() => setTestLeadMagnetOpen(true)}
+                  className="gap-1.5 font-bold text-xs rounded-full h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                >
+                  <Eye className="size-3.5" />
+                  <span>{tr("Launch Preview Modal", "فتح النافذة التجريبية")}</span>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 text-xs text-muted-foreground leading-relaxed">
+              <p>
+                {tr(
+                  "The Lead Magnet modal delivers value proposition bullets (100% Video Access, Clinical Quizzes + XP, QR Certificates, and Timestamped Clinical Notes) to convert guest learners into registered students.",
+                  "تعرض نافذة التحويل مميزات المنصة الرئيسية لتشجيع الزوار على إنشاء حساب طلابي مجاني دون حظر تجربتهم بشكل مفاجئ."
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── TEST BENCH LEAD MAGNET MODAL ─────────────────────────────────── */}
+      <LeadMagnetModal
+        isOpen={testLeadMagnetOpen}
+        onClose={() => setTestLeadMagnetOpen(false)}
+        courseTitle="Advanced Cardiovascular Pharmacology"
+        lectureTitle="Beta Blockers in Heart Failure & Arrhythmias"
+        source="preview_complete"
+      />
 
       {/* ─── INSPECT EVENT JSON MODAL ─────────────────────────────────────── */}
       {selectedEvent && (

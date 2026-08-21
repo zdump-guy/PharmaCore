@@ -4,6 +4,8 @@ export type UserRole = 'dev' | 'super_admin' | 'mentor' | 'student';
 
 export type StudentStatus = 'active' | 'pending' | 'suspended' | 'needs_setup';
 
+export type DivisionTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -19,9 +21,24 @@ export interface UserProfile {
   must_change_password?: boolean;
   role: UserRole;
   created_at: string;
+  bio?: string | null;
+  target_exam?: string | null;
+  xp?: number;
+  division?: DivisionTier;
 }
 
 export type CourseAccessPolicy = 'open' | 'students_only' | 'enrolled_only';
+
+export type CourseCategory =
+  | 'cardio'
+  | 'antimicrobial'
+  | 'cns'
+  | 'endocrine'
+  | 'renal'
+  | 'clinical'
+  | 'general';
+
+export type CourseDifficulty = 'beginner' | 'intermediate' | 'advanced';
 
 // ─── Feature Flags & Modular Activation ───────────────────────────────────────
 
@@ -48,6 +65,15 @@ export interface Course {
   is_locked?: boolean;
   access_policy?: CourseAccessPolicy;
   feature_overrides?: Partial<FeatureFlagsConfig> | null;
+  category?: CourseCategory;
+  difficulty?: CourseDifficulty;
+  estimated_hours?: number;
+  is_preview?: boolean;
+  badge_tag?: string;
+  enrolled_count?: number;
+  rating?: number;
+  lectures_count?: number;
+  quizzes_count?: number;
   created_at: string;
   mentor?: UserProfile;
 }
@@ -61,6 +87,8 @@ export interface Lecture {
   details_ar: string | null;
   youtube_url: string;
   order: number;
+  duration_seconds?: number;
+  is_preview?: boolean;
   created_at: string;
 }
 
@@ -360,3 +388,183 @@ export interface AnalyticsEventRecord {
   user_id?: string | null;
   created_at: string;
 }
+
+// ─── PharmaCore Expansion Suite Types ─────────────────────────────────────────
+
+// 1. Marketing Banner & Lead Magnet Engine
+export interface MarketingBannerConfig {
+  enabled: boolean;
+  badge_en?: string;
+  badge_ar?: string;
+  text_en: string;
+  text_ar: string;
+  coupon_code?: string;
+  target_date?: string; // ISO 8601 string e.g. "2026-09-01T00:00:00Z"
+  cta_text_en?: string;
+  cta_text_ar?: string;
+  cta_url?: string;
+}
+
+export interface LeadMagnetConfig {
+  enabled: boolean;
+  preview_all_first_lectures: boolean;
+  modal_title_en: string;
+  modal_title_ar: string;
+  modal_body_en: string;
+  modal_body_ar: string;
+}
+
+// 2. Gamification & 5-Tier Division Leagues
+export interface DivisionInfo {
+  tier: DivisionTier;
+  name_en: string;
+  name_ar: string;
+  minXp: number;
+  nextTierMinXp: number | null;
+  badgeColor: string;
+  bgGradient: string;
+  borderColor: string;
+  textColor: string;
+  iconName: string;
+}
+
+export interface XpRulesConfig {
+  lecture_completion_xp: number;
+  quiz_pass_xp: number;
+  quiz_perfect_bonus_xp: number;
+  daily_challenge_xp: number;
+  certificate_issued_xp: number;
+  discussion_upvote_xp: number;
+  division_thresholds: {
+    bronze: number;
+    silver: number;
+    gold: number;
+    platinum: number;
+    diamond: number;
+  };
+}
+
+export type LeaderboardScope = 'global' | 'university' | 'course';
+export type LeaderboardTimeframe = 'weekly' | 'all_time';
+
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  full_name: string;
+  avatar_url?: string | null;
+  university?: string | null;
+  faculty?: string | null;
+  division: DivisionTier;
+  total_xp: number;
+  weekly_xp: number;
+  streak_days: number;
+  badges_count: number;
+  certificates_count: number;
+  course_id?: string | null;
+  enrolled_courses?: string[];
+  is_current_user?: boolean;
+}
+
+// 3. Daily Pharmacology Challenge ("Drug of the Day")
+export interface DailyChallengeQuestion {
+  id: string;
+  date: string; // "YYYY-MM-DD"
+  drug_name: string;
+  drug_class: string;
+  question_en: string;
+  question_ar: string;
+  options_en: string[];
+  options_ar: string[];
+  correct_index: number;
+  rationale_en: string;
+  rationale_ar: string;
+  clinical_pearl_en?: string;
+  clinical_pearl_ar?: string;
+  reference?: string;
+  xp_reward: number; // 25
+}
+
+export interface DailyChallengeSubmission {
+  id: string;
+  user_id: string;
+  challenge_date: string;
+  selected_index: number;
+  is_correct: boolean;
+  xp_awarded: number;
+  submitted_at: string;
+}
+
+// 4. Classroom Discussions & Timestamped Notes
+export type DiscussionCategory = 'clinical_qa' | 'mnemonics' | 'faculty_solutions' | 'general';
+export type ClinicalNoteTag = 'pearl' | 'warning' | 'exam' | 'mechanism' | 'general';
+
+export interface TimestampedClinicalNote {
+  id: string;
+  user_id: string;
+  lecture_id: string;
+  course_id?: string | null;
+  lecture_title: string;
+  timestamp_seconds: number;
+  timestamp_formatted: string; // "MM:SS"
+  note_text: string;
+  tag: ClinicalNoteTag;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LectureNote {
+  id: string;
+  user_id: string;
+  lecture_id: string;
+  course_id?: string;
+  timestamp_seconds: number;
+  note_text: string;
+  created_at: string;
+  updated_at: string;
+  lecture_title_en?: string;
+  lecture_title_ar?: string;
+}
+
+export interface CourseDiscussionReply {
+  id: string;
+  thread_id: string;
+  author_id: string;
+  author_name: string;
+  author_role: UserRole;
+  author_avatar?: string | null;
+  author_university?: string | null;
+  content: string;
+  is_faculty_solution: boolean;
+  is_faculty_verified?: boolean;
+  verifier_title?: string;
+  upvotes_count: number;
+  created_at: string;
+  user_has_upvoted?: boolean;
+}
+
+export interface CourseDiscussionThread {
+  id: string;
+  course_id: string;
+  lecture_id?: string | null;
+  lecture_title?: string | null;
+  author_id: string;
+  author_name: string;
+  author_role: UserRole;
+  author_avatar?: string | null;
+  author_university?: string | null;
+  title: string;
+  content: string;
+  category: DiscussionCategory;
+  tags: string[];
+  upvotes_count: number;
+  replies_count: number;
+  has_faculty_solution: boolean;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at?: string;
+  user_has_upvoted?: boolean;
+  upvoted_user_ids?: string[];
+  replies?: CourseDiscussionReply[];
+}
+
+

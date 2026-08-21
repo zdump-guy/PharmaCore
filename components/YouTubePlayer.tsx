@@ -76,16 +76,29 @@ const qualityLabel = (quality: string) => ({
   highres: "High res",
 }[quality] ?? "Auto")
 
+export interface VideoPlayerControls {
+  getCurrentTime: () => number
+  seekTo: (seconds: number) => void
+  play?: () => void
+  pause?: () => void
+}
+
 export default function YouTubePlayer({
   videoId,
   title,
   lectureId,
   lectureTitle,
+  onTimeUpdate,
+  onPlayerReady,
+  playerRef,
 }: {
   videoId: string
   title: string
   lectureId?: string
   lectureTitle?: string
+  onTimeUpdate?: (currentTime: number, duration: number) => void
+  onPlayerReady?: (controls: VideoPlayerControls) => void
+  playerRef?: React.MutableRefObject<VideoPlayerControls | null>
 }) {
   const host = useRef<HTMLDivElement>(null)
   const shell = useRef<HTMLDivElement>(null)
@@ -104,6 +117,19 @@ export default function YouTubePlayer({
   const [rates, setRates] = useState([1])
   const [quality, setQuality] = useState("auto")
   const [fullscreen, setFullscreen] = useState(false)
+
+  // Register global seek event listener
+  useEffect(() => {
+    const handleCustomSeek = (event: Event) => {
+      const customEvent = event as CustomEvent<{ seconds: number }>
+      if (typeof customEvent.detail?.seconds === "number" && player.current) {
+        player.current.seekTo(customEvent.detail.seconds, true)
+        setCurrentTime(customEvent.detail.seconds)
+      }
+    }
+    window.addEventListener("pharmacore-seek", handleCustomSeek)
+    return () => window.removeEventListener("pharmacore-seek", handleCustomSeek)
+  }, [])
 
   useEffect(() => {
     let disposed = false
@@ -131,6 +157,23 @@ export default function YouTubePlayer({
             setRate(target.getPlaybackRate())
             setRates(target.getAvailablePlaybackRates())
             setReady(true)
+
+            const controls: VideoPlayerControls = {
+              getCurrentTime: () => player.current?.getCurrentTime() ?? 0,
+              seekTo: (seconds: number) => {
+                player.current?.seekTo(seconds, true)
+                setCurrentTime(seconds)
+              },
+              play: () => player.current?.playVideo(),
+              pause: () => player.current?.pauseVideo(),
+            }
+            if (playerRef) playerRef.current = controls
+            onPlayerReady?.(controls)
+            if (typeof window !== "undefined") {
+              ;(window as unknown as { pharmacorePlayer?: VideoPlayerControls }).pharmacorePlayer = controls
+              ;(window as unknown as { pharmacoreSeekTo?: (s: number) => void }).pharmacoreSeekTo = (s: number) => controls.seekTo(s)
+              ;(window as unknown as { pharmacoreGetCurrentTime?: () => number }).pharmacoreGetCurrentTime = () => controls.getCurrentTime()
+            }
           },
           onStateChange: ({ data }) => {
             const isNowPlaying = data === 1
@@ -201,6 +244,7 @@ export default function YouTubePlayer({
       setLoaded(instance.getVideoLoadedFraction() * total)
       setVolume(instance.getVolume())
       setMuted(instance.isMuted())
+      onTimeUpdate?.(current, total)
 
       // Check milestones
       if (total > 0) {

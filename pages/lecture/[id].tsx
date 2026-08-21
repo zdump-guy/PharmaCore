@@ -18,11 +18,11 @@ import {
   FiPlayCircle as PlayCircle,
   FiSend as Send,
   FiShield as ShieldCheck,
-  
-  
+  FiBookmark as Bookmark,
+  FiMessageSquare as MessageSquare,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
-import YouTubePlayer from "@/components/YouTubePlayer"
+import YouTubePlayer, { type VideoPlayerControls } from "@/components/YouTubePlayer"
 import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -37,8 +37,10 @@ import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { resolveCourseFeatures } from "@/lib/featureFlags"
 import ClinicalAssistantDrawer from "@/components/clinical/ClinicalAssistantDrawer"
+import InLectureNotesDrawer from "@/components/notes/InLectureNotesDrawer"
+import ClassroomDiscussionHub from "@/components/classroom/ClassroomDiscussionHub"
 import { trackLectureView, trackResourceClick, trackCommunityQuestionSubmit } from "@/lib/analytics"
-import type { CommunityQuestion, Course, Lecture, Quiz, Resource } from "@/types"
+import type { CommunityQuestion, Course, Lecture, Quiz, Resource, UserProfile } from "@/types"
 
 interface LecturePageProps {
   lecture: Lecture | null
@@ -202,10 +204,14 @@ export default function LecturePage({
   const [questions, setQuestions] = useState(initialQuestions)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
   const [enrolling, setEnrolling] = useState(false)
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null)
+  const [isNotesDrawerOpen, setIsNotesDrawerOpen] = useState(false)
+  const [currentVideoTime, setCurrentVideoTime] = useState(0)
+  const playerControlsRef = useRef<VideoPlayerControls | null>(null)
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
   // Resolve feature flags for AI Assistant
@@ -215,7 +221,7 @@ export default function LecturePage({
     ? (course?.objectives_ar ? [course.objectives_ar] : [])
     : (course?.objectives_en ? [course.objectives_en] : [])
 
-  // Check auth session & enrollment
+  // Check auth session & enrollment & user profile
   useEffect(() => {
     if (!supabase) return
 
@@ -227,18 +233,30 @@ export default function LecturePage({
       setIsAuthenticated(isAuth)
       setSessionToken(session?.access_token || null)
 
-      if (session?.user && session?.access_token && courseId) {
+      if (session?.user && session?.access_token) {
         try {
-          const res = await fetch(`/api/courses/${courseId}/enroll`, {
+          const profRes = await fetch("/api/profile", {
             headers: { Authorization: `Bearer ${session.access_token}` },
           })
-          if (res.ok) {
-            const data = await res.json()
-            setIsEnrolled(Boolean(data.isEnrolled))
-            setEnrollmentStatus(data.status || null)
+          if (profRes.ok) {
+            const profData = await profRes.json()
+            setUserProfile(profData.profile || null)
           }
-        } catch {
-          // Continue
+        } catch {}
+
+        if (courseId) {
+          try {
+            const res = await fetch(`/api/courses/${courseId}/enroll`, {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            })
+            if (res.ok) {
+              const data = await res.json()
+              setIsEnrolled(Boolean(data.isEnrolled))
+              setEnrollmentStatus(data.status || null)
+            }
+          } catch {
+            // Continue
+          }
         }
       }
     }
@@ -254,6 +272,20 @@ export default function LecturePage({
 
     return () => subscription.unsubscribe()
   }, [courseId])
+
+  const handlePlayerSeek = (seconds: number) => {
+    if (playerControlsRef.current) {
+      playerControlsRef.current.seekTo(seconds)
+    } else if (typeof window !== "undefined") {
+      const helper = (window as unknown as { pharmacoreSeekTo?: (s: number) => void }).pharmacoreSeekTo
+      if (helper) {
+        helper(seconds)
+      } else {
+        window.dispatchEvent(new CustomEvent("pharmacore-seek", { detail: { seconds } }))
+      }
+    }
+    setCurrentVideoTime(seconds)
+  }
 
   const handleQuickEnroll = async () => {
     if (!sessionToken || !courseId) return
@@ -333,7 +365,9 @@ export default function LecturePage({
         summary: "الملخص والنقاط السريرية",
         resources: "الملفات والمواد المرفقة",
         quizzes: "الاختبارات المرتبطة",
+        hub: "ساحة النقاش والاستذكار",
         discussion: "النقاش الأكاديمي",
+        notesDrawer: "الملاحظات السريرية الموقوتة",
         quiz: "تقييم سريري",
         quizBody: "اختبار قصير لقياس فهمك للمفاهيم الأساسية في هذه المحاضرة.",
         startQuiz: "بدء الاختبار",
@@ -356,7 +390,9 @@ export default function LecturePage({
         summary: "Summary & Clinical Pearls",
         resources: "Attached Resources",
         quizzes: "Linked Quizzes",
+        hub: "Classroom Discussion Hub",
         discussion: "Academic Q&A",
+        notesDrawer: "Clinical Notes",
         quiz: "Clinical Checkpoint",
         quizBody: "A short quiz to evaluate your retention of key therapeutic concepts.",
         startQuiz: "Start Quiz",
@@ -412,6 +448,16 @@ export default function LecturePage({
                   <span>{isAr ? "مقرر مقيد" : "Members Only"}</span>
                 </Badge>
               ) : null}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsNotesDrawerOpen(true)}
+                className="rounded-full gap-1.5 font-bold text-xs bg-background/80 hover:bg-primary/10 hover:text-primary border-border/80 shadow-xs"
+              >
+                <Bookmark className="size-3.5 text-primary" />
+                <span>{copy.notesDrawer}</span>
+              </Button>
 
               {isAiEnabled && (
                 <ClinicalAssistantDrawer
@@ -494,7 +540,17 @@ export default function LecturePage({
                   </div>
                 </div>
               ) : videoId ? (
-                <YouTubePlayer videoId={videoId} title={title} lectureId={lecture.id} lectureTitle={title} />
+                <YouTubePlayer
+                  videoId={videoId}
+                  title={title}
+                  lectureId={lecture.id}
+                  lectureTitle={title}
+                  onTimeUpdate={(time) => setCurrentVideoTime(time)}
+                  onPlayerReady={(controls) => {
+                    playerControlsRef.current = controls
+                  }}
+                  playerRef={playerControlsRef}
+                />
               ) : (
                 <div className="grid h-full place-items-center text-center p-6 text-muted-foreground">
                   <div className="space-y-3">
@@ -507,12 +563,16 @@ export default function LecturePage({
               )}
             </div>
 
-            {/* Lecture Tabs: Summary, Resources, Quizzes, Discussion */}
+            {/* Lecture Tabs: Summary, Resources, Quizzes, Hub, Discussion */}
             <Tabs defaultValue="summary" className="space-y-6">
-              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4 bg-muted/60 p-1.5 gap-1.5 rounded-2xl border border-border/60">
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-5 bg-muted/60 p-1.5 gap-1.5 rounded-2xl border border-border/60">
                 <TabsTrigger value="summary" className="min-h-10 rounded-xl text-xs font-bold">{copy.summary}</TabsTrigger>
                 <TabsTrigger value="resources" className="min-h-10 rounded-xl text-xs font-bold">{copy.resources}</TabsTrigger>
                 <TabsTrigger value="quizzes" className="min-h-10 rounded-xl text-xs font-bold">{copy.quizzes}</TabsTrigger>
+                <TabsTrigger value="hub" className="min-h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                  <MessageSquare className="size-3 text-primary shrink-0" />
+                  <span>{copy.hub}</span>
+                </TabsTrigger>
                 <TabsTrigger value="discussion" className="min-h-10 rounded-xl text-xs font-bold">{copy.discussion}</TabsTrigger>
               </TabsList>
 
@@ -615,6 +675,21 @@ export default function LecturePage({
                 )}
               </TabsContent>
 
+              {/* Classroom Discussion Hub Tab */}
+              <TabsContent value="hub" className="space-y-6">
+                <ClassroomDiscussionHub
+                  courseId={courseId || lecture.course_id}
+                  courseTitle={course ? (isAr ? course.title_ar : course.title_en) : title}
+                  lectureId={lecture.id}
+                  lectureTitle={title}
+                  currentUserId={userProfile?.id || (isAuthenticated ? "auth-user" : "guest")}
+                  currentUserName={userProfile?.full_name || (isAuthenticated ? "Student" : "Guest Student")}
+                  currentUserRole={userProfile?.role || "student"}
+                  currentUserUniversity={userProfile?.university || null}
+                  isAr={isAr}
+                />
+              </TabsContent>
+
               {/* Discussion Tab Form */}
               <TabsContent value="discussion">
                 <Card className="rounded-3xl border-border/80 bg-card/90 shadow-sm p-6 sm:p-8 space-y-6">
@@ -706,6 +781,33 @@ export default function LecturePage({
           variant="floating"
         />
       )}
+
+      {/* Timestamped Clinical Notes Drawer */}
+      <InLectureNotesDrawer
+        isOpen={isNotesDrawerOpen}
+        onClose={() => setIsNotesDrawerOpen(false)}
+        lectureId={lecture.id}
+        lectureTitle={title}
+        lectureOrder={lecture.order}
+        courseId={courseId}
+        courseTitle={course ? (isAr ? course.title_ar : course.title_en) : undefined}
+        currentVideoTime={currentVideoTime}
+        onSeek={handlePlayerSeek}
+        isAr={isAr}
+        userId={userProfile?.id || (isAuthenticated ? "auth-user" : "guest")}
+        userName={userProfile?.full_name || "Student"}
+      />
+
+      {/* Floating Notes Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsNotesDrawerOpen(true)}
+        className={`fixed bottom-6 ${isAr ? "left-6" : "right-6 sm:right-24"} z-40 flex items-center gap-2 rounded-full bg-card/90 border border-primary/40 shadow-xl px-4 py-2.5 text-xs font-black text-foreground backdrop-blur-xl hover:scale-105 transition-transform hover:border-primary cursor-pointer`}
+        title={copy.notesDrawer}
+      >
+        <Bookmark className="size-4 text-primary" />
+        <span className="hidden sm:inline">{copy.notesDrawer}</span>
+      </button>
     </Layout>
   )
 }

@@ -1,1 +1,0 @@
-/grill-me can you suggest adjustments, additions, upgrades or even enhancements to the project ?

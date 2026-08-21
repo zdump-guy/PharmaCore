@@ -3,6 +3,7 @@ import Head from "next/head"
 import { useRouter } from "next/router"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
+import TopPromoBanner from "@/components/TopPromoBanner"
 import { siteMetadata } from "@/lib/siteContent"
 
 interface LayoutProps {
@@ -141,6 +142,7 @@ export default function Layout({
         >
           {isAr ? "تخطي إلى المحتوى" : "Skip to content"}
         </a>
+        {!hideNavbar && <TopPromoBanner />}
         {!hideNavbar && <Navbar />}
         <main id="main-content" className="flex-1">
           {children}

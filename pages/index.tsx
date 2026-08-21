@@ -3,15 +3,18 @@ import Link from "next/link"
 import { useRouter } from "next/router"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import {
+  FiArrowRight as ArrowRight,
   FiArrowUpRight as ArrowUpRight,
+  FiAward as Award,
   FiBookOpen as BookOpenCheck,
   FiCheckCircle as CheckCircle2,
+  FiCompass as Compass,
+  FiLayers as Layers,
   FiMessageCircle as MessageCircle,
   FiPlayCircle as PlayCircle,
   FiShield as ShieldCheck,
-  FiAward as Award,
   FiUsers as Users,
-  FiLayers as Layers,
+  FiZap as Zap,
 } from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
@@ -221,25 +224,69 @@ export default function Home({ courses, siteContent }: HomeProps) {
         </div>
       </section>
 
-      {/* ─── COURSES CATALOG ──────────────────────────────────────────────── */}
+      {/* ─── FEATURED COURSES SECTION ───────────────────────────────────────── */}
       <section id="courses" className="section-space border-y border-border/60 bg-muted/30 scroll-mt-20 sm:scroll-mt-24 relative">
         <div className="page-shell">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-10">
             <div className="space-y-3 max-w-2xl">
-              <span className="eyebrow">{copy.courses_eyebrow}</span>
-              <h2 className="section-title">{copy.courses_title}</h2>
-              <p className="body-lead">{copy.courses_body}</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary">
+                <Zap className="size-3.5" />
+                <span>{tr("High-Yield Curated Curriculum", "مقررات مختارة عالية الأهمية")}</span>
+              </div>
+              <h2 className="section-title">
+                {tr("Featured Clinical Courses", "المقررات الإكلينيكية المميزة")}
+              </h2>
+              <p className="body-lead">
+                {tr(
+                  "High-yield clinical pharmacology modules tailored for licensure preparation and evidence-based practice.",
+                  "وحدات تعليمية إكلينيكية متقدمة مُصممة للتحضير لامتحانات مزاولة المهنة والممارسة المعتمدة على الدليل."
+                )}
+              </p>
             </div>
-            <Badge variant="secondary" className="badge-nowrap px-4 py-2 text-sm font-bold rounded-full">
-              {courses.length} {isAr ? "مقررات سريرية متاحة" : "Available Courses"}
-            </Badge>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 rounded-full px-5 text-xs font-bold border-primary/30 bg-card hover:bg-primary/10 text-primary gap-2"
+              >
+                <Link href="/courses">
+                  <span>{tr("Browse Full Catalog", "تصفح كافة المقررات")}</span>
+                  <ArrowRight className="size-3.5 rtl:rotate-180" />
+                </Link>
+              </Button>
+            </div>
           </div>
 
+          {/* Featured 3-Card Grid */}
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {courses.map((course, index) => {
+            {courses.slice(0, 3).map((course, index) => {
               const title = isAr ? course.title_ar : course.title_en
               const description = isAr ? course.description_ar : course.description_en
               const coverUrl = getDirectImageUrl(course.thumbnail_url)
+
+              const promoBadges = [
+                {
+                  icon: Award,
+                  label_en: "Most Popular",
+                  label_ar: "الأكثر طلباً",
+                  className: "bg-amber-500/20 text-amber-300 border-amber-400/40 shadow-xs",
+                },
+                {
+                  icon: Zap,
+                  label_en: "High-Yield",
+                  label_ar: "مراجعة بورد مكثفة",
+                  className: "bg-purple-500/20 text-purple-200 border-purple-400/40 shadow-xs",
+                },
+                {
+                  icon: PlayCircle,
+                  label_en: "Free Preview Available",
+                  label_ar: "تتوفر محاضرة تجريبية",
+                  className: "bg-emerald-500/20 text-emerald-200 border-emerald-400/40 shadow-xs",
+                },
+              ]
+              const currentBadge = promoBadges[index % promoBadges.length]
+              const PromoIcon = currentBadge.icon
 
               return (
                 <Link
@@ -248,15 +295,26 @@ export default function Home({ courses, siteContent }: HomeProps) {
                   className="group block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-3xl"
                 >
                   <Card className="overflow-hidden h-full flex flex-col justify-between border-border/80 bg-card/90 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5">
-                    {/* Course Banner */}
+                    {/* Course Banner Image & Badges */}
                     <div
-                      className="relative flex h-48 items-end border-b border-border/60 bg-gradient-to-br from-primary/10 via-secondary to-accent/10 bg-cover bg-center p-6 shrink-0"
+                      className="relative flex h-52 items-end border-b border-border/60 bg-gradient-to-br from-primary/15 via-secondary to-accent/15 bg-cover bg-center p-6 shrink-0"
                       style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined}
                       role={coverUrl ? "img" : undefined}
                       aria-label={coverUrl ? `${title} cover` : undefined}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" aria-hidden="true" />
-                      <div className="relative flex w-full items-end justify-between">
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/40 to-transparent" aria-hidden="true" />
+                      
+                      {/* Top Floating Promo Badge */}
+                      <div className="absolute top-4 start-4 z-10">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-black backdrop-blur-md ${currentBadge.className}`}
+                        >
+                          <PromoIcon className="size-3 shrink-0" />
+                          <span>{isAr ? currentBadge.label_ar : currentBadge.label_en}</span>
+                        </span>
+                      </div>
+
+                      <div className="relative flex w-full items-end justify-between z-10">
                         <div className="size-12 grid place-items-center rounded-2xl bg-card border border-border/80 text-primary shadow-sm">
                           <GraduationCap className="size-6" />
                         </div>
@@ -273,9 +331,13 @@ export default function Home({ courses, siteContent }: HomeProps) {
                           <Badge variant="outline" className="text-[11px] font-bold">
                             {copy.course_badge}
                           </Badge>
-                          {course.access_policy === "enrolled_only" && (
+                          {course.access_policy === "enrolled_only" ? (
                             <Badge variant="warning" className="text-[10px]">
                               {tr("Enrolled Only", "تسجيل مسبق")}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 text-[10px]">
+                              {tr("Open Preview", "معاينة متاحة")}
                             </Badge>
                           )}
                         </div>
@@ -301,6 +363,39 @@ export default function Home({ courses, siteContent }: HomeProps) {
                 </Link>
               )
             })}
+          </div>
+
+          {/* Prominent Full Curriculum Discovery Banner */}
+          <div className="mt-12 rounded-3xl border border-primary/30 bg-gradient-to-br from-card via-card to-primary/10 p-7 sm:p-10 shadow-xl backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 text-center md:text-start max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary">
+                <Compass className="size-3.5" />
+                <span>{tr("Complete Clinical Curriculum Directory", "دليل المنهج الإكلينيكي الشامل")}</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-foreground">
+                {tr(
+                  "Explore the Complete PharmaCore Curriculum",
+                  "استكشف المنهج الكامل لمنصة فارماكور"
+                )}
+              </h3>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                {tr(
+                  "Access all specialized courses across Cardiovascular, Antimicrobial, CNS, Endocrine, and Critical Care therapeutics with board-referenced clinical cases and verifiable certificates.",
+                  "تصفح كافة المقررات التخصصية في علم أدوية القلب، والمضادات الحيوية، والأعصاب، والغدد، والعناية المركزة مع دراسات حالة سريرية وشهادات موثقة."
+                )}
+              </p>
+            </div>
+
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-full px-8 text-xs sm:text-sm font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground gap-2 shrink-0 transition-transform hover:scale-105"
+            >
+              <Link href="/courses">
+                <span>{tr("Explore All Courses", "استعراض كافة المقررات")}</span>
+                <ArrowRight className="size-4 rtl:rotate-180" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

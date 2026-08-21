@@ -35,7 +35,7 @@ function getDistinctId(): string {
 }
 
 /**
- * Initialize Analytics & Realtime listener
+ * Initialize Analytics
  */
 export function initAnalytics() {
   if (typeof window === "undefined") return
@@ -47,51 +47,52 @@ export function initAnalytics() {
         currentUserId = session.user.id
       }
     })
+  }
+}
 
-    // Listen to Supabase Realtime for live events stream across all tabs/users
-    if (!realtimeChannelSubscribed) {
-      try {
-        supabase
-          .channel("public:analytics_events")
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "analytics_events" },
-            (payload) => {
-              const row = payload.new as {
-                id: string
-                event_name: string
-                properties: Record<string, unknown>
-                created_at: string
-                distinct_id?: string
-                user_id?: string | null
-              }
-              if (row) {
-                const eventObj: AnalyticsEvent = {
-                  id: row.id || String(Date.now()),
-                  name: row.event_name,
-                  properties: row.properties || {},
-                  timestamp: row.created_at || new Date().toISOString(),
-                  distinct_id: row.distinct_id,
-                  user_id: row.user_id,
-                }
-                // Avoid duplicating if already locally added
-                if (!recentEventsBuffer.some((e) => e.id === eventObj.id)) {
-                  recentEventsBuffer.unshift(eventObj)
-                  if (recentEventsBuffer.length > MAX_BUFFER_SIZE) {
-                    recentEventsBuffer.pop()
-                  }
-                  subscribers.forEach((fn) => fn(eventObj))
-                }
-              }
+function ensureRealtimeSubscription() {
+  if (realtimeChannelSubscribed || !supabase || typeof window === "undefined") return
+
+  try {
+    supabase
+      .channel("public:analytics_events")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "analytics_events" },
+        (payload) => {
+          const row = payload.new as {
+            id: string
+            event_name: string
+            properties: Record<string, unknown>
+            created_at: string
+            distinct_id?: string
+            user_id?: string | null
+          }
+          if (row) {
+            const eventObj: AnalyticsEvent = {
+              id: row.id || String(Date.now()),
+              name: row.event_name,
+              properties: row.properties || {},
+              timestamp: row.created_at || new Date().toISOString(),
+              distinct_id: row.distinct_id,
+              user_id: row.user_id,
             }
-          )
-          .subscribe()
+            // Avoid duplicating if already locally added
+            if (!recentEventsBuffer.some((e) => e.id === eventObj.id)) {
+              recentEventsBuffer.unshift(eventObj)
+              if (recentEventsBuffer.length > MAX_BUFFER_SIZE) {
+                recentEventsBuffer.pop()
+              }
+              subscribers.forEach((fn) => fn(eventObj))
+            }
+          }
+        }
+      )
+      .subscribe()
 
-        realtimeChannelSubscribed = true
-      } catch (err) {
-        console.warn("Realtime subscription warning:", err)
-      }
-    }
+    realtimeChannelSubscribed = true
+  } catch (err) {
+    console.warn("Realtime subscription warning:", err)
   }
 }
 
@@ -189,6 +190,7 @@ export function trackPageView(url?: string) {
  * Subscribe to real-time events in the Admin UI
  */
 export function subscribeToEvents(callback: EventSubscriber): () => void {
+  ensureRealtimeSubscription()
   subscribers.add(callback)
   return () => {
     subscribers.delete(callback)
