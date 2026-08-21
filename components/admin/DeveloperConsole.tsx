@@ -67,6 +67,28 @@ import LeadMagnetModal from "@/components/LeadMagnetModal"
 
 export type DevSubTab = "logs" | "system" | "flags" | "maintenance" | "marketing"
 
+function safeJsonStringify(val: unknown, space?: number): string {
+  try {
+    const seen = new WeakSet()
+    return JSON.stringify(
+      val,
+      (key, value) => {
+        if (typeof value === "function" || typeof value === "symbol") return undefined
+        if (typeof window !== "undefined" && (value instanceof Node || value instanceof Event)) return undefined
+        if (typeof key === "string" && (key.startsWith("__react") || key.startsWith("_react"))) return undefined
+        if (typeof value === "object" && value !== null) {
+          if (seen.has(value)) return "[Circular]"
+          seen.add(value)
+        }
+        return value
+      },
+      space
+    )
+  } catch {
+    return String(val)
+  }
+}
+
 interface DeveloperConsoleProps {
   isAr: boolean
   subTab?: DevSubTab
@@ -310,7 +332,7 @@ export default function DeveloperConsole({
         const matchName = event.name.toLowerCase().includes(q)
         const matchId = (event.distinct_id || "").toLowerCase().includes(q)
         const matchUser = (event.user_id || "").toLowerCase().includes(q)
-        const matchProps = JSON.stringify(event.properties || {}).toLowerCase().includes(q)
+        const matchProps = safeJsonStringify(event.properties || {}).toLowerCase().includes(q)
         if (!matchName && !matchId && !matchUser && !matchProps) return false
       }
 
@@ -320,7 +342,7 @@ export default function DeveloperConsole({
 
   // Export logs to JSON
   const handleExportJSON = () => {
-    const jsonStr = JSON.stringify(filteredEvents, null, 2)
+    const jsonStr = safeJsonStringify(filteredEvents, 2)
     const blob = new Blob([jsonStr], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -338,7 +360,7 @@ export default function DeveloperConsole({
       `"${e.name}"`,
       `"${e.user_id || "anonymous"}"`,
       `"${e.distinct_id || ""}"`,
-      `"${JSON.stringify(e.properties || {}).replace(/"/g, '""')}"`,
+      `"${safeJsonStringify(e.properties || {}).replace(/"/g, '""')}"`,
     ])
     const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
@@ -693,7 +715,7 @@ export default function DeveloperConsole({
                           )}
                         </td>
                         <td className="px-5 py-3 text-muted-foreground truncate max-w-md font-sans text-xs">
-                          {JSON.stringify(evt.properties || {})}
+                          {safeJsonStringify(evt.properties || {})}
                         </td>
                         <td className="px-5 py-3 text-end whitespace-nowrap">
                           <Button
@@ -1449,7 +1471,7 @@ export default function DeveloperConsole({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => copyToClipboard(JSON.stringify(selectedEvent, null, 2))}
+                  onClick={() => copyToClipboard(safeJsonStringify(selectedEvent, 2))}
                   className="gap-1.5 text-xs font-bold h-8 rounded-full"
                 >
                   <Copy className="size-3.5" />
@@ -1462,7 +1484,7 @@ export default function DeveloperConsole({
             </DialogHeader>
 
             <div className="rounded-2xl border border-border/80 bg-muted/40 p-4 font-mono text-xs overflow-x-auto custom-scrollbar">
-              <pre>{JSON.stringify(selectedEvent, null, 2)}</pre>
+              <pre>{safeJsonStringify(selectedEvent, 2)}</pre>
             </div>
           </DialogContent>
         </Dialog>

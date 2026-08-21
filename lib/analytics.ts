@@ -96,6 +96,51 @@ function ensureRealtimeSubscription() {
   }
 }
 
+function sanitizePayloadValue(value: unknown, seen = new WeakSet()): unknown {
+  if (value === null || value === undefined) return value
+  const valType = typeof value
+
+  if (valType === "string" || valType === "number" || valType === "boolean") {
+    return value
+  }
+
+  // Strip functions, symbols, and DOM Nodes / Events (which contain React fiber references)
+  if (valType === "function" || valType === "symbol") return undefined
+  if (typeof window !== "undefined" && (value instanceof Node || value instanceof Event)) {
+    return undefined
+  }
+
+  // If object or array, handle circular references
+  if (valType === "object") {
+    if (seen.has(value as object)) {
+      return "[Circular]"
+    }
+    seen.add(value as object)
+
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitizePayloadValue(item, seen)).filter((v) => v !== undefined)
+    }
+
+    const cleanObj: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      // Filter out internal React properties starting with _ or __
+      if (k.startsWith("__react") || k.startsWith("_react")) continue
+      const cleaned = sanitizePayloadValue(v, seen)
+      if (cleaned !== undefined) {
+        cleanObj[k] = cleaned
+      }
+    }
+    return cleanObj
+  }
+
+  return String(value)
+}
+
+export function sanitizeProperties(props?: Record<string, unknown>): Record<string, unknown> {
+  if (!props || typeof props !== "object") return {}
+  return (sanitizePayloadValue(props) as Record<string, unknown>) || {}
+}
+
 /**
  * Track an analytics event directly to Supabase
  */
@@ -104,11 +149,12 @@ export function trackEvent(eventName: string, properties?: Record<string, unknow
 
   const distinctId = getDistinctId()
   const currentUrl = typeof window !== "undefined" ? window.location.pathname : null
-  const payloadProps = {
+  const rawProps = {
     ...(properties || {}),
     ...(currentUserProperties || {}),
     path: currentUrl,
   }
+  const payloadProps = sanitizeProperties(rawProps)
 
   const localEvent: AnalyticsEvent = {
     id: "evt_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
