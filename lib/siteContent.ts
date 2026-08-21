@@ -81,7 +81,7 @@ export interface MaintenanceModeConfig {
 }
 
 export const defaultMarketingBanner: MarketingBannerConfig = {
-  enabled: true,
+  enabled: false,
   badge_en: "LIMITED OFFER",
   badge_ar: "عرض حصري",
   text_en: "Master Clinical Pharmacology with 20% off all certifications! Use code",
