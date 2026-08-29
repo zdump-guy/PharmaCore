@@ -283,22 +283,55 @@ export const contentGroups = contentSections
 
 export const siteMetadata = {
   en: {
-    title: "PharmaCore — Pharmacy Education",
-    description: "A specialized educational platform for pharmacy and pharmacology courses.",
+    title: "PharmaCore — Specialized Clinical Pharmacology & Pharmacy Education",
+    titleTemplate: "%s | PharmaCore",
+    description:
+      "A focused, open educational platform for medical and pharmacy students. High-yield video lectures, clinical pharmacology breakdowns, downloadable summaries, and interactive quizzes.",
+    keywords: [
+      "clinical pharmacology",
+      "pharmacy courses",
+      "PharmD education",
+      "drug mechanisms of action",
+      "medical pharmacology",
+      "pharmacology quizzes",
+      "pharmacotherapy",
+      "healthcare education",
+      "hospital pharmacy",
+      "clinical checkpoints"
+    ],
   },
   ar: {
-    title: "فارما كور — منصة التعليم الصيدلي",
-    description: "منصة تعليمية متخصصة في مقررات الصيدلة وعلم الأدوية.",
+    title: "فارماكور — المنصة التخصصية في علم الأدوية السريري والتعليم الصيدلي",
+    titleTemplate: "%s | فارماكور",
+    description:
+      "منصة تعليمية متخصصة ومفتوحة لطلاب وخريجي كليات الصيدلة والطب. محاضرات فيديو مركزة في الفارماكولوجي الإكلينيكي، ملخصات سريرية مبسطة، واختبارات تفاعلية فورية.",
+    keywords: [
+      "علم الأدوية السريري",
+      "فارماكولوجي",
+      "صيدلة إكلينيكية",
+      "دكتور صيدلي",
+      "شرح فارماكولوجي",
+      "دورات صيدلة",
+      "مقررات طبية",
+      "اختبارات أدوية",
+      "آليات عمل الأدوية",
+      "فارماكور"
+    ],
   },
 }
 
 export const siteBranding = {
-  logo_url: "",
+  logo_url: "/pharmacore-logo.svg",
   favicon_url: "/favicon.ico",
-  preview_image_url: "",
-  logoUrl: "",
+  preview_image_url: "/og-image.png",
+  logoUrl: "/pharmacore-logo.svg",
   faviconUrl: "/favicon.ico",
-  previewImageUrl: "",
+  previewImageUrl: "/og-image.png",
+  themeColorLight: "#1e515d",
+  themeColorDark: "#0d1b1e",
+  brandInk: "#262626",
+  brandMid: "#6aa6b8",
+  brandLight: "#8bcde1",
 }
 
 export const contentLabel = (field: keyof SiteLocaleContent) =>

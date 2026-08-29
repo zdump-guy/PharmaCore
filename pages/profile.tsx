@@ -277,6 +277,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
         "Manage your PharmaCore student profile, track study progress, and update academic credentials.",
         "إدارة ملفك الأكاديمي في فارما كور، ومتابعة تقدم الدراسة وتحديث البيانات."
       )}
+      noindex={true}
     >
       <div className="page-shell section-space space-y-8" dir={isAr ? "rtl" : "ltr"}>
         {/* ─── Top Hero / Profile Banner Card ──────────────────────────────── */}

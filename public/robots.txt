@@ -1,0 +1,13 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /ar/admin
+Disallow: /ar/admin/
+
+# Host & Sitemap
+Host: https://pharma-core-edu.vercel.app
+Sitemap: https://pharma-core-edu.vercel.app/sitemap.xml

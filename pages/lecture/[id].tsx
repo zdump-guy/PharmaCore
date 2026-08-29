@@ -345,8 +345,70 @@ export default function LecturePage({
         signInCta: "Sign In / Register Free",
       }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const lectureThumbnail = videoId
+    ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+    : `${siteUrl}/og-course.png`
+
+  const lectureSchema = [
+    {
+      "@type": "LearningResource",
+      "@id": `${siteUrl}/lecture/${lecture.id}#lecture`,
+      "name": title,
+      "description": details || title,
+      "learningResourceType": "Lecture Video",
+      "educationalLevel": "HigherEducation",
+      "inLanguage": isAr ? "ar" : "en",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "PharmaCore",
+        "sameAs": siteUrl,
+      },
+    },
+    ...(videoId
+      ? [
+          {
+            "@type": "VideoObject",
+            "name": title,
+            "description": details || title,
+            "thumbnailUrl": [lectureThumbnail],
+            "uploadDate": lecture.created_at || new Date().toISOString(),
+            "embedUrl": `https://www.youtube.com/embed/${videoId}`,
+          },
+        ]
+      : []),
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": siteUrl },
+        ...(courseId
+          ? [
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": isAr ? course?.title_ar || "المقرر" : course?.title_en || "Course",
+                "item": `${siteUrl}/course/${courseId}`,
+              },
+            ]
+          : []),
+        {
+          "@type": "ListItem",
+          "position": courseId ? 3 : 2,
+          "name": title,
+          "item": `${siteUrl}/lecture/${lecture.id}`,
+        },
+      ],
+    },
+  ]
+
   return (
-    <Layout title={`${title} — PharmaCore`} description={details}>
+    <Layout
+      title={`${title} — PharmaCore`}
+      description={details || title}
+      image={lectureThumbnail}
+      type="article"
+      schema={lectureSchema}
+    >
       <section className="border-b bg-muted/40">
         <div className="page-shell py-6 sm:py-8 lg:py-12">
           {courseId && (

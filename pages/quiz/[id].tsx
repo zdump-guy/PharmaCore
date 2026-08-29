@@ -179,9 +179,39 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const quizSchema = [
+    {
+      "@type": "Quiz",
+      "@id": `${siteUrl}/quiz/${quiz.id}#quiz`,
+      "name": title,
+      "description": copy.helper,
+      "educationalLevel": "HigherEducation",
+      "inLanguage": isAr ? "ar" : "en",
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "PharmaCore",
+        "sameAs": siteUrl,
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": siteUrl },
+        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}/#courses` },
+        { "@type": "ListItem", "position": 3, "name": title, "item": `${siteUrl}/quiz/${quiz.id}` },
+      ],
+    },
+  ]
+
   if (isGated) {
     return (
-      <Layout title={`${title} — PharmaCore`} description={copy.helper}>
+      <Layout
+        title={`${title} — PharmaCore`}
+        description={copy.helper}
+        image="/og-quiz.png"
+        schema={quizSchema}
+      >
         <div className="page-shell section-space max-w-xl text-center">
           <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/30">
             <LockKeyhole className="size-8" />
@@ -208,7 +238,12 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
   }
 
   return (
-    <Layout title={`${title} — PharmaCore`} description={copy.helper}>
+    <Layout
+      title={`${title} — PharmaCore`}
+      description={copy.helper}
+      image="/og-quiz.png"
+      schema={quizSchema}
+    >
       <section className="border-b bg-muted/45">
         <div className="page-shell max-w-4xl py-9 lg:py-12">
           <Button variant="ghost" className="-ms-4 mb-6" asChild>

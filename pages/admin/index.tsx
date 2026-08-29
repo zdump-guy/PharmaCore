@@ -846,7 +846,7 @@ export default function AdminPage() {
 
   if (!ready) {
     return (
-      <Layout title="Admin Hub — PharmaCore">
+      <Layout title="Admin Hub — PharmaCore" noindex={true}>
         <div className="grid min-h-screen place-items-center">
           <Loader2 className="size-8 animate-spin text-primary" />
         </div>
@@ -855,7 +855,10 @@ export default function AdminPage() {
   }
 
   return (
-    <Layout title={`${tr("Administration Hub", "لوحة الإدارة والتحليلات")} — PharmaCore`}>
+    <Layout
+      title={`${tr("Administration Hub", "لوحة الإدارة والتحليلات")} — PharmaCore`}
+      noindex={true}
+    >
       <div className="flex min-h-screen bg-muted/20">
         {/* Left / Right Collapsible Categorized Sidebar */}
         <AdminSidebar

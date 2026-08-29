@@ -27,8 +27,33 @@ export default function Home({ courses, siteContent }: HomeProps) {
     { Icon: MessageCircle, title: copy.feature_four_title, body: copy.feature_four_body, className: "md:col-span-2" },
   ]
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const homeSchema = [
+    {
+      "@type": "ItemList",
+      "name": isAr ? "مقررات علم الأدوية والصيدلة السريرية" : "Clinical Pharmacology Courses",
+      "description": copy.courses_body,
+      "numberOfItems": courses.length,
+      "itemListElement": courses.map((course, idx) => ({
+        "@type": "ListItem",
+        "position": idx + 1,
+        "item": {
+          "@type": "Course",
+          "name": isAr ? course.title_ar : course.title_en,
+          "description": isAr ? course.description_ar : course.description_en,
+          "url": `${siteUrl}/course/${course.id}`,
+          "provider": {
+            "@type": "EducationalOrganization",
+            "name": "PharmaCore",
+            "sameAs": siteUrl,
+          },
+        },
+      })),
+    },
+  ]
+
   return (
-    <Layout>
+    <Layout schema={homeSchema}>
       <section className="relative overflow-hidden border-b">
         <div className="clinical-grid pointer-events-none absolute inset-0 opacity-70" aria-hidden="true" />
         <div className="page-shell relative flex min-h-[620px] items-center py-16 lg:py-24">

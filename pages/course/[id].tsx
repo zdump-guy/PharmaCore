@@ -244,8 +244,44 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
           : "This course is restricted to enrolled students. Click Request Enrollment below to submit your access request.",
       }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const courseSchema = [
+    {
+      "@type": "Course",
+      "@id": `${siteUrl}/course/${course.id}#course`,
+      "name": title,
+      "description": description,
+      "provider": {
+        "@type": "EducationalOrganization",
+        "name": "PharmaCore",
+        "sameAs": siteUrl,
+      },
+      "educationalLevel": "HigherEducation",
+      "inLanguage": isAr ? "ar" : "en",
+      "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "courseMode": "online",
+        "courseWorkload": `${lectures.length} ${isAr ? "محاضرات" : "Lectures"}`,
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": siteUrl },
+        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}/#courses` },
+        { "@type": "ListItem", "position": 3, "name": title, "item": `${siteUrl}/course/${course.id}` },
+      ],
+    },
+  ]
+
   return (
-    <Layout title={`${title} — PharmaCore`} description={description}>
+    <Layout
+      title={`${title} — PharmaCore`}
+      description={description}
+      image={course.thumbnail_url || "/og-course.png"}
+      type="article"
+      schema={courseSchema}
+    >
       <section className="border-b bg-muted/45">
         <div className="page-shell py-8 sm:py-10 lg:py-14">
           <Button variant="ghost" className="-ms-4 mb-6 sm:mb-8" asChild>

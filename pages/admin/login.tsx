@@ -155,7 +155,10 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <Layout title={`${tr("Staff & Administration Portal", "بوابة الإدارة وهيئة التدريس")} — PharmaCore`}>
+    <Layout
+      title={`${tr("Staff & Administration Portal", "بوابة الإدارة وهيئة التدريس")} — PharmaCore`}
+      noindex={true}
+    >
       {/* Top Utility Strip */}
       <div className="border-b bg-muted/20">
         <div className="page-shell flex items-center justify-between py-2.5">
