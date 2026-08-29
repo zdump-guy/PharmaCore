@@ -329,7 +329,7 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
         }}
       />
 
-      <div className="page-shell grid min-h-[calc(100vh-5rem)] items-center gap-10 py-10 lg:grid-cols-2 lg:gap-16">
+      <div className="page-shell grid py-10 sm:min-h-[calc(100vh-5rem)] sm:items-center gap-10 lg:grid-cols-2 lg:gap-16">
         {/* Left Side: Educational Value Pitch */}
         <section className="hidden lg:block">
           <div className="inline-flex items-center gap-2 rounded-full border bg-card px-3.5 py-1.5 text-xs font-semibold text-primary">

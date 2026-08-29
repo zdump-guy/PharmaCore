@@ -445,7 +445,7 @@ export default function LecturePage({
       </section>
 
       <div className="page-shell py-6 sm:py-8 lg:py-12">
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <div className="min-w-0">
             {/* Video Player or Gated Banner */}
             <div className="aspect-video overflow-hidden rounded-2xl border bg-[#101819] shadow-sm relative">
@@ -521,10 +521,10 @@ export default function LecturePage({
             {/* Tabs for Summary, Resources, Quizzes, Discussion */}
             <Tabs defaultValue="summary" className="mt-8">
               <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4 bg-muted p-1 gap-1">
-                <TabsTrigger value="summary" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.summary}</TabsTrigger>
-                <TabsTrigger value="resources" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.resources}</TabsTrigger>
-                <TabsTrigger value="quizzes" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.quizzes}</TabsTrigger>
-                <TabsTrigger value="discussion" className="min-h-10 text-xs sm:text-sm font-semibold">{copy.discussion}</TabsTrigger>
+                <TabsTrigger value="summary" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.summary}</TabsTrigger>
+                <TabsTrigger value="resources" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.resources}</TabsTrigger>
+                <TabsTrigger value="quizzes" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.quizzes}</TabsTrigger>
+                <TabsTrigger value="discussion" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.discussion}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="summary" className="mt-5">
@@ -651,7 +651,7 @@ export default function LecturePage({
           </div>
 
           <aside
-            className="min-w-0 space-y-4 xl:sticky xl:top-28 xl:max-h-[calc(100vh-8rem)] xl:overflow-y-auto xl:pe-1 xl:self-start"
+            className="min-w-0 space-y-4 lg:sticky lg:top-28 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pe-1 lg:self-start"
             dir={isAr ? "rtl" : "ltr"}
             aria-labelledby="student-questions-title"
           >

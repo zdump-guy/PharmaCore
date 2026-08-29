@@ -376,14 +376,16 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                 {/* Enrollment Action CTA */}
                 {isAuthenticated && !isEnrolled && !isPendingApproval && (
                   <>
-                    <Turnstile
-                      ref={turnstileRef}
-                      action="course_enroll"
-                      size="flexible"
-                      appearance="interaction-only"
-                      onVerify={(token) => setTurnstileToken(token)}
-                      onExpire={() => setTurnstileToken("")}
-                    />
+                    <div className="w-full max-w-full overflow-hidden flex justify-center my-1">
+                      <Turnstile
+                        ref={turnstileRef}
+                        action="course_enroll"
+                        size="flexible"
+                        appearance="interaction-only"
+                        onVerify={(token) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken("")}
+                      />
+                    </div>
                     <Button
                       onClick={handleEnroll}
                       disabled={enrolling}
@@ -465,7 +467,7 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                         )}
                       </span>
                     </AccordionTrigger>
-                    <AccordionContent className="pb-5 ps-14">
+                    <AccordionContent className="pb-5 ps-6 sm:ps-14">
                       <p className="text-sm text-muted-foreground leading-relaxed">{details}</p>
                       <Button variant={needsAuthToWatch ? "default" : "outline"} className="btn-nowrap mt-4" asChild>
                         <Link href={targetHref}>

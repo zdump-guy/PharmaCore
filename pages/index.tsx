@@ -56,7 +56,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
     <Layout schema={homeSchema}>
       <section className="relative overflow-hidden border-b">
         <div className="clinical-grid pointer-events-none absolute inset-0 opacity-70" aria-hidden="true" />
-        <div className="page-shell relative flex min-h-[620px] items-center py-16 lg:py-24">
+        <div className="page-shell relative flex min-h-[520px] sm:min-h-[620px] items-center py-16 lg:py-24">
           <div className="max-w-4xl animate-fade-up">
             <Badge variant="outline" className="badge-nowrap mb-6 min-h-8 gap-2 border-primary/25 bg-card px-3 text-primary">
               <ShieldCheck className="size-3.5 shrink-0" />
@@ -65,10 +65,10 @@ export default function Home({ courses, siteContent }: HomeProps) {
             <h1 className="display-title">{copy.hero_title_a}{" "}<span className="block text-primary">{copy.hero_title_b}</span></h1>
             <p className="body-lead mt-7">{copy.hero_subtitle}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="btn-nowrap" asChild>
+              <Button size="lg" className="w-full sm:w-auto btn-nowrap" asChild>
                 <a href="#courses">{copy.hero_primary_cta}<ArrowUpRight className="shrink-0" /></a>
               </Button>
-              <Button size="lg" variant="outline" className="btn-nowrap" asChild>
+              <Button size="lg" variant="outline" className="w-full sm:w-auto btn-nowrap" asChild>
                 <a href="#about"><PlayCircle className="shrink-0" />{copy.hero_secondary_cta}</a>
               </Button>
             </div>
@@ -156,7 +156,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
         <div className="page-shell">
           <div className="rounded-3xl border border-primary/25 bg-primary px-6 py-12 text-primary-foreground sm:px-10 lg:flex lg:items-center lg:justify-between lg:px-14">
             <div><h2 className="text-3xl font-bold text-primary-foreground sm:text-4xl">{copy.cta_title}</h2><p className="mt-3 text-primary-foreground/80">{copy.cta_body}</p></div>
-            <Button size="lg" variant="secondary" className="mt-7 lg:mt-0" asChild><a href="#courses">{copy.hero_primary_cta}<ArrowUpRight /></a></Button>
+            <Button size="lg" variant="secondary" className="mt-7 w-full sm:w-auto lg:mt-0" asChild><a href="#courses">{copy.hero_primary_cta}<ArrowUpRight /></a></Button>
           </div>
         </div>
       </section>

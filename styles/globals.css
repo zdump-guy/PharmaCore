@@ -158,7 +158,7 @@
   }
 
   .display-title {
-    @apply max-w-4xl text-balance text-4xl font-extrabold leading-[1.07] sm:text-5xl lg:text-7xl;
+    @apply max-w-4xl text-balance text-4xl font-extrabold leading-[1.07] sm:text-5xl md:text-6xl lg:text-7xl;
   }
 
   .section-title {
@@ -225,6 +225,27 @@
 
   .animation-delay-200 {
     animation-delay: 200ms;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   }
 }
 

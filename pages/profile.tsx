@@ -387,11 +387,11 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
         </div>
 
         {/* ─── Profile Tabs Navigation ──────────────────────────────────────── */}
-        <div className="flex items-center gap-2 border-b pb-2 overflow-x-auto w-full">
+        <div className="flex items-center gap-2 border-b pb-2 overflow-x-auto w-full scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab("info")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === "info"
                 ? "bg-primary text-primary-foreground shadow-2xs"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -404,7 +404,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           <button
             type="button"
             onClick={() => setActiveTab("learning")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === "learning"
                 ? "bg-primary text-primary-foreground shadow-2xs"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -417,7 +417,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           <button
             type="button"
             onClick={() => setActiveTab("security")}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === "security"
                 ? "bg-primary text-primary-foreground shadow-2xs"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"

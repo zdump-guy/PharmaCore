@@ -301,9 +301,7 @@ export default function Navbar() {
 
               {userMenuOpen && (
                 <div
-                  className={`absolute mt-2 w-56 rounded-2xl border bg-card/95 backdrop-blur-xl p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 ${
-                    isAr ? "start-0" : "end-0"
-                  }`}
+                  className="absolute w-[min(14rem,calc(100vw-1.5rem))] end-0 mt-2 rounded-2xl border bg-card/95 backdrop-blur-xl p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100"
                   dir={isAr ? "rtl" : "ltr"}
                 >
                   <div className="px-2.5 py-2 border-b mb-1">
