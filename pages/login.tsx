@@ -390,11 +390,11 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
 
             <Tabs value={tab} onValueChange={(val) => setTab(val as "signin" | "signup")}>
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="badge-nowrap gap-2 min-h-10 text-xs sm:text-sm font-semibold">
+                <TabsTrigger value="signin" className="badge-nowrap gap-2 min-h-[44px] text-xs sm:text-sm font-semibold">
                   <LockKeyhole className="size-3.5 shrink-0" />
                   <span>{copy.signInTab}</span>
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="badge-nowrap gap-2 min-h-10 text-xs sm:text-sm font-semibold">
+                <TabsTrigger value="signup" className="badge-nowrap gap-2 min-h-[44px] text-xs sm:text-sm font-semibold">
                   <UserPlus className="size-3.5 shrink-0" />
                   <span>{copy.signUpTab}</span>
                 </TabsTrigger>

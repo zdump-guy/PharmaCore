@@ -1,5 +1,48 @@
 import type { NextApiRequest, NextApiResponse } from "next"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+
+const getQuerySchema = z.object({
+  courseId: z.string().optional(),
+  studentId: z.string().optional(),
+  status: z.string().optional(),
+})
+
+const patchBodySchema = z.object({
+  action: z.enum(["approve", "accept", "reject", "deny"]).optional(),
+  enrollmentId: z.string().uuid().optional(),
+  enrollmentIds: z.array(z.string().uuid()).optional(),
+  status: z.enum(["active", "pending", "rejected", "completed"]).optional(),
+}).refine(
+  (data) => Boolean(data.enrollmentId || (data.enrollmentIds && data.enrollmentIds.length > 0)),
+  { message: "Missing enrollment ID(s)", path: ["enrollmentId"] }
+).refine(
+  (data) => Boolean(data.action || data.status),
+  { message: "Invalid action or status", path: ["action"] }
+)
+
+const postBodySchema = z.object({
+  studentId: z.string().uuid().optional(),
+  studentIds: z.array(z.string().uuid()).optional(),
+  courseId: z.string().uuid().optional(),
+  courseIds: z.array(z.string().uuid()).optional(),
+  status: z.enum(["active", "pending", "rejected", "completed"]).optional().default("active"),
+}).refine(
+  (data) => Boolean(data.studentId || (data.studentIds && data.studentIds.length > 0)),
+  { message: "Missing student ID(s)", path: ["studentId"] }
+).refine(
+  (data) => Boolean(data.courseId || (data.courseIds && data.courseIds.length > 0)),
+  { message: "Missing course ID(s)", path: ["courseId"] }
+)
+
+const deleteBodySchema = z.object({
+  enrollmentId: z.string().uuid().optional(),
+  studentId: z.string().uuid().optional(),
+  courseId: z.string().uuid().optional(),
+}).refine(
+  (data) => Boolean(data.enrollmentId || (data.studentId && data.courseId)),
+  { message: "Missing enrollment ID or student & course ID pair", path: ["enrollmentId"] }
+)
 
 async function authorizeStaff(req: NextApiRequest) {
   if (!supabaseAdmin) return { error: "Supabase not configured", status: 503 } as const
@@ -28,20 +71,26 @@ async function authorizeStaff(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const staff = await authorizeStaff(req)
-  if ("error" in staff) {
-    return res.status(staff.status).json({ error: staff.error })
-  }
-
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: "Database service unavailable" })
-  }
-
   // ─── GET: List Enrollments by Course, Student, or Status ───────────────────
   if (req.method === "GET") {
-    const courseId = req.query.courseId as string | undefined
-    const studentId = req.query.studentId as string | undefined
-    const status = req.query.status as string | undefined
+    const parsedQuery = getQuerySchema.safeParse(req.query)
+    if (!parsedQuery.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsedQuery.error.flatten(),
+      })
+    }
+
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Database service unavailable" })
+    }
+
+    const { courseId, studentId, status } = parsedQuery.data
 
     try {
       let query = supabaseAdmin
@@ -127,13 +176,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ─── PATCH: Approve or Reject Enrollment Request(s) ─────────────────────────
   if (req.method === "PATCH") {
-    const { action, enrollmentId, enrollmentIds, status: directStatus } = req.body
-
-    const targetIds: string[] = enrollmentIds || (enrollmentId ? [enrollmentId] : [])
-
-    if (!targetIds.length) {
-      return res.status(400).json({ error: "Missing enrollment ID(s)" })
+    const parsed = patchBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsed.error.flatten(),
+      })
     }
+
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Database service unavailable" })
+    }
+
+    const { action, enrollmentId, enrollmentIds, status: directStatus } = parsed.data
+    const targetIds: string[] = enrollmentIds || (enrollmentId ? [enrollmentId] : [])
 
     let targetStatus: "active" | "rejected" | "pending" | "completed" = "active"
 
@@ -144,7 +205,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else if (directStatus) {
       targetStatus = directStatus
     } else {
-      return res.status(400).json({ error: "Invalid action. Must be 'approve' or 'reject'" })
+      targetStatus = "active"
     }
 
     try {
@@ -186,14 +247,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ─── POST: Admin Assign / Batch Enroll Student(s) ───────────────────────────
   if (req.method === "POST") {
-    const { studentId, studentIds, courseId, courseIds, status = "active" } = req.body
+    const parsed = postBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsed.error.flatten(),
+      })
+    }
 
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Database service unavailable" })
+    }
+
+    const { studentId, studentIds, courseId, courseIds, status } = parsed.data
     const targetStudents: string[] = studentIds || (studentId ? [studentId] : [])
     const targetCourses: string[] = courseIds || (courseId ? [courseId] : [])
-
-    if (!targetStudents.length || !targetCourses.length) {
-      return res.status(400).json({ error: "Missing student ID(s) or course ID(s)" })
-    }
 
     try {
       const recordsToInsert = []
@@ -229,7 +302,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ─── DELETE: Admin Remove Enrollment ───────────────────────────────────────
   if (req.method === "DELETE") {
-    const { enrollmentId, studentId, courseId } = req.body
+    const parsed = deleteBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsed.error.flatten(),
+      })
+    }
+
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Database service unavailable" })
+    }
+
+    const { enrollmentId, studentId, courseId } = parsed.data
 
     try {
       let query = supabaseAdmin.from("course_enrollments").delete()
@@ -238,8 +328,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         query = query.eq("id", enrollmentId)
       } else if (studentId && courseId) {
         query = query.eq("user_id", studentId).eq("course_id", courseId)
-      } else {
-        return res.status(400).json({ error: "Missing enrollment ID or student & course ID pair" })
       }
 
       const { error } = await query

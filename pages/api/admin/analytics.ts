@@ -1,5 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+
+const querySchema = z.object({
+  timeRange: z.enum(["today", "7d", "30d"]).optional().default("7d"),
+})
 
 async function authorize(req: NextApiRequest) {
   if (!supabaseAdmin) return { error: "Supabase is not configured", status: 503 } as const
@@ -49,6 +54,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Method not allowed" })
   }
 
+  const parsedQuery = querySchema.safeParse(req.query)
+  if (!parsedQuery.success) {
+    return res.status(400).json({
+      error: "Invalid request payload",
+      details: parsedQuery.error.flatten(),
+    })
+  }
+
   const requester = await authorize(req)
   if ("error" in requester) {
     return res.status(requester.status).json({ error: requester.error })
@@ -58,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(503).json({ error: "Supabase is not configured" })
   }
 
-  const timeRange = (req.query.timeRange as string) || "7d"
+  const timeRange = parsedQuery.data.timeRange
 
   // Calculate start date
   let startDate: string | null = null

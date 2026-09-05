@@ -65,8 +65,8 @@ describe("Tier 2 - Boundary 2: 375px Mobile Viewport (iPhone SE 2nd/3rd Gen)", (
     expect(drawerWidth).toBeLessThan(vp.width)
   })
 
-  it("2.4 brand title renders visibly with min-[360px]:inline at 375px", () => {
-    expect(navbarTsx).toContain("min-[360px]:inline")
+  it("2.4 brand title renders visibly via BrandLogo at 375px", () => {
+    expect(navbarTsx).toContain("BrandLogo")
     expect(vp.width).toBeGreaterThanOrEqual(360)
   })
 

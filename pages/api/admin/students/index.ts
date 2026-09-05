@@ -1,5 +1,76 @@
 import type { NextApiRequest, NextApiResponse } from "next"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+
+const getQuerySchema = z.object({
+  search: z.string().optional(),
+  status: z.string().optional(),
+  university: z.string().optional(),
+})
+
+const approveSchema = z.object({
+  action: z.literal("approve"),
+  studentId: z.string().uuid().optional(),
+  studentIds: z.array(z.string().uuid()).optional(),
+}).refine((d) => Boolean(d.studentId || (d.studentIds && d.studentIds.length > 0)), {
+  message: "No student ID provided",
+  path: ["studentId"],
+})
+
+const rejectSchema = z.object({
+  action: z.literal("reject"),
+  studentId: z.string().uuid().optional(),
+  studentIds: z.array(z.string().uuid()).optional(),
+}).refine((d) => Boolean(d.studentId || (d.studentIds && d.studentIds.length > 0)), {
+  message: "No student ID provided",
+  path: ["studentId"],
+})
+
+const suspendSchema = z.object({
+  action: z.literal("suspend"),
+  studentId: z.string().uuid(),
+  status: z.enum(["active", "pending", "suspended", "needs_setup"]).optional().default("suspended"),
+})
+
+const provisionSchema = z.object({
+  action: z.literal("provision"),
+  studentData: z.object({
+    email: z.string().trim().toLowerCase().email(),
+    password: z.string().min(6).max(128),
+    first_name: z.string().trim().max(60).optional().nullable(),
+    last_name: z.string().trim().max(60).optional().nullable(),
+    university: z.string().trim().max(100).optional().nullable(),
+    faculty: z.string().trim().max(100).optional().nullable(),
+    start_year: z.union([z.number(), z.string()]).optional().nullable(),
+    must_change_password: z.boolean().optional().default(false),
+  }),
+})
+
+const batchProvisionSchema = z.object({
+  action: z.literal("batch_provision"),
+  batchData: z.object({
+    count: z.union([z.number().int().min(1).max(100), z.string()]).optional().default(5),
+    prefix: z.string().trim().optional().default("student"),
+    domain: z.string().trim().optional().default("pharmacore.edu"),
+    password: z.string().optional().default("Pharma@2026"),
+    university: z.string().trim().max(100).optional().nullable(),
+    faculty: z.string().trim().max(100).optional().nullable(),
+    start_year: z.union([z.number(), z.string()]).optional().nullable(),
+    must_change_password: z.boolean().optional().default(true),
+  }).optional(),
+})
+
+const postBodySchema = z.discriminatedUnion("action", [
+  approveSchema,
+  rejectSchema,
+  suspendSchema,
+  provisionSchema,
+  batchProvisionSchema,
+])
+
+const deleteBodySchema = z.object({
+  studentId: z.string().uuid(),
+})
 
 async function authorizeStaff(req: NextApiRequest) {
   if (!supabaseAdmin) return { error: "Supabase is not configured", status: 503 } as const
@@ -26,21 +97,29 @@ async function authorizeStaff(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const staff = await authorizeStaff(req)
-  if ("error" in staff) {
-    return res.status(staff.status).json({ error: staff.error })
-  }
-
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: "Supabase not configured" })
-  }
-
   // ─── GET: List and filter students ──────────────────────────────────────────
   if (req.method === "GET") {
+    const parsedQuery = getQuerySchema.safeParse(req.query)
+    if (!parsedQuery.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsedQuery.error.flatten(),
+      })
+    }
+
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Supabase not configured" })
+    }
+
     try {
-      const search = (req.query.search as string) || ""
-      const statusFilter = (req.query.status as string) || "all"
-      const universityFilter = (req.query.university as string) || "all"
+      const search = parsedQuery.data.search || ""
+      const statusFilter = parsedQuery.data.status || "all"
+      const universityFilter = parsedQuery.data.university || "all"
 
       let query = supabaseAdmin
         .from("users")
@@ -112,12 +191,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ─── POST: Actions (Approve, Reject, Suspend, Provision generic) ──────────
   if (req.method === "POST") {
-    const { action, studentId, studentIds, studentData } = req.body
+    const parsed = postBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsed.error.flatten(),
+      })
+    }
+
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Supabase not configured" })
+    }
+
+    const payload = parsed.data
 
     try {
-      if (action === "approve") {
-        const ids = studentIds || (studentId ? [studentId] : [])
-        if (!ids.length) return res.status(400).json({ error: "No student ID provided" })
+      if (payload.action === "approve") {
+        const ids = payload.studentIds || (payload.studentId ? [payload.studentId] : [])
 
         const { error } = await supabaseAdmin
           .from("users")
@@ -128,9 +223,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ success: true, message: `Approved ${ids.length} student(s).` })
       }
 
-      if (action === "reject") {
-        const ids = studentIds || (studentId ? [studentId] : [])
-        if (!ids.length) return res.status(400).json({ error: "No student ID provided" })
+      if (payload.action === "reject") {
+        const ids = payload.studentIds || (payload.studentId ? [payload.studentId] : [])
 
         for (const id of ids) {
           await supabaseAdmin.auth.admin.deleteUser(id)
@@ -139,9 +233,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ success: true, message: `Rejected and removed ${ids.length} student(s).` })
       }
 
-      if (action === "suspend") {
-        if (!studentId) return res.status(400).json({ error: "Missing student ID" })
-        const targetStatus = req.body.status || "suspended"
+      if (payload.action === "suspend") {
+        const { studentId, status: targetStatus } = payload
 
         const { error } = await supabaseAdmin
           .from("users")
@@ -152,7 +245,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ success: true, message: `Status updated to ${targetStatus}` })
       }
 
-      if (action === "provision") {
+      if (payload.action === "provision") {
         // Provision a generic student account
         const {
           email,
@@ -163,14 +256,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           faculty,
           start_year,
           must_change_password,
-        } = studentData || {}
-
-        if (!email?.trim() || !password) {
-          return res.status(400).json({ error: "Email and temporary password are required" })
-        }
+        } = payload.studentData
 
         const fullName = first_name && last_name ? `${first_name.trim()} ${last_name.trim()}` : "Student Member"
-        const cleanEmail = String(email).trim().toLowerCase()
+        const cleanEmail = email.trim().toLowerCase()
 
         const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
           email: cleanEmail,
@@ -217,7 +306,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
 
-      if (action === "batch_provision") {
+      if (payload.action === "batch_provision") {
         const {
           count = 5,
           prefix = "student",
@@ -227,7 +316,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           faculty,
           start_year,
           must_change_password = true,
-        } = req.body.batchData || {}
+        } = payload.batchData || {}
 
         const parsedCount = Math.max(1, Math.min(100, Number(count) || 5))
         const cleanPrefix = (String(prefix).trim() || "student").toLowerCase().replace(/[^a-z0-9_-]/g, "")
@@ -307,8 +396,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ─── DELETE: Delete a student account ─────────────────────────────────────
   if (req.method === "DELETE") {
-    const { studentId } = req.body
-    if (!studentId) return res.status(400).json({ error: "Missing student ID" })
+    const parsed = deleteBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsed.error.flatten(),
+      })
+    }
+
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Supabase not configured" })
+    }
+
+    const { studentId } = parsed.data
 
     try {
       await supabaseAdmin.auth.admin.deleteUser(studentId)

@@ -1,6 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { loadSiteContent } from "@/lib/siteContent"
+
+const updateProfileSchema = z.object({
+  first_name: z.string().trim().max(60).optional(),
+  last_name: z.string().trim().max(60).optional(),
+  email: z.string().trim().toLowerCase().email().optional(),
+  phone_number: z.string().trim().max(30).optional().nullable(),
+  university: z.string().trim().max(100).optional().nullable(),
+  faculty: z.string().trim().max(100).optional().nullable(),
+  start_year: z.union([z.number(), z.string()]).optional(),
+  password: z.string().min(6).max(128).optional(),
+})
 
 async function authorizeUser(req: NextApiRequest) {
   if (!supabaseAdmin) return { error: "Supabase not configured", status: 503 } as const
@@ -24,14 +36,14 @@ async function authorizeUser(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = await authorizeUser(req)
-  if ("error" in auth) {
-    return res.status(auth.status).json({ error: auth.error })
-  }
-
-  const { user, profile } = auth
-
   if (req.method === "GET") {
+    const auth = await authorizeUser(req)
+    if ("error" in auth) {
+      return res.status(auth.status).json({ error: auth.error })
+    }
+
+    const { user, profile } = auth
+
     return res.status(200).json({
       user: {
         id: user.id,
@@ -48,6 +60,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "PUT" || req.method === "POST") {
+    const parsed = updateProfileSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsed.error.flatten(),
+      })
+    }
+
+    const auth = await authorizeUser(req)
+    if ("error" in auth) {
+      return res.status(auth.status).json({ error: auth.error })
+    }
+
+    const { user, profile } = auth
+
     try {
       const {
         first_name,
@@ -58,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         faculty,
         start_year,
         password,
-      } = req.body
+      } = parsed.data
 
       const cleanEmail = email ? String(email).trim().toLowerCase() : user.email
       const fullName = first_name && last_name ? `${first_name.trim()} ${last_name.trim()}` : profile?.full_name || null

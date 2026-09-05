@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { useUploadThing } from "@/lib/uploadthing"
+import { supabase } from "@/lib/supabaseClient"
 
 export interface UploadedFileMeta {
   url: string
@@ -57,6 +58,13 @@ export default function FileUploader({
   const tr = (en: string, ar: string) => (isAr ? ar : en)
 
   const { startUpload, isUploading } = useUploadThing(endpoint, {
+    headers: async (): Promise<Record<string, string>> => {
+      if (!supabase) return {}
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+    },
     onUploadProgress: (p) => {
       setUploadProgress(p)
     },
@@ -87,6 +95,16 @@ export default function FileUploader({
     onUploadError: (e) => {
       const msg = e.message || ""
       if (
+        msg.toLowerCase().includes("unauthorized") ||
+        msg.toLowerCase().includes("forbidden")
+      ) {
+        setUploadError(
+          tr(
+            "Access denied: Only staff members (mentors, admins) are authorized to upload media.",
+            "تم رفض الوصول: يُسمح فقط للكادر التعليمي والإداري برفع الملفات."
+          )
+        )
+      } else if (
         msg.toLowerCase().includes("token") ||
         msg.toLowerCase().includes("api key") ||
         msg.toLowerCase().includes("500") ||
@@ -114,7 +132,17 @@ export default function FileUploader({
         await startUpload([files[0]])
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
-        if (message.toLowerCase().includes("token") || message.toLowerCase().includes("500")) {
+        if (
+          message.toLowerCase().includes("unauthorized") ||
+          message.toLowerCase().includes("forbidden")
+        ) {
+          setUploadError(
+            tr(
+              "Access denied: Only staff members (mentors, admins) are authorized to upload media.",
+              "تم رفض الوصول: يُسمح فقط للكادر التعليمي والإداري برفع الملفات."
+            )
+          )
+        } else if (message.toLowerCase().includes("token") || message.toLowerCase().includes("500")) {
           setUploadError(
             tr(
               "Uploadthing token is not configured yet. Please add UPLOADTHING_TOKEN in .env.local, or paste a link.",
@@ -137,7 +165,17 @@ export default function FileUploader({
         await startUpload([files[0]])
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
-        if (message.toLowerCase().includes("token") || message.toLowerCase().includes("500")) {
+        if (
+          message.toLowerCase().includes("unauthorized") ||
+          message.toLowerCase().includes("forbidden")
+        ) {
+          setUploadError(
+            tr(
+              "Access denied: Only staff members (mentors, admins) are authorized to upload media.",
+              "تم رفض الوصول: يُسمح فقط للكادر التعليمي والإداري برفع الملفات."
+            )
+          )
+        } else if (message.toLowerCase().includes("token") || message.toLowerCase().includes("500")) {
           setUploadError(
             tr(
               "Uploadthing token is not configured yet. Please add UPLOADTHING_TOKEN in .env.local, or paste a link.",

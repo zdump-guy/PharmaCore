@@ -4,6 +4,7 @@ import { useRouter } from "next/router"
 import {
   FiBookOpen as BookOpen,
   FiChevronRight as ChevronRight,
+  FiDownload as Download,
   FiGlobe as Languages,
   FiHome as HomeIcon,
   FiInfo as InfoIcon,
@@ -16,7 +17,8 @@ import {
   FiUser as UserIcon,
 } from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
-import BrandMark from "@/components/BrandMark"
+import BrandLogo from "@/components/BrandLogo"
+import InstallAppModal from "@/components/InstallAppModal"
 import { useTheme } from "@/components/ThemeProvider"
 import { Button } from "@/components/ui/button"
 import {
@@ -214,13 +216,10 @@ export default function Navbar() {
         <Link
           href="/"
           onClick={(e) => handleNavClick(e, "/", "home")}
-          className="flex min-h-11 min-w-0 items-center gap-2 rounded-full px-1 outline-none transition-colors hover:bg-accent/35 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-2"
+          className="flex min-h-11 min-w-0 items-center rounded-full px-1 outline-none transition-colors hover:bg-accent/35 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-2"
           aria-label={isAr ? "فارما كور - الرئيسية" : "PharmaCore home"}
         >
-          <BrandMark className="size-9 sm:size-10" />
-          <span className="hidden text-sm font-extrabold tracking-tight min-[360px]:inline sm:text-lg whitespace-nowrap shrink-0">
-            Pharma<span className="text-primary">Core</span>
-          </span>
+          <BrandLogo />
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -282,13 +281,28 @@ export default function Navbar() {
             {theme === "dark" ? <Sun /> : <Moon />}
           </Button>
 
+          {/* Desktop Install App Button */}
+          <InstallAppModal
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden shrink-0 rounded-full text-foreground/75 hover:bg-accent/45 hover:text-foreground focus-visible:ring-ring lg:inline-flex"
+                aria-label={isAr ? "تثبيت تطبيق فارما كور" : "Install PharmaCore App"}
+                title={isAr ? "تثبيت التطبيق" : "Install App"}
+              >
+                <Download className="size-4" />
+              </Button>
+            }
+          />
+
           {/* User Profile / Sign In Button */}
           {authUser ? (
             <div className="relative shrink-0" ref={userMenuRef}>
               <Button
                 variant="outline"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="h-10 rounded-full ps-2 pe-3 gap-2 border-primary/30 bg-card/60 hover:bg-card shadow-xs shrink-0 whitespace-nowrap"
+                className="min-h-[44px] h-11 rounded-full ps-2 pe-3 gap-2 border-primary/30 bg-card/60 hover:bg-card shadow-xs shrink-0 whitespace-nowrap"
                 aria-expanded={userMenuOpen}
               >
                 <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs shrink-0">
@@ -357,7 +371,7 @@ export default function Navbar() {
           ) : (
             <Button
               size="sm"
-              className="h-9 sm:h-10 rounded-full px-3.5 sm:px-4 text-xs font-bold gap-1.5 shadow-xs whitespace-nowrap shrink-0"
+              className="min-h-[44px] h-11 rounded-full px-3.5 sm:px-4 text-xs font-bold gap-1.5 shadow-xs whitespace-nowrap shrink-0"
               asChild
             >
               <Link href="/login">
@@ -388,16 +402,11 @@ export default function Navbar() {
               {/* Drawer Top Header */}
               <div className="space-y-6">
                 <SheetHeader className="text-start pe-10">
-                  <SheetTitle className="flex items-center gap-3">
-                    <BrandMark className="size-9 shrink-0" />
-                    <div>
-                      <span className="text-base font-black tracking-tight block">
-                        Pharma<span className="text-primary">Core</span>
-                      </span>
-                      <span className="text-[11px] font-normal text-muted-foreground block -mt-0.5">
-                        {tr("Open Pharmacy Education", "منصة التعليم الصيدلي المفتوح")}
-                      </span>
-                    </div>
+                  <SheetTitle className="flex flex-col items-start gap-1">
+                    <BrandLogo className="h-8 w-auto" />
+                    <span className="text-[11px] font-normal text-muted-foreground block">
+                      {tr("Open Pharmacy Education", "منصة التعليم الصيدلي المفتوح")}
+                    </span>
                   </SheetTitle>
                 </SheetHeader>
 
@@ -414,9 +423,9 @@ export default function Navbar() {
                       </div>
                     </div>
                     {isStaff ? (
-                      <Button size="sm" variant="outline" className="text-xs h-7 px-2" asChild>
+                      <Button size="sm" variant="outline" className="text-xs min-h-[44px] h-11 px-3" asChild>
                         <Link href="/admin">
-                          <ShieldCheck className="size-3" />
+                          <ShieldCheck className="size-3.5" />
                         </Link>
                       </Button>
                     ) : null}
@@ -509,6 +518,28 @@ export default function Navbar() {
                       </Link>
                     </SheetClose>
                   )}
+
+                  {/* PWA Install Action Card in Mobile Drawer */}
+                  <InstallAppModal
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-primary/10 text-primary hover:bg-primary/15 transition-all min-h-[48px] cursor-pointer"
+                        aria-label={isAr ? "تثبيت تطبيق فارما كور" : "Install PharmaCore App"}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground">
+                            <Download className="size-4" />
+                          </span>
+                          <div className="text-start">
+                            <p className="text-xs font-bold leading-none">{isAr ? "تثبيت التطبيق" : "Install App"}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1 font-normal leading-none">{isAr ? "إضافة لسطح المكتب أو الهاتف" : "Add to Desktop / Phone"}</p>
+                          </div>
+                        </div>
+                        <ChevronRight className={`size-4 ${isAr ? "rotate-180" : ""}`} />
+                      </button>
+                    }
+                  />
                 </div>
               </div>
 
@@ -547,7 +578,7 @@ export default function Navbar() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    className="w-full rounded-2xl h-10 gap-2 font-bold"
+                    className="w-full rounded-2xl min-h-[44px] h-11 gap-2 font-bold"
                     onClick={handleSignOut}
                   >
                     <LogOut className="size-4" />

@@ -1,11 +1,37 @@
 import type { NextApiRequest, NextApiResponse } from "next"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { loadSiteContent } from "@/lib/siteContent"
 import { verifyTurnstileToken, extractClientIp } from "@/lib/turnstile"
+import { checkRateLimit } from "@/lib/rateLimit"
+
+const signupSchema = z.object({
+  first_name: z.string().trim().min(1, "First name is required").max(60),
+  last_name: z.string().trim().min(1, "Last name is required").max(60),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters long").max(128),
+  phone_number: z.string().trim().max(30).optional().nullable(),
+  university: z.string().trim().max(100).optional().nullable(),
+  faculty: z.string().trim().max(100).optional().nullable(),
+  start_year: z.union([z.number(), z.string()]).optional(),
+  turnstileToken: z.string().optional().nullable(),
+})
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" })
+  }
+
+  if (!checkRateLimit(req, res, { limit: 5, windowMs: 60_000, prefix: "signup" })) {
+    return
+  }
+
+  const parsed = signupSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "Invalid request payload",
+      details: parsed.error.flatten(),
+    })
   }
 
   if (!supabaseAdmin) {
@@ -37,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       faculty,
       start_year,
       turnstileToken,
-    } = req.body
+    } = parsed.data
 
     // 1. Cloudflare Turnstile Bot & Spam Verification
     const clientIp = extractClientIp(req)
@@ -52,15 +78,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         error: "Security verification failed. Please refresh and try again.",
         error_ar: "فشل التحقق الأمني من النشاط التلقائي. يرجى إعادة المحاولة.",
       })
-    }
-
-    // Validation
-    if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !password) {
-      return res.status(400).json({ error: "Please fill in all required personal information fields." })
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters long." })
     }
 
     const cleanEmail = String(email).trim().toLowerCase()

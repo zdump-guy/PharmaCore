@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyTurnstileToken, extractClientIp } from '@/lib/turnstile';
+import { checkRateLimit } from '@/lib/rateLimit';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -14,6 +15,10 @@ const schema = z.object({
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!checkRateLimit(req, res, { limit: 10, windowMs: 60_000, prefix: "questions" })) {
+    return;
   }
 
   const parsed = schema.safeParse(req.body);

@@ -70,8 +70,8 @@ export default function Layout({
       "logo": {
         "@type": "ImageObject",
         "url": `${siteUrl}/pharmacore-logo.svg`,
-        "width": 920,
-        "height": 280,
+        "width": 281,
+        "height": 60,
       },
       "image": `${siteUrl}/og-image.png`,
       "description":

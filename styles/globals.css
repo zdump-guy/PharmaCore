@@ -108,6 +108,11 @@
     font-family: var(--font-tajawal);
   }
 
+  [dir="rtl"] .font-sans,
+  [dir="rtl"] .font-display {
+    font-family: var(--font-tajawal), system-ui, sans-serif;
+  }
+
   [dir="rtl"] h1,
   [dir="rtl"] h2,
   [dir="rtl"] h3,

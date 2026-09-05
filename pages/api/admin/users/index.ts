@@ -118,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === "DELETE") {
     const parsed = deleteSchema.safeParse(req.body)
-    if (!parsed.success) return res.status(400).json({ error: "Invalid input" })
+    if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() })
     if (parsed.data.userId === requester.user.id) {
       return res.status(400).json({ error: "You cannot delete your own account" })
     }

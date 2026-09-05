@@ -1,5 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { checkRateLimit } from '@/lib/rateLimit';
+
+const createUserSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  password: z.string().min(8).max(128),
+  full_name: z.string().trim().min(1).max(120),
+  role: z.enum(['dev', 'super_admin', 'mentor']),
+});
 
 export default async function handler(
   req: NextApiRequest,
@@ -7,6 +16,18 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!checkRateLimit(req, res, { limit: 15, windowMs: 60_000, prefix: "admin_users" })) {
+    return;
+  }
+
+  const parsed = createUserSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "Invalid request payload",
+      details: parsed.error.flatten(),
+    });
   }
 
   if (!supabaseAdmin) {
@@ -39,19 +60,7 @@ export default async function handler(
     return res.status(403).json({ error: 'Forbidden: Insufficient privileges' });
   }
 
-  const { email, password, full_name, role } = req.body;
-
-  if (!email || !password || !full_name || !role) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
-  if (!['dev', 'super_admin', 'mentor'].includes(role)) {
-    return res.status(400).json({ error: 'Invalid role' });
-  }
-
-  if (typeof password !== 'string' || password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters' });
-  }
+  const { email, password, full_name, role } = parsed.data;
 
   try {
     // 1. Create user in Supabase Auth

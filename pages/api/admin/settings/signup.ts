@@ -1,7 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from "next"
+import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { loadSiteContent, mergeSiteContent } from "@/lib/siteContent"
 import type { EnrollmentSettings } from "@/types"
+
+const universitySchema = z.object({
+  id: z.string(),
+  name_en: z.string().min(1),
+  name_ar: z.string().min(1),
+})
+
+const facultySchema = z.object({
+  id: z.string(),
+  name_en: z.string().min(1),
+  name_ar: z.string().min(1),
+  duration_years: z.number().int().min(1).max(10),
+})
+
+const settingsBodySchema = z.object({
+  enrollment_settings: z.object({
+    signup_mode: z.enum(["approval_required", "open_registration", "admin_provisioned"]),
+    universities: z.array(universitySchema),
+    faculties: z.array(facultySchema),
+  }),
+})
 
 async function authorizeStaff(req: NextApiRequest) {
   if (!supabaseAdmin) return { error: "Supabase is not configured", status: 503 } as const
@@ -28,16 +50,16 @@ async function authorizeStaff(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const staff = await authorizeStaff(req)
-  if ("error" in staff) {
-    return res.status(staff.status).json({ error: staff.error })
-  }
-
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: "Supabase is not configured" })
-  }
-
   if (req.method === "GET") {
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Supabase is not configured" })
+    }
+
     const siteContent = await loadSiteContent()
     return res.status(200).json({
       enrollment_settings: siteContent.enrollment_settings,
@@ -45,12 +67,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "POST" || req.method === "PUT") {
-    try {
-      const { enrollment_settings } = req.body as { enrollment_settings: EnrollmentSettings }
+    const parsed = settingsBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request payload",
+        details: parsed.error.flatten(),
+      })
+    }
 
-      if (!enrollment_settings) {
-        return res.status(400).json({ error: "Missing enrollment_settings data" })
-      }
+    const staff = await authorizeStaff(req)
+    if ("error" in staff) {
+      return res.status(staff.status).json({ error: staff.error })
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: "Supabase is not configured" })
+    }
+
+    try {
+      const { enrollment_settings } = parsed.data as { enrollment_settings: EnrollmentSettings }
 
       const currentContent = await loadSiteContent()
       const updatedContent = mergeSiteContent({

@@ -16,7 +16,11 @@ const config: Config = {
         popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
       },
-      fontFamily: { sans: ["var(--font-inter)"], display: ["var(--font-inter)"] },
+      fontFamily: {
+        sans: ["var(--font-inter)", "var(--font-tajawal)", "system-ui", "sans-serif"],
+        display: ["var(--font-inter)", "var(--font-tajawal)", "system-ui", "sans-serif"],
+        tajawal: ["var(--font-tajawal)", "sans-serif"],
+      },
       borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

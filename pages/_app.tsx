@@ -7,6 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { ThemeProvider } from "@/components/ThemeProvider"
 import { SiteContentProvider, useSiteContent } from "@/components/SiteContentProvider"
 import MaintenanceScreen from "@/components/MaintenanceScreen"
+import ErrorBoundary from "@/components/ErrorBoundary"
 import { inter, tajawal } from "@/lib/fonts"
 import { initAnalytics, trackPageView } from "@/lib/analytics"
 import { supabase } from "@/lib/supabaseClient"
@@ -89,11 +90,34 @@ function App({ Component, pageProps }: AppProps) {
     document.documentElement.dir = isArabic ? "rtl" : "ltr"
   }, [locale])
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      const registerSW = () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then(() => {
+            // Service Worker registered
+          })
+          .catch((err) => {
+            console.warn("[SW] Registration failed:", err)
+          })
+      }
+
+      if (document.readyState === "complete") {
+        registerSW()
+      } else {
+        window.addEventListener("load", registerSW, { once: true })
+      }
+    }
+  }, [])
+
   return (
     <div className={`${inter.variable} ${tajawal.variable} font-sans`}>
       <ThemeProvider>
         <SiteContentProvider initialContent={pageProps.siteContent}>
-          <AppContent Component={Component} pageProps={pageProps} />
+          <ErrorBoundary>
+            <AppContent Component={Component} pageProps={pageProps} />
+          </ErrorBoundary>
         </SiteContentProvider>
       </ThemeProvider>
       <Analytics />
