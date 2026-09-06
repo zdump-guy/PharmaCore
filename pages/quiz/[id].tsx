@@ -16,6 +16,7 @@ import {
   FiX as X,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
+import Breadcrumb from "@/components/Breadcrumb"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,16 +27,18 @@ import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { cn } from "@/lib/utils"
 import { trackQuizStart, trackQuestionAnswered, trackQuizSubmit, trackQuizRetry } from "@/lib/analytics"
-import type { Question, Quiz } from "@/types"
+import type { Course, Lecture, Question, Quiz } from "@/types"
 
 interface QuizPageProps {
   quiz: Quiz | null
   questions: Question[]
   isLocked: boolean
+  course?: Course | null
+  lecture?: Lecture | null
   siteContent: SiteContent
 }
 
-export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
+export default function QuizPage({ quiz, questions, isLocked, course = null, lecture = null }: QuizPageProps) {
   const { locale } = useRouter()
   const isAr = locale === "ar"
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -180,14 +183,43 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const quizUrl = `${siteUrl}${isAr ? "/ar" : ""}/quiz/${quiz.id}`
+  const courseId = quiz.course_id
+  const courseUrl = courseId ? `${siteUrl}${isAr ? "/ar" : ""}/course/${courseId}` : undefined
+  const courseTitle = isAr ? course?.title_ar || "المقرر" : course?.title_en || "Course"
+  const lectureId = quiz.lecture_id
+  const lectureUrl = lectureId ? `${siteUrl}${isAr ? "/ar" : ""}/lecture/${lectureId}` : undefined
+  const lectureTitle = isAr ? lecture?.title_ar || "المحاضرة" : lecture?.title_en || "Lecture"
+
+  const breadcrumbItems = [
+    { label: isAr ? "المقررات" : "Courses", href: "/#courses" },
+    ...(courseId
+      ? [{ label: courseTitle, href: `/course/${courseId}` }]
+      : []),
+    ...(lectureId
+      ? [{ label: lectureTitle, href: `/lecture/${lectureId}` }]
+      : []),
+    { label: title },
+  ]
+
   const quizSchema = [
     {
       "@type": "Quiz",
-      "@id": `${siteUrl}/quiz/${quiz.id}#quiz`,
+      "@id": `${quizUrl}#quiz`,
       "name": title,
       "description": copy.helper,
       "educationalLevel": "HigherEducation",
       "inLanguage": isAr ? "ar" : "en",
+      "url": quizUrl,
+      ...(courseUrl
+        ? {
+            "isPartOf": {
+              "@type": "Course",
+              "name": courseTitle,
+              "url": courseUrl,
+            },
+          }
+        : {}),
       "provider": {
         "@type": "EducationalOrganization",
         "name": "PharmaCore",
@@ -197,9 +229,34 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
     {
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": siteUrl },
-        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}/#courses` },
-        { "@type": "ListItem", "position": 3, "name": title, "item": `${siteUrl}/quiz/${quiz.id}` },
+        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": `${siteUrl}${isAr ? "/ar" : ""}` },
+        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}${isAr ? "/ar" : ""}/#courses` },
+        ...(courseUrl
+          ? [
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": courseTitle,
+                "item": courseUrl,
+              },
+            ]
+          : []),
+        ...(lectureUrl
+          ? [
+              {
+                "@type": "ListItem",
+                "position": courseUrl ? 4 : 3,
+                "name": lectureTitle,
+                "item": lectureUrl,
+              },
+            ]
+          : []),
+        {
+          "@type": "ListItem",
+          "position": (courseUrl ? 1 : 0) + (lectureUrl ? 1 : 0) + 2 + 1,
+          "name": title,
+          "item": quizUrl,
+        },
       ],
     },
   ]
@@ -213,6 +270,7 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
         schema={quizSchema}
       >
         <div className="page-shell section-space max-w-xl text-center">
+          <Breadcrumb items={breadcrumbItems} className="mb-6 justify-center" />
           <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/30">
             <LockKeyhole className="size-8" />
           </div>
@@ -246,6 +304,7 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
     >
       <section className="border-b bg-muted/45">
         <div className="page-shell max-w-4xl py-9 lg:py-12">
+          <Breadcrumb items={breadcrumbItems} className="mb-4" />
           <Button variant="ghost" className="-ms-4 mb-6" asChild>
             <Link href={backHref}>
               <DirectionArrow />
@@ -361,10 +420,28 @@ export default function QuizPage({ quiz, questions, isLocked }: QuizPageProps) {
             {answeredCount < questions.length ? copy.complete : `${questions.length} / ${questions.length}`}
           </p>
           {submitted ? (
-            <Button size="lg" variant="outline" className="btn-nowrap" onClick={reset}>
-              <RotateCcw className="size-4 shrink-0" />
-              <span>{copy.retry}</span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="lg" variant="outline" className="btn-nowrap" onClick={reset}>
+                <RotateCcw className="size-4 shrink-0" />
+                <span>{copy.retry}</span>
+              </Button>
+              {quiz.course_id && (
+                <Button size="lg" className="btn-nowrap bg-primary text-primary-foreground font-bold" asChild>
+                  <Link href={`/course/${quiz.course_id}`}>
+                    <CheckCircle2 className="size-4 shrink-0" />
+                    <span>{isAr ? "العودة إلى المقرر" : "Return to Course"}</span>
+                  </Link>
+                </Button>
+              )}
+              {quiz.lecture_id && (
+                <Button size="lg" variant="secondary" className="btn-nowrap font-bold" asChild>
+                  <Link href={`/lecture/${quiz.lecture_id}`}>
+                    <DirectionArrow className="size-4 shrink-0" />
+                    <span>{isAr ? "مراجعة المحاضرة" : "Review Lecture"}</span>
+                  </Link>
+                </Button>
+              )}
+            </div>
           ) : (
             <Button size="lg" className="btn-nowrap" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}>
               <Send className="size-4 shrink-0" />
@@ -382,6 +459,8 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
   let quiz: Quiz | null = null
   let questions: Question[] = []
   let isLocked = false
+  let course: Course | null = null
+  let lecture: Lecture | null = null
 
   if (supabase) {
     try {
@@ -389,15 +468,31 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
       if (quizData) {
         quiz = quizData
         const courseId = quizData.course_id
+        const lectureId = quizData.lecture_id
 
         if (courseId) {
-          const { data: courseData } = await supabase.from("courses").select("is_locked, access_policy").eq("id", courseId).maybeSingle()
+          const { data: courseData } = await supabase
+            .from("courses")
+            .select("*")
+            .eq("id", courseId)
+            .maybeSingle()
           if (courseData) {
+            course = courseData
             isLocked = Boolean(
               courseData.is_locked ||
               courseData.access_policy === "students_only" ||
               courseData.access_policy === "enrolled_only"
             )
+          }
+        }
+        if (lectureId) {
+          const { data: lectureData } = await supabase
+            .from("lectures")
+            .select("*")
+            .eq("id", lectureId)
+            .maybeSingle()
+          if (lectureData) {
+            lecture = lectureData
           }
         }
       }
@@ -417,6 +512,8 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
       quiz,
       questions,
       isLocked,
+      course,
+      lecture,
       siteContent: await loadSiteContent(),
       ...(await serverSideTranslations(locale ?? "en", ["common"])),
     },

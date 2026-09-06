@@ -94,7 +94,7 @@ export default function CommunityManager({
                 <p className="font-extrabold text-sm text-foreground truncate">{question.author_name}</p>
                 <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   <Clock className="size-3 shrink-0" />
-                  <span>
+                  <span suppressHydrationWarning>
                     {new Date(question.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US", {
                       month: "short",
                       day: "numeric",

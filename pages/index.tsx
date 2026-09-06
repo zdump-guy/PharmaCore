@@ -41,7 +41,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
           "@type": "Course",
           "name": isAr ? course.title_ar : course.title_en,
           "description": isAr ? course.description_ar : course.description_en,
-          "url": `${siteUrl}/course/${course.id}`,
+          "url": `${siteUrl}${isAr ? "/ar" : ""}/course/${course.id}`,
           "provider": {
             "@type": "EducationalOrganization",
             "name": "PharmaCore",
@@ -49,6 +49,63 @@ export default function Home({ courses, siteContent }: HomeProps) {
           },
         },
       })),
+    },
+    {
+      "@type": "FAQPage",
+      "name": isAr ? "الأسئلة الشائعة حول منصة فارماكور" : "Frequently Asked Questions — PharmaCore",
+      "mainEntity": isAr
+        ? [
+            {
+              "@type": "Question",
+              "name": "ما هي منصة فارماكور (PharmaCore)؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "فارماكور هي منصة تعليمية متخصصة تقدم مقررات جامعية ومتقدمة في علم الأدوية السريرية والصيدلة، مع شروحات مرئية، وملخصات سريرية قابلة للتحميل، واختبارات تفاعلية لتقييم المعرفة.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "هل مقررات فارماكور متاحة لجميع طلاب العلوم الصحية؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "نعم، المقررات الأساسية في علم الأدوية السريرية متاحة لطلاب الصيدلة والطب والعلوم الصحية مع إمكانية التسجيل ومتابعة المحاضرات بشكل منظم.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "كيف يمكنني تقييم فهمي للمحاضرات السريرية؟",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "تتضمن كل محاضرة اختبارات سريرية قصيرة تقيس آليات عمل الأدوية، وموانع الاستعمال، والتداخلات الدوائية، وتطبيقات الممارسة الإكلينيكية.",
+              },
+            },
+          ]
+        : [
+            {
+              "@type": "Question",
+              "name": "What is PharmaCore?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PharmaCore is a specialized educational platform delivering university-grade clinical pharmacology and pharmacy courses, visual lecture breakdowns, downloadable clinical summaries, and interactive knowledge checkpoints.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "Are the courses on PharmaCore freely accessible?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, core clinical pharmacology courses are freely accessible to healthcare students and professionals, with open enrollment and structured video modules.",
+              },
+            },
+            {
+              "@type": "Question",
+              "name": "Can I test my clinical knowledge after lectures?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Every lecture is accompanied by targeted assessment quizzes testing mechanisms of action, drug contraindications, adverse interactions, and clinical pharmacology principles.",
+              },
+            },
+          ],
     },
   ]
 

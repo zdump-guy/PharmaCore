@@ -315,7 +315,7 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
   }
 
   return (
-    <Layout title={`${isAr ? "تسجيل الدخول والاشتراك" : "Sign In & Student Registration"} — PharmaCore`} description={copy.loginSubtitle}>
+    <Layout title={`${isAr ? "تسجيل الدخول والاشتراك" : "Sign In & Student Registration"} — PharmaCore`} description={copy.loginSubtitle} noindex={true}>
       {/* Generic provisioned account setup wizard modal */}
       <StudentSetupModal
         open={setupModalOpen}

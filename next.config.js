@@ -26,8 +26,21 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  productionBrowserSourceMaps: false,
   outputFileTracingRoot: path.join(__dirname),
   i18n,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  experimental: {
+    optimizePackageImports: [
+      'react-icons',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+    ],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'drive.google.com' },

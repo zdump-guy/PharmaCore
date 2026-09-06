@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
+import Breadcrumb from "@/components/Breadcrumb"
 import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
@@ -25,15 +26,16 @@ import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { trackCourseView } from "@/lib/analytics"
-import type { Course, Lecture } from "@/types"
+import type { Course, Lecture, Quiz } from "@/types"
 
 interface CoursePageProps {
   course: Course | null
   lectures: Lecture[]
+  quizzes?: Quiz[]
   siteContent: SiteContent
 }
 
-export default function CoursePage({ course, lectures }: CoursePageProps) {
+export default function CoursePage({ course, lectures, quizzes = [] }: CoursePageProps) {
   const { locale } = useRouter()
   const isAr = locale === "ar"
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
@@ -245,16 +247,25 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
       }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const courseUrl = `${siteUrl}${isAr ? "/ar" : ""}/course/${course.id}`
   const courseSchema = [
     {
       "@type": "Course",
-      "@id": `${siteUrl}/course/${course.id}#course`,
+      "@id": `${courseUrl}#course`,
       "name": title,
       "description": description,
+      "url": courseUrl,
       "provider": {
         "@type": "EducationalOrganization",
         "name": "PharmaCore",
         "sameAs": siteUrl,
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "category": "Free",
+        "availability": "https://schema.org/InStock",
       },
       "educationalLevel": "HigherEducation",
       "inLanguage": isAr ? "ar" : "en",
@@ -267,9 +278,9 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
     {
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": siteUrl },
-        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}/#courses` },
-        { "@type": "ListItem", "position": 3, "name": title, "item": `${siteUrl}/course/${course.id}` },
+        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": `${siteUrl}${isAr ? "/ar" : ""}` },
+        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}${isAr ? "/ar" : ""}/#courses` },
+        { "@type": "ListItem", "position": 3, "name": title, "item": courseUrl },
       ],
     },
   ]
@@ -284,6 +295,14 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
     >
       <section className="border-b bg-muted/45">
         <div className="page-shell py-8 sm:py-10 lg:py-14">
+          <Breadcrumb
+            items={[
+              { label: isAr ? "المقررات" : "Courses", href: "/#courses" },
+              { label: title },
+            ]}
+            className="mb-4"
+          />
+
           <Button variant="ghost" className="-ms-4 mb-6 sm:mb-8" asChild>
             <Link href="/#courses">
               <DirectionArrow className="size-4" />
@@ -469,17 +488,47 @@ export default function CoursePage({ course, lectures }: CoursePageProps) {
                     </AccordionTrigger>
                     <AccordionContent className="pb-5 ps-6 sm:ps-14">
                       <p className="text-sm text-muted-foreground leading-relaxed">{details}</p>
-                      <Button variant={needsAuthToWatch ? "default" : "outline"} className="btn-nowrap mt-4" asChild>
-                        <Link href={targetHref}>
-                          {needsAuthToWatch ? <LockKeyhole className="shrink-0" /> : <PlayCircle className="shrink-0" />}
-                          <span>{needsAuthToWatch ? copy.openLocked : copy.open}</span>
-                        </Link>
-                      </Button>
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <Button variant={needsAuthToWatch ? "default" : "outline"} className="btn-nowrap" asChild>
+                          <Link href={targetHref}>
+                            {needsAuthToWatch ? <LockKeyhole className="shrink-0" /> : <PlayCircle className="shrink-0" />}
+                            <span>{needsAuthToWatch ? copy.openLocked : copy.open}</span>
+                          </Link>
+                        </Button>
+                        {quizzes?.filter((q) => q.lecture_id === lecture.id).map((quiz) => (
+                          <Button key={quiz.id} variant="secondary" className="btn-nowrap gap-1.5" asChild>
+                            <Link href={`/quiz/${quiz.id}`}>
+                              <BookOpen className="size-4 shrink-0 text-primary" />
+                              <span>{isAr ? quiz.title_ar || "اختبار المحاضرة" : quiz.title_en || "Lecture Quiz"}</span>
+                            </Link>
+                          </Button>
+                        ))}
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 )
               })}
             </Accordion>
+
+            {quizzes && quizzes.length > 0 && (
+              <div className="mt-8 border-t pt-6">
+                <h3 className="text-xl font-bold mb-4">{isAr ? "اختبارات التقييم الإكلينيكي" : "Clinical Assessment Quizzes"}</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {quizzes.map((quiz) => (
+                    <Card key={quiz.id} className="p-4 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-sm truncate">{isAr ? quiz.title_ar : quiz.title_en}</h4>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/quiz/${quiz.id}`}>
+                          {isAr ? "بدء الاختبار" : "Take Quiz"}
+                        </Link>
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
@@ -526,6 +575,7 @@ export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ 
   const id = params?.id as string
   let course: Course | null = null
   let lectures: Lecture[] = []
+  let quizzes: Quiz[] = []
 
   if (supabase) {
     try {
@@ -539,6 +589,13 @@ export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ 
         .order("order", { ascending: true })
 
       if (lecturesData) lectures = lecturesData
+
+      const { data: quizzesData } = await supabase
+        .from("quizzes")
+        .select("*")
+        .eq("course_id", id)
+
+      if (quizzesData) quizzes = quizzesData
     } catch {}
   }
 
@@ -546,6 +603,7 @@ export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ 
     props: {
       course,
       lectures,
+      quizzes,
       siteContent: await loadSiteContent(),
       ...(await serverSideTranslations(locale ?? "en", ["common"])),
     },

@@ -42,11 +42,18 @@ export function initAnalytics() {
 
   // Check Supabase session on init
   if (supabase) {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        currentUserId = session.user.id
-      }
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          currentUserId = session.user.id
+        }
+      })
+      .catch((err: unknown) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Analytics auth session warning:", err)
+        }
+      })
 
     // Listen to Supabase Realtime for live events stream across all tabs/users
     if (!realtimeChannelSubscribed) {
@@ -127,9 +134,8 @@ export function trackEvent(eventName: string, properties?: Record<string, unknow
 
   // Persist directly to Supabase analytics_events table
   if (supabase) {
-    supabase
-      .from("analytics_events")
-      .insert([
+    Promise.resolve(
+      supabase.from("analytics_events").insert([
         {
           event_name: eventName,
           properties: payloadProps,
@@ -138,10 +144,17 @@ export function trackEvent(eventName: string, properties?: Record<string, unknow
           url: currentUrl,
         },
       ])
+    )
       .then(({ error }) => {
-        if (error) {
+        if (error && process.env.NODE_ENV !== "production") {
           // Table might not exist yet before migration
           console.warn("Analytics insertion warning:", error.message)
+        }
+      })
+      .catch((err: unknown) => {
+        // Suppress unhandled promise rejection if network drops or ad-blocker blocks telemetry
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Analytics insertion network error:", err)
         }
       })
   }

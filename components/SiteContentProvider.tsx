@@ -38,11 +38,17 @@ export function SiteContentProvider({
     let isMounted = true
 
     // Fetch latest directly from Supabase
-    loadSiteContent().then((latest) => {
-      if (isMounted && latest) {
-        setContent(latest)
-      }
-    })
+    loadSiteContent()
+      .then((latest) => {
+        if (isMounted && latest) {
+          setContent(latest)
+        }
+      })
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Failed to load site content:", err)
+        }
+      })
 
     // Supabase Realtime Listener for instant global maintenance & content sync
     if (supabase) {

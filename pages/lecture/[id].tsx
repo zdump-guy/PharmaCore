@@ -20,6 +20,7 @@ import {
   FiShield as ShieldCheck,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
+import Breadcrumb from "@/components/Breadcrumb"
 import YouTubePlayer from "@/components/YouTubePlayer"
 import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -43,6 +44,10 @@ interface LecturePageProps {
   courseId: string | null
   course: Course | null
   isLocked: boolean
+  previousLecture?: Lecture | null
+  nextLecture?: Lecture | null
+  currentIndex?: number
+  totalLectures?: number
   siteContent: SiteContent
 }
 
@@ -176,9 +181,17 @@ export default function LecturePage({
   courseId,
   course,
   isLocked,
+  previousLecture = null,
+  nextLecture = null,
+  currentIndex = 0,
+  totalLectures = 1,
 }: LecturePageProps) {
   const { locale } = useRouter()
   const isAr = locale === "ar"
+  const prevLecture = previousLecture
+  const hasPrev = Boolean(prevLecture)
+  const isLastLecture = !nextLecture || (totalLectures > 0 && currentIndex === totalLectures - 1)
+  const [isMounted, setIsMounted] = useState(false)
   const [questions, setQuestions] = useState(initialQuestions)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [sessionToken, setSessionToken] = useState<string | null>(null)
@@ -186,7 +199,13 @@ export default function LecturePage({
   const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
   const [enrolling, setEnrolling] = useState(false)
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null)
+  const [enrollTurnstileToken, setEnrollTurnstileToken] = useState("")
+  const enrollTurnstileRef = useRef<TurnstileRef>(null)
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Check auth session & enrollment
   useEffect(() => {
@@ -239,6 +258,9 @@ export default function LecturePage({
           "Content-Type": "application/json",
           Authorization: `Bearer ${sessionToken}`,
         },
+        body: JSON.stringify({
+          turnstileToken: enrollTurnstileToken,
+        }),
       })
       const data = await res.json()
       if (res.ok && data.success) {
@@ -255,10 +277,13 @@ export default function LecturePage({
               : "Enrollment request submitted! It is now pending admin review."
           )
         }
+        enrollTurnstileRef.current?.reset()
       } else {
+        enrollTurnstileRef.current?.reset()
         setEnrollMsg(data.error || (isAr ? "تعذر إتمام التسجيل" : "Failed to enroll"))
       }
     } catch {
+      enrollTurnstileRef.current?.reset()
       setEnrollMsg(isAr ? "حدث خطأ أثناء الاشتراك" : "Error during enrollment")
     } finally {
       setEnrolling(false)
@@ -346,6 +371,9 @@ export default function LecturePage({
       }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const courseUrl = courseId ? `${siteUrl}${isAr ? "/ar" : ""}/course/${courseId}` : undefined
+  const courseTitle = isAr ? course?.title_ar || "المقرر" : course?.title_en || "Course"
+  const lectureUrl = `${siteUrl}${isAr ? "/ar" : ""}/lecture/${lecture.id}`
   const lectureThumbnail = videoId
     ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
     : `${siteUrl}/og-course.png`
@@ -353,12 +381,20 @@ export default function LecturePage({
   const lectureSchema = [
     {
       "@type": "LearningResource",
-      "@id": `${siteUrl}/lecture/${lecture.id}#lecture`,
+      "@id": `${lectureUrl}#lecture`,
       "name": title,
       "description": details || title,
       "learningResourceType": "Lecture Video",
       "educationalLevel": "HigherEducation",
       "inLanguage": isAr ? "ar" : "en",
+      "url": lectureUrl,
+      ...(courseId ? {
+        "isPartOf": {
+          "@type": "Course",
+          "name": courseTitle,
+          "url": courseUrl,
+        }
+      } : {}),
       "provider": {
         "@type": "EducationalOrganization",
         "name": "PharmaCore",
@@ -374,28 +410,36 @@ export default function LecturePage({
             "thumbnailUrl": [lectureThumbnail],
             "uploadDate": lecture.created_at || new Date().toISOString(),
             "embedUrl": `https://www.youtube.com/embed/${videoId}`,
+            ...(courseId ? {
+              "isPartOf": {
+                "@type": "Course",
+                "name": courseTitle,
+                "url": courseUrl,
+              }
+            } : {}),
           },
         ]
       : []),
     {
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": siteUrl },
+        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": `${siteUrl}${isAr ? "/ar" : ""}` },
+        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}${isAr ? "/ar" : ""}/#courses` },
         ...(courseId
           ? [
               {
                 "@type": "ListItem",
-                "position": 2,
-                "name": isAr ? course?.title_ar || "المقرر" : course?.title_en || "Course",
-                "item": `${siteUrl}/course/${courseId}`,
+                "position": 3,
+                "name": courseTitle,
+                "item": courseUrl,
               },
             ]
           : []),
         {
           "@type": "ListItem",
-          "position": courseId ? 3 : 2,
+          "position": courseId ? 4 : 3,
           "name": title,
-          "item": `${siteUrl}/lecture/${lecture.id}`,
+          "item": lectureUrl,
         },
       ],
     },
@@ -411,6 +455,17 @@ export default function LecturePage({
     >
       <section className="border-b bg-muted/40">
         <div className="page-shell py-6 sm:py-8 lg:py-12">
+          <Breadcrumb
+            items={[
+              { label: isAr ? "المقررات" : "Courses", href: "/#courses" },
+              ...(courseId && course
+                ? [{ label: isAr ? course.title_ar : course.title_en, href: `/course/${courseId}` }]
+                : []),
+              { label: title },
+            ]}
+            className="mb-4"
+          />
+
           {courseId && (
             <Button variant="ghost" className="-ms-4 mb-4 sm:mb-6" asChild>
               <Link href={`/course/${courseId}`}>
@@ -480,7 +535,17 @@ export default function LecturePage({
                         <span>{isAr ? "بانتظار موافقة الإدارة" : "Awaiting Administrator Approval"}</span>
                       </div>
                     ) : isGatedEnrollment ? (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
+                        <div className="w-full max-w-full overflow-hidden flex justify-center my-1">
+                          <Turnstile
+                            ref={enrollTurnstileRef}
+                            action="course_enroll"
+                            size="flexible"
+                            appearance="interaction-only"
+                            onVerify={(token) => setEnrollTurnstileToken(token)}
+                            onExpire={() => setEnrollTurnstileToken("")}
+                          />
+                        </div>
                         <Button
                           onClick={handleQuickEnroll}
                           disabled={enrolling}
@@ -648,6 +713,54 @@ export default function LecturePage({
                 </Card>
               </TabsContent>
             </Tabs>
+
+            {/* Sequential Lecture Navigation Controls */}
+            <nav className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-6" aria-label={isAr ? "التنقل بين المحاضرات" : "Lecture navigation"}>
+              {prevLecture ? (
+                <Button variant="outline" className="w-full sm:w-auto gap-2 text-start" asChild>
+                  <Link href={`/lecture/${prevLecture.id}`} aria-label={`${isAr ? "المحاضرة السابقة" : "Previous lecture"}: ${isAr ? prevLecture.title_ar : prevLecture.title_en}`}>
+                    <DirectionArrow className="size-4 shrink-0" aria-hidden="true" />
+                    <div className="truncate text-start">
+                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">{isAr ? "المحاضرة السابقة" : "Previous Lecture"}</span>
+                      <span className="block font-semibold text-xs truncate max-w-[200px]">{isAr ? prevLecture.title_ar : prevLecture.title_en}</span>
+                    </div>
+                  </Link>
+                </Button>
+              ) : (
+                <Button variant="outline" disabled={!hasPrev} className="w-full sm:w-auto gap-2 opacity-50 cursor-not-allowed" aria-hidden="true">
+                  <DirectionArrow className="size-4 shrink-0" aria-hidden="true" />
+                  <span>{isAr ? "بداية المقرر (لا توجد محاضرة سابقة)" : "Course Start (No Previous Lecture)"}</span>
+                </Button>
+              )}
+
+              {nextLecture ? (
+                <Button variant="default" className="w-full sm:w-auto gap-2 text-end ms-auto" asChild>
+                  <Link href={`/lecture/${nextLecture.id}`} aria-label={`${isAr ? "المحاضرة التالية" : "Next lecture"}: ${isAr ? nextLecture.title_ar : nextLecture.title_en}`}>
+                    <div className="truncate text-end">
+                      <span className="block text-[10px] uppercase tracking-wider opacity-80">{isAr ? "المحاضرة التالية" : "Next Lecture"}</span>
+                      <span className="block font-semibold text-xs truncate max-w-[200px]">{isAr ? nextLecture.title_ar : nextLecture.title_en}</span>
+                    </div>
+                    {isAr ? <ArrowLeft className="size-4 shrink-0" aria-hidden="true" /> : <ArrowRight className="size-4 shrink-0" aria-hidden="true" />}
+                  </Link>
+                </Button>
+              ) : isLastLecture ? (
+                quizzes && quizzes.length > 0 ? (
+                  <Button variant="default" className="w-full sm:w-auto gap-2 ms-auto bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
+                    <Link href={`/quiz/${quizzes[0].id}`} aria-label={isAr ? "بدء اختبار التقييم النهائي" : "Start final assessment quiz"}>
+                      <span>{isAr ? "إتمام المقرر: بدء الاختبار" : "Course Completion: Take Quiz"}</span>
+                      <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                ) : courseId ? (
+                  <Button variant="outline" className="w-full sm:w-auto gap-2 ms-auto" asChild>
+                    <Link href={`/course/${courseId}`} aria-label={isAr ? "إتمام المقرر والعودة للفهرس" : "Course completion, return to overview"}>
+                      <span>{isAr ? "إتمام المقرر: العودة للمقرر" : "Course Completed: Return to Course"}</span>
+                      <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                ) : null
+              ) : null}
+            </nav>
           </div>
 
           <aside
@@ -683,8 +796,8 @@ export default function LecturePage({
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-bold">{question.author_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(question.created_at).toLocaleDateString(locale)}
+                      <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+                        {isMounted ? new Date(question.created_at).toLocaleDateString(locale) : ""}
                       </p>
                     </div>
                   </div>
@@ -727,6 +840,10 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
   let courseId: string | null = null
   let course: Course | null = null
   let isLocked = false
+  let previousLecture: Lecture | null = null
+  let nextLecture: Lecture | null = null
+  let currentIndex = 0
+  let totalLectures = 1
 
   if (supabase) {
     try {
@@ -736,7 +853,15 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
         courseId = lectureData.course_id
 
         if (courseId) {
-          const { data: courseData } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle()
+          const [{ data: courseData }, { data: allLecturesData }] = await Promise.all([
+            supabase.from("courses").select("*").eq("id", courseId).maybeSingle(),
+            supabase
+              .from("lectures")
+              .select("id, course_id, title_en, title_ar, order")
+              .eq("course_id", courseId)
+              .order("order", { ascending: true }),
+          ])
+
           if (courseData) {
             course = courseData
             isLocked = Boolean(
@@ -744,6 +869,16 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
               courseData.access_policy === "students_only" ||
               courseData.access_policy === "enrolled_only"
             )
+          }
+
+          if (allLecturesData && allLecturesData.length > 0) {
+            totalLectures = allLecturesData.length
+            const idx = allLecturesData.findIndex((l) => l.id === id)
+            if (idx !== -1) {
+              currentIndex = idx
+              previousLecture = idx > 0 ? (allLecturesData[idx - 1] as unknown as Lecture) : null
+              nextLecture = idx < allLecturesData.length - 1 ? (allLecturesData[idx + 1] as unknown as Lecture) : null
+            }
           }
         }
       }
@@ -773,6 +908,10 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
       courseId,
       course,
       isLocked,
+      previousLecture,
+      nextLecture,
+      currentIndex,
+      totalLectures,
       siteContent: await loadSiteContent(),
       ...(await serverSideTranslations(locale ?? "en", ["common"])),
     },

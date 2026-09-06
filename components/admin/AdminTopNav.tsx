@@ -143,22 +143,28 @@ export default function AdminTopNav({
         </Button>
 
         {/* Dynamic Breadcrumbs */}
-        <nav className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground min-w-0 max-w-[220px] sm:max-w-md lg:max-w-xl truncate">
-          <span className="hidden sm:inline hover:text-foreground transition-colors shrink-0 whitespace-nowrap">
-            {isAr ? currentMeta.category_ar : currentMeta.category_en}
-          </span>
-          <BreadcrumbArrow className="hidden sm:inline size-3 shrink-0 text-muted-foreground/50" />
-          <span className={`${currentSubMeta ? "text-muted-foreground" : "font-bold text-foreground"} truncate whitespace-nowrap`}>
-            {isAr ? currentMeta.ar : currentMeta.en}
-          </span>
-          {currentSubMeta && (
-            <>
-              <BreadcrumbArrow className="size-3 shrink-0 text-muted-foreground/50" />
-              <span className="font-extrabold text-foreground truncate whitespace-nowrap">
-                {isAr ? currentSubMeta.ar : currentSubMeta.en}
+        <nav aria-label="Breadcrumb" className="flex items-center text-xs font-semibold text-muted-foreground min-w-0 max-w-[220px] sm:max-w-md lg:max-w-xl truncate">
+          <ol className="flex items-center gap-1.5 min-w-0 truncate">
+            <li className="hidden sm:inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+              <span>{isAr ? currentMeta.category_ar : currentMeta.category_en}</span>
+              <BreadcrumbArrow className="size-3 text-muted-foreground/50 rtl:rotate-180" aria-hidden="true" />
+            </li>
+            <li className="inline-flex items-center gap-1.5 min-w-0 truncate whitespace-nowrap">
+              <span className={`${currentSubMeta ? "text-muted-foreground" : "font-bold text-foreground"} truncate`} {...(!currentSubMeta ? { "aria-current": "page" as const } : {})}>
+                {isAr ? currentMeta.ar : currentMeta.en}
               </span>
-            </>
-          )}
+              {currentSubMeta && (
+                <BreadcrumbArrow className="size-3 shrink-0 text-muted-foreground/50 rtl:rotate-180" aria-hidden="true" />
+              )}
+            </li>
+            {currentSubMeta && (
+              <li className="inline-flex items-center min-w-0 truncate whitespace-nowrap">
+                <span aria-current="page" className="font-extrabold text-foreground truncate">
+                  {isAr ? currentSubMeta.ar : currentSubMeta.en}
+                </span>
+              </li>
+            )}
+          </ol>
         </nav>
       </div>
 

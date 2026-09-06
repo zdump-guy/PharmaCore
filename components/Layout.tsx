@@ -3,6 +3,7 @@ import Head from "next/head"
 import { useRouter } from "next/router"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
+import Breadcrumb from "@/components/Breadcrumb"
 import { siteMetadata } from "@/lib/siteContent"
 
 interface LayoutProps {
@@ -15,6 +16,7 @@ interface LayoutProps {
   noindex?: boolean
   schema?: Record<string, unknown> | Record<string, unknown>[]
   canonical?: string
+  breadcrumbs?: { label: string; href?: string }[]
 }
 
 export default function Layout({
@@ -27,6 +29,7 @@ export default function Layout({
   noindex = false,
   schema,
   canonical,
+  breadcrumbs,
 }: LayoutProps) {
   const router = useRouter()
   const { locale, pathname, asPath } = router
@@ -49,10 +52,12 @@ export default function Layout({
   // Canonical & Base URLs
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
-  const currentPath = asPath.split("?")[0] || ""
+  const currentPath = asPath.split("?")[0].split("#")[0] || "/"
+  const cleanPath = currentPath.replace(/^\/(?:ar|en)(?=\/|$)/, "") || "/"
+  const normalizedPath = cleanPath === "/" ? "" : cleanPath
   const canonicalUrl =
     canonical ||
-    `${siteUrl}${locale === "ar" ? "/ar" : ""}${currentPath === "/" ? "" : currentPath}`
+    `${siteUrl}${locale === "ar" ? "/ar" : ""}${normalizedPath}`
   const ogImage = image
     ? image.startsWith("http")
       ? image
@@ -143,13 +148,15 @@ export default function Layout({
           />
         )}
 
-        {/* Canonical Link */}
-        <link rel="canonical" href={canonicalUrl} />
-
-        {/* Multilingual Hreflang Alternates */}
-        <link rel="alternate" hrefLang="en" href={`${siteUrl}${currentPath === "/" ? "" : currentPath}`} />
-        <link rel="alternate" hrefLang="ar" href={`${siteUrl}/ar${currentPath === "/" ? "" : currentPath}`} />
-        <link rel="alternate" hrefLang="x-default" href={`${siteUrl}${currentPath === "/" ? "" : currentPath}`} />
+        {/* Canonical Link & Multilingual Hreflang Alternates */}
+        {!noindex && (
+          <>
+            <link rel="canonical" href={canonicalUrl} />
+            <link rel="alternate" hrefLang="en" href={`${siteUrl}${normalizedPath}`} />
+            <link rel="alternate" hrefLang="ar" href={`${siteUrl}/ar${normalizedPath}`} />
+            <link rel="alternate" hrefLang="x-default" href={`${siteUrl}${normalizedPath}`} />
+          </>
+        )}
 
         {/* Complete Favicons & App Icons Suite */}
         <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
@@ -212,6 +219,11 @@ export default function Layout({
         </a>
         {!hideNavbar && <Navbar />}
         <main id="main-content" className="flex-1">
+          {breadcrumbs && breadcrumbs.length > 0 && (
+            <div className="page-shell pt-4">
+              <Breadcrumb items={breadcrumbs} />
+            </div>
+          )}
           {children}
         </main>
         {!hideNavbar && <Footer />}

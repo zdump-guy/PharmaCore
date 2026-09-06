@@ -22,6 +22,7 @@ import {
 } from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
+import Breadcrumb from "@/components/Breadcrumb"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -280,6 +281,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
       noindex={true}
     >
       <div className="page-shell section-space space-y-8" dir={isAr ? "rtl" : "ltr"}>
+        <Breadcrumb items={[{ label: isAr ? "الملف الأكاديمي للطالب" : "Student Profile" }]} />
         {/* ─── Top Hero / Profile Banner Card ──────────────────────────────── */}
         <div className="rounded-3xl border bg-card p-6 sm:p-8 shadow-xs relative overflow-hidden">
           <div className="absolute top-0 end-0 size-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />

@@ -1,4 +1,5 @@
 import type { GetServerSideProps } from "next"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
@@ -6,20 +7,49 @@ import { FiLoader as Loader2 } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import AdminSidebar from "@/components/admin/AdminSidebar"
 import AdminTopNav from "@/components/admin/AdminTopNav"
-import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard"
-import CurriculumManager from "@/components/admin/CurriculumManager"
-import CommunityManager from "@/components/admin/CommunityManager"
-import UserManager, { type ManagedUser, type UserForm } from "@/components/admin/UserManager"
-import SiteContentManager from "@/components/admin/SiteContentManager"
-import StudentManager from "@/components/admin/StudentManager"
-import DeveloperConsole, { type DevSubTab } from "@/components/admin/DeveloperConsole"
-import AdminModals, {
-  type CourseForm,
-  type LectureForm,
-  type QuizForm,
-  type ResourceForm,
-  type QuestionForm,
+import AdminLoadingSkeleton from "@/components/admin/AdminLoadingSkeleton"
+import type { ManagedUser, UserForm } from "@/components/admin/UserManager"
+import type { DevSubTab } from "@/components/admin/DeveloperConsole"
+import type {
+  CourseForm,
+  LectureForm,
+  QuizForm,
+  ResourceForm,
+  QuestionForm,
 } from "@/components/admin/AdminModals"
+
+const AnalyticsDashboard = dynamic(() => import("@/components/admin/AnalyticsDashboard"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Analytics" />,
+})
+const CurriculumManager = dynamic(() => import("@/components/admin/CurriculumManager"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Curriculum" />,
+})
+const CommunityManager = dynamic(() => import("@/components/admin/CommunityManager"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Community Q&A" />,
+})
+const UserManager = dynamic(() => import("@/components/admin/UserManager"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="User Management" />,
+})
+const SiteContentManager = dynamic(() => import("@/components/admin/SiteContentManager"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Site Content" />,
+})
+const StudentManager = dynamic(() => import("@/components/admin/StudentManager"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Students" />,
+})
+const DeveloperConsole = dynamic(() => import("@/components/admin/DeveloperConsole"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Developer Console" />,
+})
+const AdminModals = dynamic(() => import("@/components/admin/AdminModals"), {
+  ssr: false,
+})
+
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { supabase } from "@/lib/supabaseClient"
 import {
@@ -208,94 +238,113 @@ export default function AdminPage() {
       return
     }
 
-    client.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        router.replace("/admin/login")
-        return
-      }
-
-      setSessionToken(session.access_token)
-
-      // Query pending students and course enrollments count
-      try {
-        const [{ count: studentCount }, { count: enrollCount }] = await Promise.all([
-          client
-            .from("users")
-            .select("*", { count: "exact", head: true })
-            .eq("role", "student")
-            .eq("status", "pending"),
-          client
-            .from("course_enrollments")
-            .select("*", { count: "exact", head: true })
-            .eq("status", "pending"),
-        ])
-        if (studentCount !== null) setPendingStudentsCount(studentCount)
-        if (enrollCount !== null) setPendingEnrollmentsCount(enrollCount)
-      } catch {}
-
-      const data = await Promise.all([
-        client.from("users").select("*").eq("id", session.user.id).maybeSingle(),
-        client.from("courses").select("*").order("created_at", { ascending: false }),
-        client.from("lectures").select("*").order("order"),
-        client.from("quizzes").select("*").order("created_at", { ascending: false }),
-        client.from("resources").select("*"),
-        client.from("questions").select("*").order("order"),
-        client
-          .from("community_questions")
-          .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
-          .order("created_at", { ascending: false }),
-        client.from("site_content").select("content").eq("id", "main").maybeSingle(),
-      ])
-
-      if (data[0].data) {
-        if (!["dev", "super_admin", "mentor"].includes(data[0].data.role)) {
-          // If student or unauthorized role attempts to open admin panel, redirect to admin login
-          router.replace("/admin/login")
-          return
-        }
-
-        setProfile(data[0].data)
-        if (["dev", "super_admin"].includes(data[0].data.role)) {
-          setLoadingUsers(true)
-          try {
-            const payload = await callUserApi(session.access_token)
-            setManagedUsers(payload.users)
-          } catch (error) {
-            setNotice({
-              error: true,
-              text: error instanceof Error ? error.message : "Could not load users",
-            })
-          } finally {
-            setLoadingUsers(false)
+    client.auth
+      .getSession()
+      .then(async ({ data: { session } }) => {
+        try {
+          if (!session) {
+            router.replace("/admin/login")
+            return
           }
+
+          setSessionToken(session.access_token)
+
+          // Query pending students and course enrollments count
+          try {
+            const [{ count: studentCount }, { count: enrollCount }] = await Promise.all([
+              client
+                .from("users")
+                .select("*", { count: "exact", head: true })
+                .eq("role", "student")
+                .eq("status", "pending"),
+              client
+                .from("course_enrollments")
+                .select("*", { count: "exact", head: true })
+                .eq("status", "pending"),
+            ])
+            if (studentCount !== null) setPendingStudentsCount(studentCount)
+            if (enrollCount !== null) setPendingEnrollmentsCount(enrollCount)
+          } catch {}
+
+          const data = await Promise.all([
+            client.from("users").select("*").eq("id", session.user.id).maybeSingle(),
+            client.from("courses").select("*").order("created_at", { ascending: false }),
+            client.from("lectures").select("*").order("order"),
+            client.from("quizzes").select("*").order("created_at", { ascending: false }),
+            client.from("resources").select("*"),
+            client.from("questions").select("*").order("order"),
+            client
+              .from("community_questions")
+              .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
+              .order("created_at", { ascending: false }),
+            client.from("site_content").select("content").eq("id", "main").maybeSingle(),
+          ])
+
+          if (data[0].data) {
+            if (!["dev", "super_admin", "mentor"].includes(data[0].data.role)) {
+              // If student or unauthorized role attempts to open admin panel, redirect to admin login
+              router.replace("/admin/login")
+              return
+            }
+
+            setProfile(data[0].data)
+            if (["dev", "super_admin"].includes(data[0].data.role)) {
+              setLoadingUsers(true)
+              try {
+                const payload = await callUserApi(session.access_token)
+                setManagedUsers(payload.users)
+              } catch (error) {
+                setNotice({
+                  error: true,
+                  text: error instanceof Error ? error.message : "Could not load users",
+                })
+              } finally {
+                setLoadingUsers(false)
+              }
+            }
+          } else {
+            router.replace("/admin/login")
+            return
+          }
+
+          if (data[1].data) setCourses(data[1].data)
+          if (data[2].data) setLectures(data[2].data)
+          if (data[3].data) {
+            setQuizzes(data[3].data)
+            setSelectedQuizId(data[3].data[0]?.id ?? "")
+          }
+          if (data[4].data) setResources(data[4].data)
+          if (data[5].data) setQuestions(data[5].data)
+          if (data[6].data) {
+            setCommunity(data[6].data)
+            if (data[6].data.some((question) => !question.answers?.length)) {
+              setQuestionAlertOpen(true)
+            }
+          }
+          if (data[7].data?.content) {
+            setSiteContent(mergeSiteContent(data[7].data.content as Partial<SiteContent>))
+          }
+
+          const error = data.slice(0, 7).find((item) => item.error)?.error
+          if (error) setNotice({ error: true, text: error.message })
+          setReady(true)
+        } catch (err) {
+          if (process.env.NODE_ENV !== "production") {
+            console.error("Admin dashboard initialization failed:", err)
+          }
+          setNotice({
+            error: true,
+            text: err instanceof Error ? err.message : "Failed to load admin dashboard",
+          })
+          setReady(true)
         }
-      } else {
+      })
+      .catch((err) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Admin session retrieval error:", err)
+        }
         router.replace("/admin/login")
-        return
-      }
-
-      if (data[1].data) setCourses(data[1].data)
-      if (data[2].data) setLectures(data[2].data)
-      if (data[3].data) {
-        setQuizzes(data[3].data)
-        setSelectedQuizId(data[3].data[0]?.id ?? "")
-      }
-      if (data[4].data) setResources(data[4].data)
-      if (data[5].data) setQuestions(data[5].data)
-      if (data[6].data) {
-        setCommunity(data[6].data)
-        if (data[6].data.some((question) => !question.answers?.length)) {
-          setQuestionAlertOpen(true)
-        }
-      }
-      if (data[7].data?.content) {
-        setSiteContent(mergeSiteContent(data[7].data.content as Partial<SiteContent>))
-      }
-
-      const error = data.slice(0, 7).find((item) => item.error)?.error
-      if (error) setNotice({ error: true, text: error.message })
-      setReady(true)
-    })
+      })
   }, [router])
 
   const canManageUsers = profile?.role === "dev" || profile?.role === "super_admin"
@@ -840,7 +889,9 @@ export default function AdminPage() {
         setNotice({ text: tr("Enrollment settings updated successfully.", "تم تحديث إعدادات التسجيل بنجاح.") })
       }
     } catch (err) {
-      console.error("Failed to update enrollment settings:", err)
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to update enrollment settings:", err)
+      }
     }
   }
 
