@@ -147,6 +147,7 @@ test("2.1 pages/admin/index.tsx uses next/dynamic for all 8 management modules",
     "SiteContentManager",
     "StudentManager",
     "DeveloperConsole",
+    "FeedbackManager",
     "AdminModals",
   ]
 
@@ -170,6 +171,7 @@ test("2.2 All admin dynamic imports explicitly specify { ssr: false }", () => {
     "SiteContentManager",
     "StudentManager",
     "DeveloperConsole",
+    "FeedbackManager",
     "AdminModals",
   ]
   for (const mod of requiredModules) {

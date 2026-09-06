@@ -318,6 +318,55 @@ ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS user_id UUID REFERE
 ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS url TEXT;
 ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 
+-- 13. Feedback Submissions table
+CREATE TABLE IF NOT EXISTS public.feedback_submissions (
+  id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id             UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  feedback_type       TEXT NOT NULL,
+  category            TEXT NOT NULL,
+  page_url            TEXT,
+  course_id           UUID REFERENCES public.courses(id) ON DELETE SET NULL,
+  lecture_id          UUID REFERENCES public.lectures(id) ON DELETE SET NULL,
+  title               TEXT NOT NULL,
+  description         TEXT NOT NULL,
+  reproduction_steps  TEXT,
+  severity            TEXT NOT NULL DEFAULT 'medium',
+  device_info         JSONB DEFAULT '{}'::jsonb,
+  attachment_url      TEXT,
+  academic_reference  TEXT,
+  contact_email       TEXT,
+  contact_name        TEXT,
+  status              TEXT NOT NULL DEFAULT 'open',
+  admin_notes         TEXT,
+  resolved_by         UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  resolved_at         TIMESTAMPTZ,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ensure all feedback_submissions columns exist
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS feedback_type TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS page_url TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS course_id UUID REFERENCES public.courses(id) ON DELETE SET NULL;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS lecture_id UUID REFERENCES public.lectures(id) ON DELETE SET NULL;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS reproduction_steps TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS severity TEXT DEFAULT 'medium';
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS device_info JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS attachment_url TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS academic_reference TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS contact_email TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS contact_name TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open';
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS admin_notes TEXT;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS resolved_by UUID REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.feedback_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
 -- ==============================================================================
 -- SECTION 4: IDEMPOTENT CONSTRAINTS & FOREIGN KEYS
 -- ==============================================================================
@@ -385,8 +434,27 @@ DO $$ BEGIN
     UNIQUE (user_id, course_id);
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
+-- 10. Feedback submissions check constraints
+DO $$ BEGIN
+  ALTER TABLE public.feedback_submissions DROP CONSTRAINT IF EXISTS feedback_type_check;
+  ALTER TABLE public.feedback_submissions ADD CONSTRAINT feedback_type_check 
+    CHECK (feedback_type IN ('technical', 'academic'));
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public.feedback_submissions DROP CONSTRAINT IF EXISTS feedback_severity_check;
+  ALTER TABLE public.feedback_submissions ADD CONSTRAINT feedback_severity_check 
+    CHECK (severity IN ('low', 'medium', 'high', 'critical'));
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public.feedback_submissions DROP CONSTRAINT IF EXISTS feedback_status_check;
+  ALTER TABLE public.feedback_submissions ADD CONSTRAINT feedback_status_check 
+    CHECK (status IN ('open', 'under_review', 'in_progress', 'resolved', 'dismissed'));
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
 -- ==============================================================================
--- SECTION 5: 16 HIGH-PERFORMANCE INDEXES
+-- SECTION 5: 20 HIGH-PERFORMANCE INDEXES
 -- ==============================================================================
 
 -- Lectures indexes (2)
@@ -419,11 +487,17 @@ CREATE INDEX IF NOT EXISTS idx_analytics_events_created_at ON public.analytics_e
 CREATE INDEX IF NOT EXISTS idx_analytics_events_distinct_id ON public.analytics_events(distinct_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_user_id ON public.analytics_events(user_id);
 
+-- Feedback submissions indexes (4)
+CREATE INDEX IF NOT EXISTS idx_feedback_status ON public.feedback_submissions(status);
+CREATE INDEX IF NOT EXISTS idx_feedback_type ON public.feedback_submissions(feedback_type);
+CREATE INDEX IF NOT EXISTS idx_feedback_created_at ON public.feedback_submissions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON public.feedback_submissions(user_id);
+
 -- ==============================================================================
 -- SECTION 6: ROW LEVEL SECURITY & PERMISSIONS
 -- ==============================================================================
 
--- Enable RLS across all 12 tables
+-- Enable RLS across all 13 tables
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lectures ENABLE ROW LEVEL SECURITY;
@@ -436,6 +510,7 @@ ALTER TABLE public.mentor_course_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.course_enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.feedback_submissions ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------------------------
 -- 1. public.users policies
@@ -625,6 +700,32 @@ CREATE POLICY "Allow staff to read analytics_events"
   ON public.analytics_events FOR SELECT
   USING (public.get_user_role() IN ('dev', 'super_admin', 'mentor'));
 
+-- ------------------------------------------------------------------------------
+-- 13. public.feedback_submissions policies
+-- ------------------------------------------------------------------------------
+GRANT ALL ON public.feedback_submissions TO service_role;
+GRANT ALL ON public.feedback_submissions TO authenticated;
+GRANT ALL ON public.feedback_submissions TO anon;
+
+DROP POLICY IF EXISTS "Allow public insert on feedback_submissions" ON public.feedback_submissions;
+CREATE POLICY "Allow public insert on feedback_submissions"
+  ON public.feedback_submissions FOR INSERT
+  WITH CHECK (
+    title IS NOT NULL AND length(title) > 0 AND
+    description IS NOT NULL AND length(description) > 0
+  );
+
+DROP POLICY IF EXISTS "Users can read own feedback submissions" ON public.feedback_submissions;
+CREATE POLICY "Users can read own feedback submissions"
+  ON public.feedback_submissions FOR SELECT
+  USING (auth.uid() IS NOT NULL AND auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Staff manage feedback submissions" ON public.feedback_submissions;
+CREATE POLICY "Staff manage feedback submissions"
+  ON public.feedback_submissions FOR ALL
+  USING (public.get_user_role() IN ('dev', 'super_admin', 'mentor'))
+  WITH CHECK (public.get_user_role() IN ('dev', 'super_admin', 'mentor'));
+
 -- ==============================================================================
 -- SECTION 7: REALTIME PUBLICATION REGISTRATION
 -- ==============================================================================
@@ -639,6 +740,15 @@ BEGIN
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.analytics_events;
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'feedback_submissions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.feedback_submissions;
+  END IF;
 EXCEPTION
   WHEN OTHERS THEN NULL;
 END $$;
@@ -647,5 +757,6 @@ END $$;
 COMMENT ON TABLE public.course_enrollments IS 'PharmaCore student course enrollments and cohort request/approval workflow.';
 COMMENT ON TABLE public.analytics_events IS 'PharmaCore telemetry and visitor analytics event stream.';
 COMMENT ON TABLE public.community_questions IS 'PharmaCore student community Q&A with Column Level Security on author_email.';
+COMMENT ON TABLE public.feedback_submissions IS 'PharmaCore technical bug reports and academic curriculum feedback submissions.';
 
 COMMIT;

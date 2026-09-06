@@ -8,6 +8,7 @@ import {
   FiFileText as FileText,
   FiFolder as Folder,
   FiHelpCircle as HelpCircle,
+  FiInbox as Inbox,
   FiLock as LockKeyhole,
   FiLogOut as LogOut,
   FiServer as Server,
@@ -56,6 +57,7 @@ interface AdminSidebarProps {
   unansweredCount: number
   pendingStudentsCount: number
   pendingEnrollmentsCount?: number
+  openFeedbackCount?: number
   canManageUsers: boolean
   isDev: boolean
   onLogout: () => void
@@ -74,6 +76,7 @@ export default function AdminSidebar({
   unansweredCount,
   pendingStudentsCount,
   pendingEnrollmentsCount = 0,
+  openFeedbackCount = 0,
   canManageUsers,
   isDev,
   onLogout,
@@ -215,6 +218,15 @@ export default function AdminSidebar({
           icon: HelpCircle,
           badge: unansweredCount > 0 ? unansweredCount : null,
           badgeColor: "bg-rose-500 text-white animate-pulse",
+        },
+        {
+          id: "feedback",
+          page: "feedback",
+          label_en: "Feedback & Bug Reports",
+          label_ar: "الملاحظات وبلاغات الأخطاء",
+          icon: Inbox,
+          badge: openFeedbackCount > 0 ? openFeedbackCount : null,
+          badgeColor: "bg-amber-500 text-white",
         },
       ],
     },

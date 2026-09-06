@@ -4,6 +4,7 @@ import {
   FiDownload as Download,
   FiGlobe as Globe,
   FiMail as Mail,
+  FiMessageSquare as MessageSquare,
   FiShield as ShieldCheck,
 } from "react-icons/fi"
 import {
@@ -105,7 +106,7 @@ export default function Footer() {
               <ShieldCheck className="size-4 shrink-0" />
               <span>{copy.footer_reviewed}</span>
             </div>
-            <div className="pt-1">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               <InstallAppModal
                 trigger={
                   <button
@@ -117,6 +118,13 @@ export default function Footer() {
                   </button>
                 }
               />
+              <Link
+                href="/feedback"
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted transition-colors border border-border/50 cursor-pointer min-h-[36px]"
+              >
+                <MessageSquare className="size-3.5 shrink-0 text-primary" />
+                <span>{isAr ? "إرسال ملاحظة / بلاغ" : "Feedback & Bug Reports"}</span>
+              </Link>
             </div>
           </div>
 

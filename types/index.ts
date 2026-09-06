@@ -172,3 +172,72 @@ export interface AnalyticsEventRecord {
   user_id?: string | null;
   created_at: string;
 }
+
+// ─── Feedback & Bug Report Types ──────────────────────────────────────────────
+
+export type FeedbackType = 'technical' | 'academic';
+
+export type TechnicalCategory =
+  | 'visual'
+  | 'playback'
+  | 'quiz_bug'
+  | 'login_issue'
+  | 'performance'
+  | 'other';
+
+export type AcademicCategory =
+  | 'scientific_accuracy'
+  | 'explanation_clarity'
+  | 'question_correction'
+  | 'suggested_topic'
+  | 'other';
+
+export type FeedbackCategory = TechnicalCategory | AcademicCategory;
+
+export type FeedbackSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type FeedbackStatus =
+  | 'open'
+  | 'under_review'
+  | 'in_progress'
+  | 'resolved'
+  | 'dismissed';
+
+export interface FeedbackDeviceInfo {
+  browser?: string;
+  os?: string;
+  screen?: string;
+  viewport?: string;
+  userAgent?: string;
+  language?: string;
+}
+
+export interface FeedbackSubmission {
+  id: string;
+  user_id?: string | null;
+  feedback_type: FeedbackType;
+  category: FeedbackCategory;
+  page_url?: string | null;
+  course_id?: string | null;
+  lecture_id?: string | null;
+  title: string;
+  description: string;
+  reproduction_steps?: string | null;
+  severity: FeedbackSeverity;
+  device_info?: FeedbackDeviceInfo | null;
+  attachment_url?: string | null;
+  academic_reference?: string | null;
+  contact_email?: string | null;
+  contact_name?: string | null;
+  status: FeedbackStatus;
+  admin_notes?: string | null;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: UserProfile;
+  course?: Course;
+  lecture?: Lecture;
+  resolver?: UserProfile;
+}
+

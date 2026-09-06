@@ -138,7 +138,7 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
       }
     : {
         signInTab: "Sign In",
-        signUpTab: "Create Student Account",
+        signUpTab: "Create Account",
         loginTitle: "Welcome to PharmaCore",
         loginSubtitle: "Sign in to access lecture videos, test your knowledge, and track your clinical learning.",
         email: "Email address",
@@ -389,14 +389,20 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
             </div>
 
             <Tabs value={tab} onValueChange={(val) => setTab(val as "signin" | "signup")}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin" className="badge-nowrap gap-2 min-h-[44px] text-xs sm:text-sm font-semibold">
+              <TabsList className="grid w-full grid-cols-2 h-auto p-1.5 mb-6 bg-muted/80 rounded-xl gap-1">
+                <TabsTrigger
+                  value="signin"
+                  className="gap-2 min-h-[44px] px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:shadow-sm"
+                >
                   <LockKeyhole className="size-3.5 shrink-0" />
-                  <span>{copy.signInTab}</span>
+                  <span className="truncate">{copy.signInTab}</span>
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="badge-nowrap gap-2 min-h-[44px] text-xs sm:text-sm font-semibold">
+                <TabsTrigger
+                  value="signup"
+                  className="gap-2 min-h-[44px] px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:shadow-sm"
+                >
                   <UserPlus className="size-3.5 shrink-0" />
-                  <span>{copy.signUpTab}</span>
+                  <span className="truncate">{copy.signUpTab}</span>
                 </TabsTrigger>
               </TabsList>
 

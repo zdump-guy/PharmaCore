@@ -130,7 +130,7 @@ export default function SiteContentManager({
         </div>
 
         <Button
-          onClick={onSaveContent}
+          onClick={() => onSaveContent()}
           disabled={saving}
           className="btn-nowrap gap-2 font-bold text-xs shrink-0 w-full sm:w-auto min-h-[40px] sm:min-h-[36px]"
         >

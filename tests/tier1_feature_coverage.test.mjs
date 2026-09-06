@@ -155,7 +155,8 @@ describe("Tier 1 - Feature 6: Login Container Mobile Keyboard Shift Fix (R3)", (
   })
 
   it("6.3 structures auth tabs trigger list with full-width grid on mobile", () => {
-    expect(loginTsx).toContain("grid w-full grid-cols-2 mb-6")
+    expect(loginTsx).toContain("grid w-full grid-cols-2")
+    expect(loginTsx).toContain("mb-6")
   })
 
   it("6.4 collapses registration form fields to single column on mobile (grid gap-3 sm:grid-cols-2)", () => {

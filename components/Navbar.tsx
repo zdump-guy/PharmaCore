@@ -11,6 +11,7 @@ import {
   FiLogIn as LogIn,
   FiLogOut as LogOut,
   FiMenu as Menu,
+  FiMessageSquare as MessageSquare,
   FiMoon as Moon,
   FiShield as ShieldCheck,
   FiSun as Sun,
@@ -46,7 +47,7 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const isAr = locale === "ar"
-  const [activeSection, setActiveSection] = useState<"home" | "about" | "courses">("home")
+  const [activeSection, setActiveSection] = useState<"home" | "about" | "courses" | "feedback">("home")
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
 
   // Track active section on scroll when on homepage
@@ -57,13 +58,17 @@ export default function Navbar() {
       const scrollY = window.scrollY
       const aboutEl = document.getElementById("about")
       const coursesEl = document.getElementById("courses")
+      const feedbackEl = document.getElementById("feedback")
 
       const aboutOffset = (aboutEl?.offsetTop ?? 600) - 150
       const coursesOffset = (coursesEl?.offsetTop ?? 1200) - 150
+      const feedbackOffset = (feedbackEl?.offsetTop ?? 2000) - 150
 
-      if (scrollY >= coursesOffset) {
+      if (feedbackEl && scrollY >= feedbackOffset) {
+        setActiveSection("feedback")
+      } else if (coursesEl && scrollY >= coursesOffset) {
         setActiveSection("courses")
-      } else if (scrollY >= aboutOffset) {
+      } else if (aboutEl && scrollY >= aboutOffset) {
         setActiveSection("about")
       } else {
         setActiveSection("home")
@@ -173,7 +178,11 @@ export default function Navbar() {
     router.push("/")
   }
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string, sectionId: "home" | "about" | "courses") => {
+  const handleNavClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+    sectionId: "home" | "about" | "courses" | "feedback"
+  ) => {
     if (pathname === "/") {
       e.preventDefault()
       if (sectionId === "home") {
@@ -194,11 +203,18 @@ export default function Navbar() {
     { href: "/", label: isAr ? "الرئيسية" : "Home", icon: HomeIcon, sectionId: "home" as const },
     { href: "/#about", label: isAr ? "عن المنصة" : "About", icon: InfoIcon, sectionId: "about" as const },
     { href: "/#courses", label: isAr ? "المقررات" : "Courses", icon: BookOpen, sectionId: "courses" as const },
+    { href: "/#feedback", label: isAr ? "الملاحظات" : "Feedback", icon: MessageSquare, sectionId: "feedback" as const },
   ]
 
-  const isNavActive = (sectionId: "home" | "about" | "courses", href: string) => {
+  const isNavActive = (sectionId: "home" | "about" | "courses" | "feedback", href: string) => {
     if (pathname === "/") {
       return activeSection === sectionId
+    }
+    if (href === "/#feedback" || href === "/feedback") {
+      return pathname === "/feedback"
+    }
+    if (href === "/") {
+      return pathname === "/"
     }
     return asPath.startsWith(href)
   }
@@ -342,6 +358,15 @@ export default function Navbar() {
                   >
                     <BookOpen className="size-4 text-primary shrink-0" />
                     <span>{tr("Browse Courses", "استعراض المقررات")}</span>
+                  </Link>
+
+                  <Link
+                    href="/feedback"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-xs font-bold hover:bg-muted transition-colors cursor-pointer text-foreground whitespace-nowrap"
+                  >
+                    <MessageSquare className="size-4 text-primary shrink-0" />
+                    <span>{tr("Feedback & Bug Reports", "الملاحظات والدعم الفني")}</span>
                   </Link>
 
                   {isStaff && (

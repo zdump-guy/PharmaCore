@@ -222,7 +222,7 @@ export default function CommunityManager({
 
       {/* Tabs: Unanswered vs Answered */}
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="space-y-4">
-        <TabsList className="grid grid-cols-2 h-10 w-full sm:w-80 p-1 bg-muted/60">
+        <TabsList className="grid grid-cols-2 h-auto min-h-10 w-full sm:w-80 p-1 bg-muted/60 gap-1">
           <TabsTrigger value="unanswered" className="badge-nowrap text-xs font-bold gap-2 min-h-[34px]">
             <span>{tr("Unanswered", "غير مجابة")}</span>
             <Badge

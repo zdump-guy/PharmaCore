@@ -46,6 +46,10 @@ const DeveloperConsole = dynamic(() => import("@/components/admin/DeveloperConso
   ssr: false,
   loading: () => <AdminLoadingSkeleton title="Developer Console" />,
 })
+const FeedbackManager = dynamic(() => import("@/components/admin/FeedbackManager"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Feedback & Bug Reports" />,
+})
 const AdminModals = dynamic(() => import("@/components/admin/AdminModals"), {
   ssr: false,
 })
@@ -220,6 +224,7 @@ export default function AdminPage() {
   const [sessionToken, setSessionToken] = useState<string | null>(null)
   const [pendingStudentsCount, setPendingStudentsCount] = useState(0)
   const [pendingEnrollmentsCount, setPendingEnrollmentsCount] = useState(0)
+  const [openFeedbackCount, setOpenFeedbackCount] = useState(0)
 
   // Users management
   const [userForm, setUserForm] = useState<UserForm>(emptyUser)
@@ -232,119 +237,129 @@ export default function AdminPage() {
   const [deletingUser, setDeletingUser] = useState<ManagedUser | null>(null)
 
   useEffect(() => {
-    const client = supabase
-    if (!client) {
-      router.replace("/admin/login")
-      return
+    async function loadData() {
+      const client = supabase
+      if (!client) {
+        setNotice({
+          error: true,
+          text:
+            router.locale === "ar"
+              ? "إعدادات الاتصال بقاعدة البيانات غير مهيأة."
+              : "Supabase client is not configured.",
+        })
+        setReady(true)
+        return
+      }
+
+      try {
+        const {
+          data: { session },
+        } = await client.auth.getSession()
+
+        if (!session) {
+          router.replace("/admin/login")
+          return
+        }
+
+        setSessionToken(session.access_token)
+
+        // Query pending students, enrollments, and open feedback count
+        try {
+          const [{ count: studentCount }, { count: enrollCount }, { count: feedbackCount }] = await Promise.all([
+            client
+              .from("users")
+              .select("*", { count: "exact", head: true })
+              .eq("role", "student")
+              .eq("status", "pending"),
+            client
+              .from("course_enrollments")
+              .select("*", { count: "exact", head: true })
+              .eq("status", "pending"),
+            client
+              .from("feedback_submissions")
+              .select("*", { count: "exact", head: true })
+              .in("status", ["open", "under_review", "in_progress"]),
+          ])
+          if (studentCount !== null) setPendingStudentsCount(studentCount)
+          if (enrollCount !== null) setPendingEnrollmentsCount(enrollCount)
+          if (feedbackCount !== null) setOpenFeedbackCount(feedbackCount)
+        } catch {}
+
+        const data = await Promise.all([
+          client.from("users").select("*").eq("id", session.user.id).maybeSingle(),
+          client.from("courses").select("*").order("created_at", { ascending: false }),
+          client.from("lectures").select("*").order("order"),
+          client.from("quizzes").select("*").order("created_at", { ascending: false }),
+          client.from("resources").select("*"),
+          client.from("questions").select("*").order("order"),
+          client
+            .from("community_questions")
+            .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
+            .order("created_at", { ascending: false }),
+          client.from("site_content").select("content").eq("id", "main").maybeSingle(),
+        ])
+
+        if (data[0].data) {
+          if (!["dev", "super_admin", "mentor"].includes(data[0].data.role)) {
+            // If student or unauthorized role attempts to open admin panel, redirect to admin login
+            router.replace("/admin/login")
+            return
+          }
+
+          setProfile(data[0].data)
+          if (["dev", "super_admin"].includes(data[0].data.role)) {
+            setLoadingUsers(true)
+            try {
+              const payload = await callUserApi(session.access_token)
+              setManagedUsers(payload.users)
+            } catch (error) {
+              setNotice({
+                error: true,
+                text: error instanceof Error ? error.message : "Could not load users",
+              })
+            } finally {
+              setLoadingUsers(false)
+            }
+          }
+        } else {
+          router.replace("/admin/login")
+          return
+        }
+
+        if (data[1].data) setCourses(data[1].data)
+        if (data[2].data) setLectures(data[2].data)
+        if (data[3].data) {
+          setQuizzes(data[3].data)
+          setSelectedQuizId(data[3].data[0]?.id ?? "")
+        }
+        if (data[4].data) setResources(data[4].data)
+        if (data[5].data) setQuestions(data[5].data)
+        if (data[6].data) {
+          setCommunity(data[6].data)
+          if (data[6].data.some((question) => !question.answers?.length)) {
+            setQuestionAlertOpen(true)
+          }
+        }
+        if (data[7].data?.content) {
+          setSiteContent(mergeSiteContent(data[7].data.content as Partial<SiteContent>))
+        }
+
+        const error = data.slice(0, 7).find((item) => item.error)?.error
+        if (error) setNotice({ error: true, text: error.message })
+        setReady(true)
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Admin dashboard initialization failed:", err)
+        }
+        setNotice({
+          error: true,
+          text: err instanceof Error ? err.message : "Failed to load admin dashboard",
+        })
+        setReady(true)
+      }
     }
 
-    client.auth
-      .getSession()
-      .then(async ({ data: { session } }) => {
-        try {
-          if (!session) {
-            router.replace("/admin/login")
-            return
-          }
-
-          setSessionToken(session.access_token)
-
-          // Query pending students and course enrollments count
-          try {
-            const [{ count: studentCount }, { count: enrollCount }] = await Promise.all([
-              client
-                .from("users")
-                .select("*", { count: "exact", head: true })
-                .eq("role", "student")
-                .eq("status", "pending"),
-              client
-                .from("course_enrollments")
-                .select("*", { count: "exact", head: true })
-                .eq("status", "pending"),
-            ])
-            if (studentCount !== null) setPendingStudentsCount(studentCount)
-            if (enrollCount !== null) setPendingEnrollmentsCount(enrollCount)
-          } catch {}
-
-          const data = await Promise.all([
-            client.from("users").select("*").eq("id", session.user.id).maybeSingle(),
-            client.from("courses").select("*").order("created_at", { ascending: false }),
-            client.from("lectures").select("*").order("order"),
-            client.from("quizzes").select("*").order("created_at", { ascending: false }),
-            client.from("resources").select("*"),
-            client.from("questions").select("*").order("order"),
-            client
-              .from("community_questions")
-              .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
-              .order("created_at", { ascending: false }),
-            client.from("site_content").select("content").eq("id", "main").maybeSingle(),
-          ])
-
-          if (data[0].data) {
-            if (!["dev", "super_admin", "mentor"].includes(data[0].data.role)) {
-              // If student or unauthorized role attempts to open admin panel, redirect to admin login
-              router.replace("/admin/login")
-              return
-            }
-
-            setProfile(data[0].data)
-            if (["dev", "super_admin"].includes(data[0].data.role)) {
-              setLoadingUsers(true)
-              try {
-                const payload = await callUserApi(session.access_token)
-                setManagedUsers(payload.users)
-              } catch (error) {
-                setNotice({
-                  error: true,
-                  text: error instanceof Error ? error.message : "Could not load users",
-                })
-              } finally {
-                setLoadingUsers(false)
-              }
-            }
-          } else {
-            router.replace("/admin/login")
-            return
-          }
-
-          if (data[1].data) setCourses(data[1].data)
-          if (data[2].data) setLectures(data[2].data)
-          if (data[3].data) {
-            setQuizzes(data[3].data)
-            setSelectedQuizId(data[3].data[0]?.id ?? "")
-          }
-          if (data[4].data) setResources(data[4].data)
-          if (data[5].data) setQuestions(data[5].data)
-          if (data[6].data) {
-            setCommunity(data[6].data)
-            if (data[6].data.some((question) => !question.answers?.length)) {
-              setQuestionAlertOpen(true)
-            }
-          }
-          if (data[7].data?.content) {
-            setSiteContent(mergeSiteContent(data[7].data.content as Partial<SiteContent>))
-          }
-
-          const error = data.slice(0, 7).find((item) => item.error)?.error
-          if (error) setNotice({ error: true, text: error.message })
-          setReady(true)
-        } catch (err) {
-          if (process.env.NODE_ENV !== "production") {
-            console.error("Admin dashboard initialization failed:", err)
-          }
-          setNotice({
-            error: true,
-            text: err instanceof Error ? err.message : "Failed to load admin dashboard",
-          })
-          setReady(true)
-        }
-      })
-      .catch((err) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Admin session retrieval error:", err)
-        }
-        router.replace("/admin/login")
-      })
+    loadData()
   }, [router])
 
   const canManageUsers = profile?.role === "dev" || profile?.role === "super_admin"
@@ -586,10 +601,16 @@ export default function AdminPage() {
     result(error, tr("Reply posted successfully.", "تم نشر الإجابة بنجاح."))
   }
 
-  async function saveSiteContent(overrideContent?: SiteContent) {
+  async function saveSiteContent(overrideContent?: SiteContent | unknown) {
     if (!supabase || profile?.role !== "dev") return
     setSaving(true)
-    const contentToSave = overrideContent || siteContent
+    const isContentObject =
+      overrideContent &&
+      typeof overrideContent === "object" &&
+      !("nativeEvent" in (overrideContent as object)) &&
+      !("target" in (overrideContent as object)) &&
+      "en" in (overrideContent as object)
+    const contentToSave = isContentObject ? (overrideContent as SiteContent) : siteContent
     const { error } = await supabase
       .from("site_content")
       .upsert({
@@ -600,8 +621,8 @@ export default function AdminPage() {
       })
 
     if (!error) {
-      if (overrideContent) {
-        setSiteContent(overrideContent)
+      if (isContentObject) {
+        setSiteContent(overrideContent as SiteContent)
       }
       trackAdminAction({ action: "content_updated", entityType: "site_content" })
     }
@@ -925,6 +946,7 @@ export default function AdminPage() {
           unansweredCount={unansweredCommunity.length}
           pendingStudentsCount={pendingStudentsCount}
           pendingEnrollmentsCount={pendingEnrollmentsCount}
+          openFeedbackCount={openFeedbackCount}
           canManageUsers={canManageUsers}
           isDev={isDev}
           onLogout={logout}
@@ -1019,6 +1041,16 @@ export default function AdminPage() {
                 reply={reply}
                 setReply={setReply}
                 onSendReply={sendReply}
+              />
+            )}
+
+            {/* 3b. Feedback & Bug Reports */}
+            {activePage === "feedback" && profile && (
+              <FeedbackManager
+                isAr={isAr}
+                sessionToken={sessionToken || ""}
+                profile={profile}
+                onCountChange={(cnt) => setOpenFeedbackCount(cnt)}
               />
             )}
 

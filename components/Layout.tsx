@@ -50,19 +50,28 @@ export default function Layout({
     pathname.startsWith("/admin/")
 
   // Canonical & Base URLs
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
+  const rawSiteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : "") ||
+    "https://pharma-core-edu.vercel.app"
+  const siteUrl = rawSiteUrl.replace(/\/+$/, "")
   const currentPath = asPath.split("?")[0].split("#")[0] || "/"
   const cleanPath = currentPath.replace(/^\/(?:ar|en)(?=\/|$)/, "") || "/"
   const normalizedPath = cleanPath === "/" ? "" : cleanPath
   const canonicalUrl =
     canonical ||
     `${siteUrl}${locale === "ar" ? "/ar" : ""}${normalizedPath}`
-  const ogImage = image
-    ? image.startsWith("http")
-      ? image
-      : `${siteUrl}${image.startsWith("/") ? "" : "/"}${image}`
-    : `${siteUrl}/${isAr ? "og-image-ar.png" : "og-image.png"}`
+
+  // Resolve absolute image URL for OpenGraph and Twitter
+  let ogImage = `${siteUrl}/${isAr ? "og-image-ar.png" : "og-image.png"}`
+  if (image) {
+    if (image.startsWith("http://") || image.startsWith("https://")) {
+      ogImage = image
+    } else {
+      const cleanImgPath = image.startsWith("/") ? image : `/${image}`
+      ogImage = `${siteUrl}${cleanImgPath}`
+    }
+  }
 
   // Structured Data JSON-LD
   const baseGraph = [
@@ -186,7 +195,16 @@ export default function Layout({
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={resolvedTitle} />
-        <meta property="og:image:type" content="image/png" />
+        <meta
+          property="og:image:type"
+          content={
+            ogImage.endsWith(".jpg") || ogImage.endsWith(".jpeg")
+              ? "image/jpeg"
+              : ogImage.endsWith(".webp")
+              ? "image/webp"
+              : "image/png"
+          }
+        />
         <meta property="og:locale" content={isAr ? "ar_EG" : "en_US"} />
         <meta property="og:locale:alternate" content={isAr ? "en_US" : "ar_EG"} />
 

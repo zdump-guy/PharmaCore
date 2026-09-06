@@ -83,6 +83,12 @@ export default function AdminTopNav({
       category_en: "Interaction",
       category_ar: "التفاعل",
     },
+    feedback: {
+      en: "Feedback & Bug Reports",
+      ar: "الملاحظات وبلاغات الأخطاء",
+      category_en: "Interaction",
+      category_ar: "التفاعل",
+    },
     users: {
       en: "Staff & Faculty Access",
       ar: "الكادر الإداري والتدريسي",

@@ -1,5 +1,4 @@
 import { Html, Head, Main, NextScript, type DocumentProps } from "next/document";
-import { inter, tajawal } from "@/lib/fonts";
 
 export default function Document(props: DocumentProps) {
   const locale = props.locale || "en";
@@ -18,7 +17,7 @@ export default function Document(props: DocumentProps) {
         <link rel="preconnect" href="https://i.ytimg.com" />
         <link rel="dns-prefetch" href="https://utfs.io" />
       </Head>
-      <body className={`${inter.variable} ${tajawal.variable}`}>
+      <body>
         <Main />
         <NextScript />
       </body>

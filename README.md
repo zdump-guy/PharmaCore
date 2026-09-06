@@ -123,6 +123,7 @@ The comprehensive administrative dashboard features dynamic code-splitting via `
 - **UserManager**: Role assignment (`student`, `mentor`, `super_admin`, `dev`), account suspension, password resets, and user creation.
 - **StudentManager**: Student directory, enrollment request triage, batch approvals, rejection notices, and academic profile inspection.
 - **SiteContentManager**: Live CMS editing for bilingual landing page content, FAQs, announcements, and maintenance mode toggling.
+- **FeedbackManager**: Real-time bug reports and academic feedback queue with status workflows, telemetry inspection, and resolution tracking.
 - **DeveloperConsole**: Database connection diagnostics, cache clearing, system telemetry, and schema health auditing.
 - **AdminModals**: Asset uploaders and sensitive state change confirmation dialogs.
 
@@ -316,6 +317,31 @@ Visitor telemetry and platform event stream.
 - `user_id` (UUID) — Authenticated user ID, references `public.users(id) ON DELETE SET NULL`.
 - `url` (TEXT) — Browser URL route.
 - `created_at` (TIMESTAMPTZ, NOT NULL, DEFAULT `NOW()`) — Event timestamp.
+
+#### 13. `public.feedback_submissions`
+Technical bug reports, visual layout issues, and academic pharmacology feedback submissions.
+- `id` (UUID, PK, DEFAULT `uuid_generate_v4()`) — Unique feedback ticket identifier.
+- `user_id` (UUID) — Submitting student ID if authenticated, references `public.users(id) ON DELETE SET NULL`.
+- `feedback_type` (TEXT, NOT NULL) — Type enum: `'technical' | 'academic'`.
+- `category` (TEXT, NOT NULL) — Category label (e.g., `'visual'`, `'playback'`, `'quiz_bug'`, `'scientific_accuracy'`).
+- `page_url` (TEXT) — Contextual page route where issue occurred.
+- `course_id` (UUID) — Associated course, references `public.courses(id) ON DELETE SET NULL`.
+- `lecture_id` (UUID) — Associated lecture, references `public.lectures(id) ON DELETE SET NULL`.
+- `title` (TEXT, NOT NULL) — Summary issue title.
+- `description` (TEXT, NOT NULL) — In-depth description and expected behavior.
+- `reproduction_steps` (TEXT) — Numbered steps to reproduce the issue.
+- `severity` (TEXT, NOT NULL, DEFAULT `'medium'`) — Severity enum: `'low' | 'medium' | 'high' | 'critical'`.
+- `device_info` (JSONB, DEFAULT `'{}'::jsonb`) — Client telemetry (OS, Browser, Screen, Viewport, UserAgent).
+- `attachment_url` (TEXT) — Screenshot or external link URL.
+- `academic_reference` (TEXT) — Medical citation, guideline, or textbook reference.
+- `contact_email` (TEXT) — Submitter contact email for follow-up notifications.
+- `contact_name` (TEXT) — Submitter name.
+- `status` (TEXT, NOT NULL, DEFAULT `'open'`) — Workflow status: `'open' | 'under_review' | 'in_progress' | 'resolved' | 'dismissed'`.
+- `admin_notes` (TEXT) — Internal engineering / mentor resolution notes.
+- `resolved_by` (UUID) — Staff member who resolved the issue, references `public.users(id) ON DELETE SET NULL`.
+- `resolved_at` (TIMESTAMPTZ) — Resolution timestamp.
+- `created_at` (TIMESTAMPTZ, NOT NULL, DEFAULT `NOW()`) — Submission timestamp.
+- `updated_at` (TIMESTAMPTZ, NOT NULL, DEFAULT `NOW()`) — Last update timestamp.
 
 ---
 

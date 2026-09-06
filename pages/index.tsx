@@ -2,7 +2,16 @@ import type { GetStaticProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
-import { FiArrowUpRight as ArrowUpRight, FiBookOpen as BookOpenCheck, FiCheckCircle as CheckCircle2, FiMessageCircle as MessageCircle, FiPlayCircle as PlayCircle, FiShield as ShieldCheck } from "react-icons/fi"
+import {
+  FiArrowUpRight as ArrowUpRight,
+  FiBookOpen as BookOpenCheck,
+  FiCheckCircle as CheckCircle2,
+  FiCpu as Cpu,
+  FiMessageCircle as MessageCircle,
+  FiMessageSquare as MessageSquare,
+  FiPlayCircle as PlayCircle,
+  FiShield as ShieldCheck,
+} from "react-icons/fi"
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
 import { Badge } from "@/components/ui/badge"
@@ -205,6 +214,99 @@ export default function Home({ courses, siteContent }: HomeProps) {
 
               )
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FEEDBACK & QUALITY ASSURANCE SECTION ──────────────────────── */}
+      <section id="feedback" className="section-space scroll-mt-20 sm:scroll-mt-24">
+        <div className="page-shell">
+          <div className="rounded-3xl border bg-card/80 p-6 sm:p-10 lg:p-14 shadow-xs">
+            <div className="max-w-3xl space-y-4">
+              <Badge variant="outline" className="badge-nowrap min-h-8 gap-2 border-primary/25 bg-background px-3 text-primary">
+                <MessageSquare className="size-3.5 shrink-0" />
+                <span>{isAr ? "مركز الملاحظات والجودة" : "Quality & Feedback"}</span>
+              </Badge>
+
+              <h2 className="section-title text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
+                {isAr
+                  ? "شاركنا ملاحظاتك لتحسين المحتوى والمنصة"
+                  : "Help Us Continuously Improve PharmaCore"}
+              </h2>
+
+              <p className="body-lead text-muted-foreground text-sm sm:text-base leading-relaxed">
+                {isAr
+                  ? "سواء واجهتك مشكلة تقنية أثناء التصفح أو كان لديك تصحيح أو مقترح أكاديمي لمحاضرة، فريقنا يستمع إليك ويعالج ملاحظاتك مباشرة."
+                  : "Whether you encountered a technical glitch or have an academic recommendation for a lecture, our faculty and engineering team are here to act."}
+              </p>
+            </div>
+
+            {/* Quick Dual Cards */}
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <Link
+                href="/feedback?type=technical"
+                className="group flex flex-col justify-between rounded-2xl border border-border/80 bg-background/70 p-5 sm:p-6 transition-all hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-2"
+              >
+                <div className="space-y-3">
+                  <div className="inline-flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Cpu className="size-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                    {isAr ? "بلاغ عن مشكلة تقنية" : "Technical Bug Reports"}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                    {isAr
+                      ? "إبلاغ عن عطل في مشغل الفيديو، أخطاء في واجهة المستخدم، أو مشاكل في الاختبارات."
+                      : "Report video playback errors, UI glitches, quiz calculation bugs, or access issues."}
+                  </p>
+                </div>
+                <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <span>{isAr ? "تقديم بلاغ تقني" : "Report a Technical Issue"}</span>
+                  <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 rtl:rotate-[-90deg]" />
+                </div>
+              </Link>
+
+              <Link
+                href="/feedback?type=academic"
+                className="group flex flex-col justify-between rounded-2xl border border-border/80 bg-background/70 p-5 sm:p-6 transition-all hover:border-primary/50 hover:bg-accent/40 focus-visible:ring-2"
+              >
+                <div className="space-y-3">
+                  <div className="inline-flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <BookOpenCheck className="size-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                    {isAr ? "ملاحظات وتصحيحات أكاديمية" : "Academic & Clinical Feedback"}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                    {isAr
+                      ? "تصحيح لمعلومة دوائية، مقترحات لتبسيط المفاهيم، أو مراجع إكلينيكية إضافية."
+                      : "Submit pharmacological corrections, lecture clarity feedback, or reference updates."}
+                  </p>
+                </div>
+                <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">
+                  <span>{isAr ? "تقديم ملاحظة أكاديمية" : "Submit Academic Feedback"}</span>
+                  <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 rtl:rotate-[-90deg]" />
+                </div>
+              </Link>
+            </div>
+
+            {/* Bottom Full Hub CTA Button */}
+            <div className="mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-muted-foreground text-center sm:text-start">
+                <span>
+                  {isAr
+                    ? "يتم مراجعة كافة الملاحظات من قِبل المشرفين الأكاديمي والتقني بشكل دوري."
+                    : "All submissions are thoroughly reviewed and tracked by our academic supervisors."}
+                </span>
+              </div>
+              <Button size="lg" className="w-full sm:w-auto font-bold gap-2 btn-nowrap" asChild>
+                <Link href="/feedback">
+                  <MessageSquare className="size-4" />
+                  <span>{isAr ? "فتح مركز الملاحظات الشامل" : "Open Full Feedback Hub"}</span>
+                  <ArrowUpRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

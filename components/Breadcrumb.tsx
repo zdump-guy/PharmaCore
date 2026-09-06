@@ -19,10 +19,16 @@ export default function Breadcrumb({ items: rawItems, className = "", showHome =
   const { locale } = useRouter()
   const isAr = locale === "ar"
   const homeLabel = isAr ? "الرئيسية" : "Home"
+  const alreadyHasHome =
+    rawItems.length > 0 &&
+    (rawItems[0].href === "/" ||
+      rawItems[0].label.toLowerCase() === "home" ||
+      rawItems[0].label === "الرئيسية")
 
-  const items: BreadcrumbItem[] = showHome
-    ? [{ label: homeLabel, href: "/" }, ...rawItems]
-    : rawItems
+  const items: BreadcrumbItem[] =
+    showHome && !alreadyHasHome
+      ? [{ label: homeLabel, href: "/" }, ...rawItems]
+      : rawItems
 
   return (
     <nav aria-label="Breadcrumb" className={`flex min-w-0 ${className}`} dir={isAr ? "rtl" : "ltr"}>
