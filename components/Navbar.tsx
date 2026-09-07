@@ -88,38 +88,49 @@ export default function Navbar() {
   useEffect(() => {
     if (pathname !== "/") return
 
+    let rafId: number | null = null
+
     const handleScroll = () => {
-      const scrollY = window.scrollY
-      if (scrollY < 100) {
-        setActiveSection("home")
-        return
-      }
+      if (rafId !== null) return
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null
+        const scrollY = window.scrollY
+        if (scrollY < 100) {
+          setActiveSection("home")
+          return
+        }
 
-      // If at or near the very bottom of the page, activate feedback
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80) {
-        setActiveSection("feedback")
-        return
-      }
+        // If at or near the very bottom of the page, activate feedback
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80) {
+          setActiveSection("feedback")
+          return
+        }
 
-      const header = document.querySelector("header")
-      const navBottom = (header?.getBoundingClientRect().bottom ?? 76) + 60
+        const header = document.querySelector("header")
+        const navBottom = (header?.getBoundingClientRect().bottom ?? 76) + 60
 
-      const sectionIds: Array<"about" | "courses" | "feedback"> = ["feedback", "courses", "about"]
-      for (const id of sectionIds) {
-        const el = document.getElementById(id)
-        if (el) {
-          const rect = el.getBoundingClientRect()
-          if (rect.top <= navBottom && rect.bottom > 0) {
-            setActiveSection(id)
-            return
+        const sectionIds: Array<"about" | "courses" | "feedback"> = ["feedback", "courses", "about"]
+        for (const id of sectionIds) {
+          const el = document.getElementById(id)
+          if (el) {
+            const rect = el.getBoundingClientRect()
+            if (rect.top <= navBottom && rect.bottom > 0) {
+              setActiveSection(id)
+              return
+            }
           }
         }
-      }
+      })
     }
 
     handleScroll()
     window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId)
+      }
+    }
   }, [pathname])
 
   const handleSignOut = async () => {

@@ -38,27 +38,33 @@ export default function Home({ courses, siteContent }: HomeProps) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
   const homeSchema = [
-    {
-      "@type": "ItemList",
-      "name": isAr ? "مقررات علم الأدوية والصيدلة السريرية" : "Clinical Pharmacology Courses",
-      "description": copy.courses_body,
-      "numberOfItems": courses.length,
-      "itemListElement": courses.map((course, idx) => ({
-        "@type": "ListItem",
-        "position": idx + 1,
-        "item": {
-          "@type": "Course",
-          "name": isAr ? course.title_ar : course.title_en,
-          "description": isAr ? course.description_ar : course.description_en,
-          "url": `${siteUrl}${isAr ? "/ar" : ""}/course/${course.id}`,
-          "provider": {
-            "@type": "EducationalOrganization",
-            "name": "PharmaCore",
-            "sameAs": siteUrl,
+    ...(courses && courses.length > 0
+      ? [
+          {
+            "@type": "ItemList",
+            "name": isAr ? "مقررات علم الأدوية والصيدلة السريرية" : "Clinical Pharmacology Courses",
+            "description": copy.courses_body || (isAr ? "مقررات علم الأدوية السريري" : "Clinical Pharmacology Curriculum"),
+            "numberOfItems": courses.length,
+            "itemListElement": courses.map((course, idx) => ({
+              "@type": "ListItem",
+              "position": idx + 1,
+              "item": {
+                "@type": "Course",
+                "name": isAr ? course.title_ar || "مقرر فارماكور" : course.title_en || "PharmaCore Course",
+                "description": isAr
+                  ? course.description_ar || "مقرر تخصصي في علم الأدوية السريري"
+                  : course.description_en || "Specialized clinical pharmacology course.",
+                "url": `${siteUrl}${isAr ? "/ar" : ""}/course/${course.id}`,
+                "provider": {
+                  "@type": "EducationalOrganization",
+                  "name": "PharmaCore",
+                  "sameAs": siteUrl,
+                },
+              },
+            })),
           },
-        },
-      })),
-    },
+        ]
+      : []),
     {
       "@type": "FAQPage",
       "name": isAr ? "الأسئلة الشائعة حول منصة فارماكور" : "Frequently Asked Questions — PharmaCore",

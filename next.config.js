@@ -25,6 +25,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  poweredByHeader: false,
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
   outputFileTracingRoot: path.join(__dirname),
@@ -35,9 +36,12 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: [
       'react-icons',
+      'react-icons/fa6',
+      'react-icons/fi',
       '@radix-ui/react-accordion',
       '@radix-ui/react-dialog',
       '@radix-ui/react-select',
+      '@radix-ui/react-slot',
       '@radix-ui/react-tabs',
     ],
   },

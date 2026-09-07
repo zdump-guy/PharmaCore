@@ -84,21 +84,42 @@ export const defaultSocialLinks: SocialLink[] = [
     platform: "telegram",
     label_en: "Official Channel",
     label_ar: "القناة الرسمية",
-    url: "https://t.me",
+    url: "https://t.me/pharmacore",
   },
   {
     id: "2",
     platform: "facebook",
     label_en: "Discussion Community",
     label_ar: "مجموعة النقاش",
-    url: "https://facebook.com",
+    url: "https://facebook.com/pharmacore.edu",
   },
   {
     id: "3",
     platform: "youtube",
     label_en: "Video Lectures",
     label_ar: "قناة المحاضرات",
-    url: "https://youtube.com",
+    url: "https://www.youtube.com/@PharmaCore",
+  },
+  {
+    id: "4",
+    platform: "twitter",
+    label_en: "X (Twitter)",
+    label_ar: "منصة إكس",
+    url: "https://x.com/PharmaCore",
+  },
+  {
+    id: "5",
+    platform: "instagram",
+    label_en: "Instagram",
+    label_ar: "إنستغرام",
+    url: "https://instagram.com/pharmacore_22",
+  },
+  {
+    id: "6",
+    platform: "linkedin",
+    label_en: "Academic Lead",
+    label_ar: "المشرف الأكاديمي",
+    url: "https://linkedin.com/in/mai-bahaa-7b78b7340",
   },
 ]
 
@@ -283,10 +304,10 @@ export const contentGroups = contentSections
 
 export const siteMetadata = {
   en: {
-    title: "PharmaCore — Specialized Clinical Pharmacology & Pharmacy Education",
+    title: "PharmaCore — Clinical Pharmacology & Pharmacy Education",
     titleTemplate: "%s | PharmaCore",
     description:
-      "A focused, open educational platform for medical and pharmacy students. High-yield video lectures, clinical pharmacology breakdowns, downloadable summaries, and interactive quizzes.",
+      "Specialized clinical pharmacology education for healthcare students with video lectures, summaries, and interactive quizzes.",
     keywords: [
       "clinical pharmacology",
       "pharmacy courses",
@@ -301,10 +322,10 @@ export const siteMetadata = {
     ],
   },
   ar: {
-    title: "فارماكور — المنصة التخصصية في علم الأدوية السريري والتعليم الصيدلي",
+    title: "فارماكور — المنصة التخصصية في علم الأدوية والصيدلة",
     titleTemplate: "%s | فارماكور",
     description:
-      "منصة تعليمية متخصصة ومفتوحة لطلاب وخريجي كليات الصيدلة والطب. محاضرات فيديو مركزة في الفارماكولوجي الإكلينيكي، ملخصات سريرية مبسطة، واختبارات تفاعلية فورية.",
+      "منصة تعليمية متخصصة في علم الأدوية السريري والصيدلة. محاضرات مرئية مكثفة، ملخصات سريرية، واختبارات تفاعلية فورية.",
     keywords: [
       "علم الأدوية السريري",
       "فارماكولوجي",

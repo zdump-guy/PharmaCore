@@ -54,62 +54,79 @@ export function initAnalytics() {
   }
 }
 
+function deferTask(task: () => void) {
+  if (typeof window === "undefined") return
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(task)
+  } else {
+    setTimeout(task, 0)
+  }
+}
+
 /**
  * Track an analytics event directly to Supabase
  */
 export function trackEvent(eventName: string, properties?: Record<string, unknown>) {
   if (typeof window === "undefined") return
 
-  const distinctId = getDistinctId()
-  const currentUrl = typeof window !== "undefined" ? window.location.pathname : null
-  const payloadProps = {
-    ...(properties || {}),
-    ...(currentUserProperties || {}),
-    path: currentUrl,
-  }
+  deferTask(() => {
+    try {
+      const distinctId = getDistinctId()
+      const currentUrl = typeof window !== "undefined" ? window.location.pathname : null
+      const payloadProps = {
+        ...(properties || {}),
+        ...(currentUserProperties || {}),
+        path: currentUrl,
+      }
 
-  const localEvent: AnalyticsEvent = {
-    id: "evt_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
-    name: eventName,
-    properties: payloadProps,
-    timestamp: new Date().toISOString(),
-    distinct_id: distinctId,
-    user_id: currentUserId,
-  }
+      const localEvent: AnalyticsEvent = {
+        id: "evt_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
+        name: eventName,
+        properties: payloadProps,
+        timestamp: new Date().toISOString(),
+        distinct_id: distinctId,
+        user_id: currentUserId,
+      }
 
-  // Push immediately to local memory buffer and notify UI listeners
-  recentEventsBuffer.unshift(localEvent)
-  if (recentEventsBuffer.length > MAX_BUFFER_SIZE) {
-    recentEventsBuffer.pop()
-  }
-  subscribers.forEach((subscriber) => subscriber(localEvent))
-
-  // Persist directly to Supabase analytics_events table
-  if (supabase) {
-    Promise.resolve(
-      supabase.from("analytics_events").insert([
-        {
-          event_name: eventName,
-          properties: payloadProps,
-          distinct_id: distinctId,
-          user_id: currentUserId,
-          url: currentUrl,
-        },
-      ])
-    )
-      .then(({ error }) => {
-        if (error && process.env.NODE_ENV !== "production") {
-          // Table might not exist yet before migration
-          console.warn("Analytics insertion warning:", error.message)
-        }
+      // Push immediately to local memory buffer and notify UI listeners
+      recentEventsBuffer.unshift(localEvent)
+      if (recentEventsBuffer.length > MAX_BUFFER_SIZE) {
+        recentEventsBuffer.pop()
+      }
+      subscribers.forEach((subscriber) => {
+        try {
+          subscriber(localEvent)
+        } catch {}
       })
-      .catch((err: unknown) => {
-        // Suppress unhandled promise rejection if network drops or ad-blocker blocks telemetry
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("Analytics insertion network error:", err)
-        }
-      })
-  }
+
+      // Persist directly to Supabase analytics_events table
+      if (supabase) {
+        Promise.resolve(
+          supabase.from("analytics_events").insert([
+            {
+              event_name: eventName,
+              properties: payloadProps,
+              distinct_id: distinctId,
+              user_id: currentUserId,
+              url: currentUrl,
+            },
+          ])
+        )
+          .then(({ error }) => {
+            if (error && process.env.NODE_ENV !== "production") {
+              // Table might not exist yet before migration
+              console.warn("Analytics insertion warning:", error.message)
+            }
+          })
+          .catch((err: unknown) => {
+            // Suppress unhandled promise rejection if network drops or ad-blocker blocks telemetry
+            if (process.env.NODE_ENV !== "production") {
+              console.warn("Analytics insertion network error:", err)
+            }
+          })
+      }
+    } catch {}
+  })
 }
 
 /**

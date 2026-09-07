@@ -1,4 +1,5 @@
 import type { AppProps } from "next/app"
+import Head from "next/head"
 import { appWithTranslation } from "next-i18next/pages"
 import { useRouter } from "next/router"
 import { useEffect } from "react"
@@ -118,6 +119,9 @@ function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={`${inter.variable} ${tajawal.variable} font-sans`}>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </Head>
       <ThemeProvider>
         <AuthProvider>
           <SiteContentProvider initialContent={pageProps.siteContent}>

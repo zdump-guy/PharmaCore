@@ -10,7 +10,6 @@ import {
 import {
   FaDiscord,
   FaFacebookF,
-  FaGithub,
   FaInstagram,
   FaLinkedinIn,
   FaTelegram,
@@ -105,12 +104,12 @@ export default function Footer() {
               <ShieldCheck className="size-4 shrink-0" />
               <span>{copy.footer_reviewed}</span>
             </div>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <InstallAppModal
                 trigger={
                   <button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer min-h-[36px]"
+                    className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 transition-colors border border-primary/20 cursor-pointer min-h-[44px]"
                   >
                     <Download className="size-3.5 shrink-0" />
                     <span>{isAr ? "تثبيت تطبيق سطح المكتب" : "Install Desktop App"}</span>
@@ -119,7 +118,7 @@ export default function Footer() {
               />
               <Link
                 href="/feedback"
-                className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted transition-colors border border-border/50 cursor-pointer min-h-[36px]"
+                className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted transition-colors border border-border/50 cursor-pointer min-h-[44px]"
               >
                 <MessageSquare className="size-3.5 shrink-0 text-primary" />
                 <span>{isAr ? "إرسال ملاحظة / بلاغ" : "Feedback & Bug Reports"}</span>

@@ -4,7 +4,8 @@ import { useRouter } from "next/router"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import Breadcrumb from "@/components/Breadcrumb"
-import { siteMetadata } from "@/lib/siteContent"
+import { siteMetadata, defaultSocialLinks } from "@/lib/siteContent"
+import { useSiteContent } from "@/components/SiteContentProvider"
 
 interface LayoutProps {
   children: ReactNode
@@ -73,6 +74,15 @@ export default function Layout({
     }
   }
 
+  const siteContent = useSiteContent()
+  const activeSocialUrls = (
+    siteContent?.social_links && siteContent.social_links.length > 0
+      ? siteContent.social_links
+      : defaultSocialLinks
+  )
+    .map((s) => s.url)
+    .filter((url) => Boolean(url) && url.startsWith("http"))
+
   // Structured Data JSON-LD
   const baseGraph = [
     {
@@ -90,10 +100,13 @@ export default function Layout({
       "image": `${siteUrl}/og-image.jpg`,
       "description":
         "A specialized educational platform for pharmacy and clinical pharmacology courses.",
-      "sameAs": [
-        "https://t.me",
-        "https://facebook.com",
-        "https://youtube.com"
+      "sameAs": activeSocialUrls.length > 0 ? activeSocialUrls : [
+        "https://www.youtube.com/@PharmaCore",
+        "https://facebook.com/pharmacore.edu",
+        "https://x.com/PharmaCore",
+        "https://instagram.com/pharmacore_22",
+        "https://linkedin.com/in/mai-bahaa-7b78b7340",
+        "https://t.me/pharmacore"
       ]
     },
     {
@@ -114,7 +127,10 @@ export default function Layout({
       "inLanguage": ["en", "ar"],
       "potentialAction": {
         "@type": "SearchAction",
-        "target": `${siteUrl}/#courses?q={search_term_string}`,
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": `${siteUrl}/#courses?q={search_term_string}`
+        },
         "query-input": "required name=search_term_string"
       }
     }
