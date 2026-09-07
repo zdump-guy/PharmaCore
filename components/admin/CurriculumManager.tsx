@@ -8,6 +8,7 @@ import {
   FiExternalLink as ExternalLink,
   FiFileText as FileText,
   FiGlobe as Globe,
+  FiHeadphones as Headphones,
   FiHelpCircle as HelpCircle,
   FiImage as FileImage,
   FiLink as LinkIcon,
@@ -27,7 +28,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CourseEnrollmentManager from "@/components/admin/CourseEnrollmentManager"
-import type { Course, EnrollmentSettings, Lecture, Question, Quiz, Resource } from "@/types"
+import type { AudioRecord, Course, EnrollmentSettings, Lecture, Question, Quiz, Resource } from "@/types"
 
 interface CurriculumManagerProps {
   isAr: boolean
@@ -36,6 +37,7 @@ interface CurriculumManagerProps {
   searchQuery: string
   courses: Course[]
   lectures: Lecture[]
+  audioRecords?: AudioRecord[]
   quizzes: Quiz[]
   questions: Question[]
   resources: Resource[]
@@ -45,11 +47,12 @@ interface CurriculumManagerProps {
   selectedEnrollmentCourseId?: string
   onOpenCourseEditor: (course?: Course) => void
   onOpenLectureEditor: (lecture?: Lecture) => void
+  onOpenVoiceRecordEditor?: (record?: AudioRecord) => void
   onOpenQuizEditor: (quiz?: Quiz) => void
   onOpenResourceEditor: (resource?: Resource) => void
   onOpenQuestionEditor: (question?: Question) => void
   onDeleteEntity: (
-    table: "courses" | "lectures" | "quizzes" | "resources" | "questions",
+    table: "courses" | "lectures" | "audio_records" | "quizzes" | "resources" | "questions",
     id: string,
     name: string
   ) => void
@@ -57,7 +60,7 @@ interface CurriculumManagerProps {
   onEnrollmentsUpdated?: (pendingCount: number) => void
 }
 
-type SubTab = "courses" | "enrollments" | "lectures" | "quizzes" | "resources"
+export type SubTab = "courses" | "enrollments" | "lectures" | "records" | "quizzes" | "resources"
 
 export default function CurriculumManager({
   isAr,
@@ -66,6 +69,7 @@ export default function CurriculumManager({
   searchQuery,
   courses,
   lectures,
+  audioRecords = [],
   quizzes,
   questions,
   resources,
@@ -75,6 +79,7 @@ export default function CurriculumManager({
   selectedEnrollmentCourseId,
   onOpenCourseEditor,
   onOpenLectureEditor,
+  onOpenVoiceRecordEditor,
   onOpenQuizEditor,
   onOpenResourceEditor,
   onOpenQuestionEditor,
@@ -88,6 +93,13 @@ export default function CurriculumManager({
 
   const tr = (en: string, ar: string) => (isAr ? ar : en)
   const effectiveSearch = (searchQuery || localSearch).trim().toLowerCase()
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "0:00"
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    return `${m}:${s < 10 ? "0" : ""}${s}`
+  }
 
   // Helpers to resolve titles
   const getCourseTitle = (courseId: string | null) => {
@@ -118,6 +130,17 @@ export default function CurriculumManager({
       l.title_en.toLowerCase().includes(effectiveSearch) ||
       l.title_ar.toLowerCase().includes(effectiveSearch) ||
       getCourseTitle(l.course_id).toLowerCase().includes(effectiveSearch)
+    )
+  })
+
+  const filteredAudioRecords = (audioRecords || []).filter((rec) => {
+    const lecture = lectures.find((l) => l.id === rec.lecture_id)
+    if (selectedCourseFilter !== "all" && lecture?.course_id !== selectedCourseFilter) return false
+    if (!effectiveSearch) return true
+    return (
+      rec.title_en.toLowerCase().includes(effectiveSearch) ||
+      rec.title_ar.toLowerCase().includes(effectiveSearch) ||
+      getLectureTitle(rec.lecture_id).toLowerCase().includes(effectiveSearch)
     )
   })
 
@@ -501,7 +524,155 @@ export default function CurriculumManager({
         </div>
       )}
 
-      {/* ─── 3. QUIZZES & QUESTIONS VIEW ────────────────────────────────── */}
+      {/* ─── 3. VOICE RECORDS VIEW ───────────────────────────────────────── */}
+      {activeSubTab === "records" && (
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
+            <div>
+              <div className="flex items-center gap-2">
+                <Headphones className="size-5 text-primary" />
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight">{tr("Voice Records", "التسجيلات الصوتية")}</h3>
+                <Badge variant="secondary" className="text-xs font-mono font-bold">
+                  {filteredAudioRecords.length} {tr("records", "تسجيل")}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {tr(
+                  "High-yield audio explanations and voice walkthroughs for lectures.",
+                  "تسجيلات وشروحات صوتية موجزة ومباشرة للمحاضرات بواسطة المدربين."
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <Select value={selectedCourseFilter} onValueChange={setSelectedCourseFilter}>
+                <SelectTrigger className="h-9 w-full sm:w-[180px] text-xs bg-background">
+                  <SelectValue placeholder={tr("Filter by course", "تصفية حسب المقرر")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tr("All Courses", "جميع المقررات")}</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {isAr ? course.title_ar : course.title_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative w-full sm:w-52">
+                <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  placeholder={tr("Search records...", "بحث في التسجيلات...")}
+                  className="h-9 ps-8 pe-8 text-xs bg-background"
+                />
+                {localSearch && (
+                  <button
+                    onClick={() => setLocalSearch("")}
+                    className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <Button
+                onClick={() => onOpenVoiceRecordEditor?.()}
+                disabled={!lectures.length}
+                className="gap-1.5 font-bold min-h-[36px] w-full sm:w-auto shrink-0 shadow-xs"
+              >
+                <Plus className="size-4" />
+                <span>{tr("New Voice Record", "إضافة تسجيل صوتي")}</span>
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredAudioRecords.map((record) => {
+              const lectureTitle = getLectureTitle(record.lecture_id)
+              const title = isAr ? record.title_ar : record.title_en
+
+              return (
+                <Card key={record.id} className="card-interactive shadow-none flex flex-col justify-between">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge
+                        variant="outline"
+                        className="gap-1 text-[10px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                      >
+                        <Headphones className="size-3" />
+                        {record.duration_seconds ? formatDuration(record.duration_seconds) : tr("Audio", "صوت")}
+                      </Badge>
+
+                      <Badge variant="outline" className="text-[10px] truncate max-w-[160px]">
+                        {lectureTitle}
+                      </Badge>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-sm leading-snug line-clamp-2">{title}</h4>
+                      <div className="mt-2.5">
+                        <audio controls src={record.audio_url} className="w-full h-8 max-w-full rounded-md" preload="none" />
+                      </div>
+                    </div>
+                  </CardContent>
+
+                  <div className="border-t bg-muted/20 p-2.5 flex items-center justify-between">
+                    <a
+                      href={record.audio_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline px-2 min-h-[32px]"
+                    >
+                      <ExternalLink className="size-3" />
+                      {tr("Open Audio", "فتح الملف")}
+                    </a>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        onClick={() => onOpenVoiceRecordEditor?.(record)}
+                        title={tr("Edit record", "تعديل التسجيل")}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => onDeleteEntity("audio_records", record.id, title)}
+                        title={tr("Delete record", "حذف التسجيل")}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+          </div>
+
+          {!filteredAudioRecords.length && (
+            <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed p-8 text-center text-muted-foreground">
+              <div>
+                <Headphones className="mx-auto size-8 opacity-40" />
+                <p className="mt-2 font-bold text-sm">
+                  {tr("No voice records found", "لم يتم العثور على تسجيلات صوتية")}
+                </p>
+                <p className="mt-1 text-xs">
+                  {tr("Record in-browser voice notes or upload audio files for lectures.", "سجل بصوتك مباشرة عبر المتصفح أو ارفع ملفات صوتية للمحاضرات.")}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── 4. QUIZZES & QUESTIONS VIEW ────────────────────────────────── */}
       {activeSubTab === "quizzes" && (
         <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-card border rounded-2xl p-4 shadow-xs">
@@ -515,8 +686,8 @@ export default function CurriculumManager({
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {tr(
-                  "Interactive question banks for assessing student comprehension.",
-                  "بنوك أسئلة تفاعلية لتقييم استيعاب الطلاب للمحاضرات."
+                  "Quiz PDF sheets and question banks for evaluating student comprehension.",
+                  "أوراق اختبارات PDF وبنوك أسئلة لتقييم استيعاب الطلاب للمحاضرات."
                 )}
               </p>
             </div>
@@ -585,9 +756,24 @@ export default function CurriculumManager({
                 >
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <Badge variant={isSelected ? "default" : "outline"} className="text-[10px]">
-                        {quizQuestions.length} {tr("questions", "سؤال")}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {quiz.pdf_url && (
+                          <Badge variant="outline" className="text-[10px] font-bold text-red-600 dark:text-red-400 border-red-500/30 bg-red-500/10 gap-1">
+                            <FileText className="size-2.5" />
+                            PDF
+                          </Badge>
+                        )}
+                        {quizQuestions.length > 0 && (
+                          <Badge variant={isSelected ? "default" : "outline"} className="text-[10px]">
+                            {quizQuestions.length} {tr("questions", "سؤال")}
+                          </Badge>
+                        )}
+                        {!quiz.pdf_url && quizQuestions.length === 0 && (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                            {tr("Draft", "مسودة")}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
@@ -622,6 +808,21 @@ export default function CurriculumManager({
                         {courseTitle} · {lectureTitle}
                       </p>
                     </div>
+
+                    {quiz.pdf_url && (
+                      <div className="pt-1 flex items-center gap-2">
+                        <a
+                          href={quiz.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                        >
+                          <ExternalLink className="size-3" />
+                          {tr("View Quiz PDF", "معاينة ملف الاختبار")}
+                        </a>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )

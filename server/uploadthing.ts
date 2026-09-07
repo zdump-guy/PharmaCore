@@ -93,6 +93,22 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ file, metadata }) => {
       return { url: file.url, name: file.name, size: file.size, uploadedBy: metadata?.userId }
     }),
+
+  // Lecture voice recordings and instructor audio files
+  lectureAudio: f({
+    audio: {
+      maxFileSize: "64MB",
+      maxFileCount: 1,
+    },
+    blob: {
+      maxFileSize: "64MB",
+      maxFileCount: 1,
+    },
+  })
+    .middleware(authorizeStaffUpload)
+    .onUploadComplete(async ({ file, metadata }) => {
+      return { url: file.url, name: file.name, size: file.size, uploadedBy: metadata?.userId }
+    }),
 } satisfies FileRouter
 
 export type OurFileRouter = typeof ourFileRouter

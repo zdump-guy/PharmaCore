@@ -62,8 +62,8 @@ export default function Layout({
     canonical ||
     `${siteUrl}${locale === "ar" ? "/ar" : ""}${normalizedPath}`
 
-  // Resolve absolute image URL for OpenGraph and Twitter
-  let ogImage = `${siteUrl}/${isAr ? "og-image-ar.png" : "og-image.png"}`
+  // Resolve absolute image URL for OpenGraph, WhatsApp, and Twitter
+  let ogImage = `${siteUrl}/${isAr ? "og-image-ar.jpg" : "og-image.jpg"}`
   if (image) {
     if (image.startsWith("http://") || image.startsWith("https://")) {
       ogImage = image
@@ -87,7 +87,7 @@ export default function Layout({
         "width": 281,
         "height": 60,
       },
-      "image": `${siteUrl}/og-image.png`,
+      "image": `${siteUrl}/og-image.jpg`,
       "description":
         "A specialized educational platform for pharmacy and clinical pharmacology courses.",
       "sameAs": [
@@ -167,11 +167,13 @@ export default function Layout({
           </>
         )}
 
-        {/* Complete Favicons & App Icons Suite */}
-        <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        {/* Complete Favicons & App Icons Suite for Google Favicon Bot & Browsers */}
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="icon" type="image/svg+xml" href="/pharmacore-mark.svg" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
@@ -183,6 +185,9 @@ export default function Layout({
           href="/opensearch.xml"
           title="PharmaCore"
         />
+
+        {/* WhatsApp Preview Image Link Directives */}
+        <link rel="image_src" href={ogImage} />
 
         {/* Open Graph / Facebook / LinkedIn / WhatsApp */}
         <meta property="og:type" content={type} />

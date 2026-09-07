@@ -571,7 +571,7 @@ export function trackThemeToggle(themeOrObj: "light" | "dark" | { theme: "light"
 
 export function trackAdminAction(payload: {
   action: "created" | "updated" | "deleted" | "content_updated"
-  entityType: "course" | "lecture" | "quiz" | "resource" | "question" | "user" | "qa_reply" | "site_content"
+  entityType: "course" | "lecture" | "quiz" | "resource" | "question" | "user" | "qa_reply" | "site_content" | "audio_record"
   entityId?: string
   entityName?: string
   details?: Record<string, unknown>

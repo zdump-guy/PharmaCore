@@ -64,6 +64,18 @@ export interface Resource {
   type: ResourceType;
 }
 
+export interface AudioRecord {
+  id: string;
+  lecture_id: string;
+  course_id?: string | null;
+  title_en: string;
+  title_ar: string;
+  audio_url: string;
+  duration_seconds?: number;
+  created_by?: string | null;
+  created_at: string;
+}
+
 export type QuestionType = 'multiple_choice' | 'true_false' | 'short_text';
 
 export interface Quiz {
@@ -72,6 +84,10 @@ export interface Quiz {
   title_ar: string;
   lecture_id: string | null;
   course_id: string | null;
+  pdf_url?: string | null;
+  solution_pdf_url?: string | null;
+  description_en?: string | null;
+  description_ar?: string | null;
   created_by: string | null;
   created_at: string;
 }

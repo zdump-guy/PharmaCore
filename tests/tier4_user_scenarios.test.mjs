@@ -26,7 +26,7 @@ describe("Tier 4 - Scenario 1: Complete Mobile Learner End-to-End Journey", () =
 
   it("1.3 Step 3 (Lecture Room): Mobile player renders 16:9 video with stacked tabs below", () => {
     expect(lectureTsx).toContain("aspect-video")
-    expect(lectureTsx).toContain("grid h-auto w-full grid-cols-2 sm:grid-cols-4")
+    expect(lectureTsx).toContain("grid h-auto w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5")
     expect(lectureTsx).toContain("min-h-[44px]")
   })
 
@@ -82,8 +82,8 @@ describe("Tier 4 - Scenario 3: Tablet Learner Experience (768px - 1024px)", () =
     expect(lectureTsx).toContain("lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]")
   })
 
-  it("3.4 lecture tabs switch from 2 columns to 4 columns on tablet (sm:grid-cols-4)", () => {
-    expect(lectureTsx).toContain("grid-cols-2 sm:grid-cols-4")
+  it("3.4 lecture tabs switch cleanly across responsive breakpoints (grid-cols-2 sm:grid-cols-3 lg:grid-cols-5)", () => {
+    expect(lectureTsx).toContain("grid-cols-2 sm:grid-cols-3 lg:grid-cols-5")
   })
 })
 

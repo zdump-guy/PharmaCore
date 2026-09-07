@@ -323,10 +323,10 @@ export const siteMetadata = {
 export const siteBranding = {
   logo_url: "/pharmacore-logo.svg",
   favicon_url: "/favicon.ico",
-  preview_image_url: "/og-image.png",
+  preview_image_url: "/og-image.jpg",
   logoUrl: "/pharmacore-logo.svg",
   faviconUrl: "/favicon.ico",
-  previewImageUrl: "/og-image.png",
+  previewImageUrl: "/og-image.jpg",
   themeColorLight: "#1e515d",
   themeColorDark: "#0d1b1e",
   brandInk: "#262626",

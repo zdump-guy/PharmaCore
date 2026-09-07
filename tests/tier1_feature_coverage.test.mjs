@@ -210,8 +210,8 @@ describe("Tier 1 - Feature 8: Lecture Tab Touch Targets (R4)", () => {
     expect(hasMinH10).toBe(false)
   })
 
-  it("8.3 tabs list uses responsive 2-col to 4-col grid (grid-cols-2 sm:grid-cols-4)", () => {
-    expect(lectureTsx).toContain("grid h-auto w-full grid-cols-2 sm:grid-cols-4")
+  it("8.3 tabs list uses responsive multi-column grid (grid-cols-2 sm:grid-cols-3 lg:grid-cols-5)", () => {
+    expect(lectureTsx).toContain("grid h-auto w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5")
   })
 
   it("8.4 action buttons in lecture tabs have accessible touch heights", () => {

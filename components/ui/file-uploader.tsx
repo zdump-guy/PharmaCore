@@ -4,6 +4,7 @@ import {
   FiCheck as Check,
   FiExternalLink as ExternalLink,
   FiFileText as FileText,
+  FiHeadphones as Headphones,
   FiImage as FileImage,
   FiLink as LinkIcon,
   FiLoader as Loader2,
@@ -23,11 +24,11 @@ export interface UploadedFileMeta {
   url: string
   name: string
   size?: number
-  type?: "pdf" | "image" | "other"
+  type?: "pdf" | "image" | "audio" | "other"
 }
 
 interface FileUploaderProps {
-  endpoint: "courseImage" | "lectureResource"
+  endpoint: "courseImage" | "lectureResource" | "lectureAudio"
   value: string
   onChange: (url: string, meta?: UploadedFileMeta) => void
   isAr?: boolean
@@ -35,6 +36,7 @@ interface FileUploaderProps {
   hint?: string
   acceptPdfOnly?: boolean
   acceptImagesOnly?: boolean
+  acceptAudioOnly?: boolean
   className?: string
 }
 
@@ -47,6 +49,7 @@ export default function FileUploader({
   hint,
   acceptPdfOnly = false,
   acceptImagesOnly = false,
+  acceptAudioOnly = false,
   className = "",
 }: FileUploaderProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -79,11 +82,16 @@ export default function FileUploader({
         const isImg =
           name.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)$/) !== null ||
           url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)$/) !== null
+        const isAud =
+          name.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)$/) !== null ||
+          url.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)$/) !== null
 
-        const detectedType: "pdf" | "image" | "other" = isPdf
+        const detectedType: "pdf" | "image" | "audio" | "other" = isPdf
           ? "pdf"
           : isImg
           ? "image"
+          : isAud
+          ? "audio"
           : "other"
 
         setFileName(name)
@@ -189,8 +197,6 @@ export default function FileUploader({
     }
   }
 
-
-
   const isImageValue =
     endpoint === "courseImage" ||
     acceptImagesOnly ||
@@ -201,6 +207,11 @@ export default function FileUploader({
     acceptPdfOnly ||
     value.toLowerCase().endsWith(".pdf") ||
     value.toLowerCase().includes(".pdf")
+
+  const isAudioValue =
+    endpoint === "lectureAudio" ||
+    acceptAudioOnly ||
+    value.match(/\.(mp3|wav|m4a|ogg|webm|aac)(\?.*)?$/i) !== null
 
   const formatBytes = (bytes?: number | null) => {
     if (!bytes) return null
@@ -260,6 +271,10 @@ export default function FileUploader({
                 <span className="grid size-12 sm:size-14 shrink-0 place-items-center rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
                   <FileText className="size-6" />
                 </span>
+              ) : isAudioValue ? (
+                <span className="grid size-12 sm:size-14 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <Headphones className="size-6" />
+                </span>
               ) : (
                 <span className="grid size-12 sm:size-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
                   <FileImage className="size-6" />
@@ -310,7 +325,9 @@ export default function FileUploader({
                       ? "image/*"
                       : acceptPdfOnly
                       ? ".pdf,application/pdf"
-                      : ".pdf,image/*,application/pdf"
+                      : endpoint === "lectureAudio" || acceptAudioOnly
+                      ? "audio/*,.mp3,.wav,.m4a,.ogg,.webm"
+                      : ".pdf,image/*,audio/*,application/pdf"
                   }
                   onChange={handleFileInputChange}
                 />

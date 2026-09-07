@@ -497,7 +497,7 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
                         </Button>
                         {quizzes?.filter((q) => q.lecture_id === lecture.id).map((quiz) => (
                           <Button key={quiz.id} variant="secondary" className="btn-nowrap gap-1.5" asChild>
-                            <Link href={`/quiz/${quiz.id}`}>
+                            <Link href={quiz.pdf_url && quiz.lecture_id ? `/lecture/${quiz.lecture_id}` : `/quiz/${quiz.id}`}>
                               <BookOpen className="size-4 shrink-0 text-primary" />
                               <span>{isAr ? quiz.title_ar || "اختبار المحاضرة" : quiz.title_en || "Lecture Quiz"}</span>
                             </Link>

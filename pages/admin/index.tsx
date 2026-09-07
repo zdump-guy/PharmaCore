@@ -14,6 +14,7 @@ import type {
   CourseForm,
   LectureForm,
   QuizForm,
+  VoiceRecordForm,
   ResourceForm,
   QuestionForm,
 } from "@/components/admin/AdminModals"
@@ -64,6 +65,7 @@ import {
 } from "@/lib/siteContent"
 import { trackAdminAction, resetUser } from "@/lib/analytics"
 import type {
+  AudioRecord,
   CommunityQuestion,
   Course,
   EnrollmentSettings,
@@ -74,7 +76,7 @@ import type {
   UserProfile,
 } from "@/types"
 
-type Editor = "course" | "lecture" | "quiz" | "resource" | "question" | null
+type Editor = "course" | "lecture" | "quiz" | "resource" | "question" | "voiceRecord" | null
 type Notice = { error?: boolean; text: string } | null
 
 const emptyCourse: CourseForm = {
@@ -106,6 +108,19 @@ const emptyQuiz: QuizForm = {
   lecture_id: "",
   title_en: "",
   title_ar: "",
+  pdf_url: "",
+  solution_pdf_url: "",
+  description_en: "",
+  description_ar: "",
+}
+
+const emptyVoiceRecord: VoiceRecordForm = {
+  course_id: "",
+  lecture_id: "",
+  title_en: "",
+  title_ar: "",
+  audio_url: "",
+  duration_seconds: 0,
 }
 
 const emptyResource: ResourceForm = {
@@ -167,6 +182,7 @@ export default function AdminPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
   const [lectures, setLectures] = useState<Lecture[]>([])
+  const [audioRecords, setAudioRecords] = useState<AudioRecord[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [resources, setResources] = useState<Resource[]>([])
   const [questions, setQuestions] = useState<Question[]>([])
@@ -175,6 +191,7 @@ export default function AdminPage() {
   const [courseForm, setCourseForm] = useState<CourseForm>(emptyCourse)
   const [lectureForm, setLectureForm] = useState<LectureForm>(emptyLecture)
   const [quizForm, setQuizForm] = useState<QuizForm>(emptyQuiz)
+  const [voiceRecordForm, setVoiceRecordForm] = useState<VoiceRecordForm>(emptyVoiceRecord)
   const [resourceForm, setResourceForm] = useState<ResourceForm>(emptyResource)
   const [questionForm, setQuestionForm] = useState<QuestionForm>(emptyQuestion)
 
@@ -184,7 +201,7 @@ export default function AdminPage() {
   
   // Navigation State
   const [activePage, setActivePage] = useState<string>("analytics")
-  const [activeCurriculumSubTab, setActiveCurriculumSubTab] = useState<"courses" | "enrollments" | "lectures" | "quizzes" | "resources">("courses")
+  const [activeCurriculumSubTab, setActiveCurriculumSubTab] = useState<"courses" | "enrollments" | "lectures" | "records" | "quizzes" | "resources">("courses")
   const [activeStudentSubTab, setActiveStudentSubTab] = useState<"roster" | "pending" | "controller" | "directories" | "provision">("roster")
   const [activeDevSubTab, setActiveDevSubTab] = useState<DevSubTab>("logs")
   const [selectedEnrollmentCourseId, setSelectedEnrollmentCourseId] = useState<string>("all")
@@ -297,6 +314,7 @@ export default function AdminPage() {
             .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
             .order("created_at", { ascending: false }),
           client.from("site_content").select("content").eq("id", "main").maybeSingle(),
+          client.from("audio_records").select("*").order("order", { ascending: true }),
         ])
 
         if (data[0].data) {
@@ -343,8 +361,11 @@ export default function AdminPage() {
         if (data[7].data?.content) {
           setSiteContent(mergeSiteContent(data[7].data.content as Partial<SiteContent>))
         }
+        if (data[8]?.data) {
+          setAudioRecords(data[8].data)
+        }
 
-        const error = data.slice(0, 7).find((item) => item.error)?.error
+        const error = data.slice(0, 9).find((item) => item.error)?.error
         if (error) setNotice({ error: true, text: error.message })
         setReady(true)
       } catch (err) {
@@ -452,6 +473,35 @@ export default function AdminPage() {
     setSaving(false)
   }
 
+  async function saveVoiceRecord(e: React.FormEvent) {
+    e.preventDefault()
+    if (!supabase || !profile) return
+    setSaving(true)
+    const { id, course_id: _courseId, ...form } = voiceRecordForm
+    const payload = {
+      ...form,
+      duration_seconds: form.duration_seconds || 0,
+      created_by: profile.id,
+    }
+    const res = id
+      ? await supabase.from("audio_records").update(payload).eq("id", id).select().single()
+      : await supabase.from("audio_records").insert([payload]).select().single()
+
+    if (res.data) {
+      setAudioRecords((rows) => merge(rows, res.data))
+      setEditor(null)
+      setVoiceRecordForm(emptyVoiceRecord)
+      trackAdminAction({
+        action: id ? "updated" : "created",
+        entityType: "audio_record",
+        entityId: res.data.id,
+        entityName: res.data.title_en,
+      })
+    }
+    result(res.error, tr("Voice record saved successfully.", "تم حفظ التسجيل الصوتي بنجاح."))
+    setSaving(false)
+  }
+
   async function saveResource(e: React.FormEvent) {
     e.preventDefault()
     if (!supabase) return
@@ -525,7 +575,7 @@ export default function AdminPage() {
   }
 
   async function remove(
-    table: "courses" | "lectures" | "quizzes" | "resources" | "questions",
+    table: "courses" | "lectures" | "audio_records" | "quizzes" | "resources" | "questions",
     id: string,
     name: string
   ) {
@@ -540,6 +590,8 @@ export default function AdminPage() {
             ? "course"
             : table === "lectures"
             ? "lecture"
+            : table === "audio_records"
+            ? "audio_record"
             : table === "quizzes"
             ? "quiz"
             : table === "resources"
@@ -556,6 +608,7 @@ export default function AdminPage() {
       setCourses((r) => r.filter((x) => x.id !== id))
       setLectures((r) => r.filter((x) => x.course_id !== id))
       setResources((r) => r.filter((x) => !lectureIds.includes(x.lecture_id)))
+      setAudioRecords((r) => r.filter((x) => !lectureIds.includes(x.lecture_id)))
       setQuizzes((r) => r.filter((x) => x.course_id !== id))
       setQuestions((r) => r.filter((x) => !quizIds.includes(x.quiz_id)))
     }
@@ -563,9 +616,11 @@ export default function AdminPage() {
       const quizIds = quizzes.filter((x) => x.lecture_id === id).map((x) => x.id)
       setLectures((r) => r.filter((x) => x.id !== id))
       setResources((r) => r.filter((x) => x.lecture_id !== id))
+      setAudioRecords((r) => r.filter((x) => x.lecture_id !== id))
       setQuizzes((r) => r.filter((x) => x.lecture_id !== id))
       setQuestions((r) => r.filter((x) => !quizIds.includes(x.quiz_id)))
     }
+    if (!error && table === "audio_records") setAudioRecords((r) => r.filter((x) => x.id !== id))
     if (!error && table === "quizzes") {
       setQuizzes((r) => r.filter((x) => x.id !== id))
       setQuestions((r) => r.filter((x) => x.quiz_id !== id))
@@ -843,10 +898,36 @@ export default function AdminPage() {
             lecture_id: x.lecture_id ?? "",
             title_en: x.title_en,
             title_ar: x.title_ar,
+            pdf_url: x.pdf_url ?? "",
+            solution_pdf_url: x.solution_pdf_url ?? "",
+            description_en: x.description_en ?? "",
+            description_ar: x.description_ar ?? "",
           }
         : { ...emptyQuiz, course_id: courses[0]?.id ?? "" }
     )
     setEditor("quiz")
+  }
+
+  const openVoiceRecord = (x?: AudioRecord) => {
+    const lecture = lectures.find((l) => l.id === x?.lecture_id)
+    setVoiceRecordForm(
+      x
+        ? {
+            id: x.id,
+            course_id: lecture?.course_id ?? courses[0]?.id ?? "",
+            lecture_id: x.lecture_id,
+            title_en: x.title_en,
+            title_ar: x.title_ar,
+            audio_url: x.audio_url,
+            duration_seconds: x.duration_seconds || 0,
+          }
+        : {
+            ...emptyVoiceRecord,
+            course_id: courses[0]?.id ?? "",
+            lecture_id: lectures[0]?.id ?? "",
+          }
+    )
+    setEditor("voiceRecord")
   }
 
   const openResource = (x?: Resource) => {
@@ -1012,6 +1093,7 @@ export default function AdminPage() {
                 searchQuery={searchQuery}
                 courses={courses}
                 lectures={lectures}
+                audioRecords={audioRecords}
                 quizzes={quizzes}
                 questions={questions}
                 resources={resources}
@@ -1021,6 +1103,7 @@ export default function AdminPage() {
                 selectedEnrollmentCourseId={selectedEnrollmentCourseId}
                 onOpenCourseEditor={openCourse}
                 onOpenLectureEditor={openLecture}
+                onOpenVoiceRecordEditor={openVoiceRecord}
                 onOpenQuizEditor={openQuiz}
                 onOpenResourceEditor={openResource}
                 onOpenQuestionEditor={openQuestion}
@@ -1138,6 +1221,9 @@ export default function AdminPage() {
         quizForm={quizForm}
         setQuizForm={setQuizForm}
         onSaveQuiz={saveQuiz}
+        voiceRecordForm={voiceRecordForm}
+        setVoiceRecordForm={setVoiceRecordForm}
+        onSaveVoiceRecord={saveVoiceRecord}
         resourceForm={resourceForm}
         setResourceForm={setResourceForm}
         onSaveResource={saveResource}

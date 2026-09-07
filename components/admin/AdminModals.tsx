@@ -1,5 +1,6 @@
 import {
   FiGlobe as Globe,
+  FiHeadphones as Headphones,
   FiLoader as Loader2,
   FiLock as Lock,
   FiMessageCircle as MessageCircle,
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import FileUploader from "@/components/ui/file-uploader"
+import VoiceRecorder from "@/components/admin/VoiceRecorder"
 import type { Course, Lecture, Question, QuestionType, Quiz, Resource, ResourceType, UserRole } from "@/types"
 import type { ManagedUser, UserForm } from "@/components/admin/UserManager"
 
@@ -42,10 +44,26 @@ export type LectureForm = {
   order: number
 }
 
-export type QuizForm = Pick<Quiz, "title_en" | "title_ar"> & {
+export type QuizForm = {
   id?: string
   course_id: string
   lecture_id: string
+  title_en: string
+  title_ar: string
+  pdf_url?: string
+  solution_pdf_url?: string
+  description_en?: string
+  description_ar?: string
+}
+
+export type VoiceRecordForm = {
+  id?: string
+  course_id: string
+  lecture_id: string
+  title_en: string
+  title_ar: string
+  audio_url: string
+  duration_seconds?: number
 }
 
 export type ResourceForm = Pick<Resource, "lecture_id" | "title_en" | "title_ar" | "url" | "type"> & {
@@ -60,8 +78,8 @@ export type QuestionForm = Pick<Question, "quiz_id" | "text_en" | "text_ar" | "t
 
 interface AdminModalsProps {
   isAr: boolean
-  editor: "course" | "lecture" | "quiz" | "resource" | "question" | null
-  setEditor: (val: "course" | "lecture" | "quiz" | "resource" | "question" | null) => void
+  editor: "course" | "lecture" | "quiz" | "resource" | "question" | "voiceRecord" | null
+  setEditor: (val: "course" | "lecture" | "quiz" | "resource" | "question" | "voiceRecord" | null) => void
   saving: boolean
   courses: Course[]
   lectures: Lecture[]
@@ -76,6 +94,9 @@ interface AdminModalsProps {
   quizForm: QuizForm
   setQuizForm: React.Dispatch<React.SetStateAction<QuizForm>>
   onSaveQuiz: (e: React.FormEvent) => void
+  voiceRecordForm: VoiceRecordForm
+  setVoiceRecordForm: React.Dispatch<React.SetStateAction<VoiceRecordForm>>
+  onSaveVoiceRecord: (e: React.FormEvent) => void
   resourceForm: ResourceForm
   setResourceForm: React.Dispatch<React.SetStateAction<ResourceForm>>
   onSaveResource: (e: React.FormEvent) => void
@@ -117,6 +138,9 @@ export default function AdminModals({
   quizForm,
   setQuizForm,
   onSaveQuiz,
+  voiceRecordForm,
+  setVoiceRecordForm,
+  onSaveVoiceRecord,
   resourceForm,
   setResourceForm,
   onSaveResource,
@@ -140,6 +164,7 @@ export default function AdminModals({
 }: AdminModalsProps) {
   const tr = (en: string, ar: string) => (isAr ? ar : en)
   const quizLectures = lectures.filter((l) => l.course_id === quizForm.course_id)
+  const voiceLectures = lectures.filter((l) => l.course_id === voiceRecordForm.course_id)
   const resourceLectures = lectures.filter((l) => l.course_id === resourceForm.course_id)
 
   return (
@@ -379,16 +404,16 @@ export default function AdminModals({
         </DialogContent>
       </Dialog>
 
-      {/* ─── 3. QUIZ MODAL ───────────────────────────────────────────── */}
+      {/* ─── 3. QUIZ PDF MODAL ───────────────────────────────────────── */}
       <Dialog open={editor === "quiz"} onOpenChange={(v) => !v && setEditor(null)}>
-        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
           <form onSubmit={onSaveQuiz}>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl font-extrabold">
-                {quizForm.id ? tr("Edit Quiz Checkpoint", "تعديل الاختبار") : tr("New Quiz Checkpoint", "إضافة اختبار جديد")}
+                {quizForm.id ? tr("Edit Quiz PDF Sheet", "تعديل ملف الاختبار") : tr("New Quiz PDF Sheet", "إضافة ملف اختبار جديد")}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                {tr("Assign this quiz checkpoint to a specific course and lecture.", "ربط هذا الاختبار بمقرر ومحاضرة محددة.")}
+                {tr("Upload a dedicated PDF quiz or worksheet for this lecture.", "رفع ملف اختبار أو واجب تدريبي بصيغة PDF مخصص لهذه المحاضرة.")}
               </DialogDescription>
             </DialogHeader>
 
@@ -441,7 +466,7 @@ export default function AdminModals({
                   required
                   value={quizForm.title_en}
                   onChange={(e) => setQuizForm((prev) => ({ ...prev, title_en: e.target.value }))}
-                  placeholder="e.g. Pharmacokinetics Checkpoint 1"
+                  placeholder="e.g. Mechanism Checkpoint Quiz (PDF)"
                   className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
                 />
               </div>
@@ -453,8 +478,43 @@ export default function AdminModals({
                   required
                   value={quizForm.title_ar}
                   onChange={(e) => setQuizForm((prev) => ({ ...prev, title_ar: e.target.value }))}
-                  placeholder="مثال: اختبار تقييم الحركية الدوائية"
+                  placeholder="مثال: ورقة اختبار آليات العمل الدوائية (PDF)"
                   className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <FileUploader
+                  endpoint="lectureResource"
+                  acceptPdfOnly={true}
+                  value={quizForm.pdf_url || ""}
+                  onChange={(url, meta) => {
+                    setQuizForm((prev) => {
+                      let titleEn = prev.title_en
+                      let titleAr = prev.title_ar
+                      if (meta?.name) {
+                        const cleanName = meta.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim()
+                        if (!titleEn) titleEn = cleanName
+                        if (!titleAr) titleAr = cleanName
+                      }
+                      return { ...prev, pdf_url: url, title_en: titleEn, title_ar: titleAr }
+                    })
+                  }}
+                  isAr={isAr}
+                  label={tr("Quiz Question Sheet (PDF)", "ملف ورقة أسئلة الاختبار (PDF)")}
+                  hint={tr("Direct upload: Upload quiz questions PDF up to 32MB", "رفع مباشر: ملف ورقة أسئلة الاختبار بصيغة PDF حتى 32 ميجابايت")}
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <FileUploader
+                  endpoint="lectureResource"
+                  acceptPdfOnly={true}
+                  value={quizForm.solution_pdf_url || ""}
+                  onChange={(url) => setQuizForm((prev) => ({ ...prev, solution_pdf_url: url }))}
+                  isAr={isAr}
+                  label={tr("Model Solution PDF (Optional)", "نموذج الإجابة والشرح (اختياري - PDF)")}
+                  hint={tr("Optional: Upload model answer and explanation sheet", "اختياري: رفع نموذج الإجابة والشرح التفصيلي بصيغة PDF")}
                 />
               </div>
             </div>
@@ -465,7 +525,140 @@ export default function AdminModals({
               </Button>
               <Button type="submit" disabled={saving} className="w-full sm:w-auto min-h-[40px] sm:min-h-[36px]">
                 {saving && <Loader2 className="size-3.5 animate-spin me-1.5" />}
-                {saving ? tr("Saving...", "جارٍ الحفظ...") : tr("Save Quiz", "حفظ الاختبار")}
+                {saving ? tr("Saving...", "جارٍ الحفظ...") : tr("Save Quiz PDF", "حفظ ملف الاختبار")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── 4. VOICE RECORD MODAL ────────────────────────────────────── */}
+      <Dialog open={editor === "voiceRecord"} onOpenChange={(v) => !v && setEditor(null)}>
+        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
+          <form onSubmit={onSaveVoiceRecord}>
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl font-extrabold flex items-center gap-2">
+                <Headphones className="size-5 text-amber-500" />
+                <span>{voiceRecordForm.id ? tr("Edit Voice Record", "تعديل التسجيل الصوتي") : tr("New Voice Record", "إضافة تسجيل صوتي جديد")}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {tr("Record directly using your microphone or upload an audio explanation file.", "سجل صوتيًا مباشرة عبر الميكروفون أو ارفع ملف شرح صوتي.")}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-3.5 sm:gap-4 py-4 sm:py-5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">{tr("Course", "المقرر")}</Label>
+                <Select
+                  value={voiceRecordForm.course_id}
+                  onValueChange={(val) => setVoiceRecordForm((prev) => ({ ...prev, course_id: val, lecture_id: "" }))}
+                  required
+                >
+                  <SelectTrigger className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]">
+                    <SelectValue placeholder={tr("Select course", "اختر المقرر")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {isAr ? c.title_ar : c.title_en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">{tr("Assigned Lecture", "المحاضرة التابع لها")}</Label>
+                <Select
+                  value={voiceRecordForm.lecture_id}
+                  onValueChange={(val) => setVoiceRecordForm((prev) => ({ ...prev, lecture_id: val }))}
+                  disabled={!voiceRecordForm.course_id}
+                  required
+                >
+                  <SelectTrigger className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]">
+                    <SelectValue placeholder={tr("Select lecture", "اختر المحاضرة")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {voiceLectures.map((l) => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {isAr ? l.title_ar : l.title_en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5" dir="ltr">
+                <Label htmlFor="voice-title-en" className="text-xs font-bold">English Record Title</Label>
+                <Input
+                  id="voice-title-en"
+                  required
+                  value={voiceRecordForm.title_en}
+                  onChange={(e) => setVoiceRecordForm((prev) => ({ ...prev, title_en: e.target.value }))}
+                  placeholder="e.g. Clinical Case Discussion (Audio)"
+                  className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                />
+              </div>
+
+              <div className="space-y-1.5" dir="rtl">
+                <Label htmlFor="voice-title-ar" className="text-xs font-bold">عنوان التسجيل بالعربية</Label>
+                <Input
+                  id="voice-title-ar"
+                  required
+                  value={voiceRecordForm.title_ar}
+                  onChange={(e) => setVoiceRecordForm((prev) => ({ ...prev, title_ar: e.target.value }))}
+                  placeholder="مثال: تسجيل صوتي لشرح الحالات السريرية"
+                  className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
+                />
+              </div>
+
+              {/* Option A: Live Microphone Recorder */}
+              <div className="sm:col-span-2 space-y-1.5">
+                <Label className="text-xs font-bold">{tr("Method 1: Direct Microphone Recording", "الخيار الأول: التسجيل المباشر من الميكروفون")}</Label>
+                <VoiceRecorder
+                  onRecordingComplete={(url, durationSecs) => {
+                    setVoiceRecordForm((prev) => ({
+                      ...prev,
+                      audio_url: url,
+                      duration_seconds: durationSecs,
+                    }))
+                  }}
+                  isAr={isAr}
+                />
+              </div>
+
+              {/* Option B: Audio File Uploader */}
+              <div className="sm:col-span-2 space-y-1.5">
+                <FileUploader
+                  endpoint="lectureAudio"
+                  acceptAudioOnly={true}
+                  value={voiceRecordForm.audio_url}
+                  onChange={(url, meta) => {
+                    setVoiceRecordForm((prev) => {
+                      let titleEn = prev.title_en
+                      let titleAr = prev.title_ar
+                      if (meta?.name) {
+                        const cleanName = meta.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim()
+                        if (!titleEn) titleEn = cleanName
+                        if (!titleAr) titleAr = cleanName
+                      }
+                      return { ...prev, audio_url: url, title_en: titleEn, title_ar: titleAr }
+                    })
+                  }}
+                  isAr={isAr}
+                  label={tr("Method 2: Upload Pre-recorded Audio File", "الخيار الثاني: رفع ملف صوتي مسجل مسبقًا")}
+                  hint={tr("Direct upload: MP3, WAV, M4A, OGG, WebM audio up to 64MB", "رفع مباشر: ملف صوتي MP3 أو WAV أو M4A حتى 64 ميجابايت")}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setEditor(null)} className="w-full sm:w-auto min-h-[40px] sm:min-h-[36px]">
+                {tr("Cancel", "إلغاء")}
+              </Button>
+              <Button type="submit" disabled={saving || !voiceRecordForm.audio_url} className="w-full sm:w-auto min-h-[40px] sm:min-h-[36px] bg-amber-600 hover:bg-amber-700 text-white">
+                {saving && <Loader2 className="size-3.5 animate-spin me-1.5" />}
+                {saving ? tr("Saving...", "جارٍ الحفظ...") : tr("Save Voice Record", "حفظ التسجيل الصوتي")}
               </Button>
             </DialogFooter>
           </form>
@@ -562,7 +755,7 @@ export default function AdminModals({
                       let newTitleAr = prev.title_ar
 
                       if (meta?.type) {
-                        newType = meta.type
+                        newType = meta.type === "audio" ? "other" : meta.type
                       }
                       if (meta?.name) {
                         const cleanName = meta.name

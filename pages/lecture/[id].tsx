@@ -8,9 +8,8 @@ import {
   FiArrowRight as ArrowRight,
   FiCheckCircle as CheckCircle2,
   FiClock as Clock,
-  FiDownload as Download,
-  FiImage as FileImage,
   FiFileText as FileText,
+  FiHeadphones as Headphones,
   FiHelpCircle as HelpCircle,
   FiLock as LockKeyhole,
   FiLogIn as LogIn,
@@ -23,6 +22,7 @@ import Layout from "@/components/Layout"
 import Breadcrumb from "@/components/Breadcrumb"
 import YouTubePlayer from "@/components/YouTubePlayer"
 import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
+import MediaActionCard from "@/components/ui/media-action-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,11 +34,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { trackLectureView, trackResourceClick, trackCommunityQuestionSubmit } from "@/lib/analytics"
-import type { CommunityQuestion, Course, Lecture, Quiz, Resource } from "@/types"
+import type { AudioRecord, CommunityQuestion, Course, Lecture, Quiz, Resource } from "@/types"
 
 interface LecturePageProps {
   lecture: Lecture | null
   resources: Resource[]
+  audioRecords?: AudioRecord[]
   quizzes: Quiz[]
   questions: CommunityQuestion[]
   courseId: string | null
@@ -176,6 +177,7 @@ function QuestionForm({
 export default function LecturePage({
   lecture,
   resources,
+  audioRecords = [],
   quizzes,
   questions: initialQuestions,
   courseId,
@@ -327,14 +329,16 @@ export default function LecturePage({
         back: "العودة إلى المقرر",
         lecture: "محاضرة",
         summary: "الملخص",
-        resources: "المواد",
-        quizzes: "الاختبارات",
-        discussion: "الأسئلة",
+        records: "التسجيلات الصوتية",
+        resources: "المواد والمرفقات",
+        quizzes: "أوراق الاختبارات",
+        discussion: "الأسئلة والنقاش",
         quiz: "اختبر فهمك",
-        quizBody: "اختبار قصير يساعدك على تثبيت المفاهيم الأساسية.",
+        quizBody: "ورقة اختبار PDF ومفتاح الحل لمراجعة وتثبيت المفاهيم.",
         startQuiz: "بدء الاختبار",
+        noRecords: "لا توجد تسجيلات صوتية لهذه المحاضرة حتى الآن.",
         noResources: "لا توجد مواد مرفقة حتى الآن.",
-        noQuizzes: "لا توجد اختبارات مرتبطة بهذه المحاضرة حتى الآن.",
+        noQuizzes: "لا توجد أوراق اختبارات مرفقة لهذه المحاضرة حتى الآن.",
         mentor: "إجابة المرشد",
         ask: "لديك سؤال؟",
         askBody: "اكتب سؤالك بوضوح ليستفيد منه باقي الطلاب أيضًا.",
@@ -350,14 +354,16 @@ export default function LecturePage({
         back: "Back to course",
         lecture: "Lecture",
         summary: "Summary",
+        records: "Voice Records",
         resources: "Resources",
-        quizzes: "Quizzes",
+        quizzes: "Quiz PDFs",
         discussion: "Discussion",
         quiz: "Check your understanding",
-        quizBody: "A short checkpoint to reinforce the core ideas.",
+        quizBody: "PDF quiz sheets and solution keys to practice and master concepts.",
         startQuiz: "Start quiz",
+        noRecords: "No voice records are attached to this lecture yet.",
         noResources: "No resources are attached yet.",
-        noQuizzes: "No quizzes are linked to this lecture yet.",
+        noQuizzes: "No quiz sheets are attached to this lecture yet.",
         mentor: "Mentor answer",
         ask: "Have a question?",
         askBody: "Ask clearly so other students can benefit from the answer too.",
@@ -583,24 +589,102 @@ export default function LecturePage({
               )}
             </div>
 
-            {/* Tabs for Summary, Resources, Quizzes, Discussion */}
+            {/* Tabs for Summary, Voice Records, Resources, Quiz PDFs, Discussion */}
             <Tabs defaultValue="summary" className="mt-8">
-              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4 bg-muted p-1 gap-1">
-                <TabsTrigger value="summary" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.summary}</TabsTrigger>
-                <TabsTrigger value="resources" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.resources}</TabsTrigger>
-                <TabsTrigger value="quizzes" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.quizzes}</TabsTrigger>
-                <TabsTrigger value="discussion" className="min-h-[44px] text-xs sm:text-sm font-semibold">{copy.discussion}</TabsTrigger>
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 bg-muted p-1 gap-1">
+                <TabsTrigger value="summary" className="min-h-[44px] text-xs sm:text-sm font-semibold">
+                  {copy.summary}
+                </TabsTrigger>
+                <TabsTrigger value="records" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5">
+                  <Headphones className="size-3.5 shrink-0" />
+                  <span>{copy.records}</span>
+                  {audioRecords.length > 0 && (
+                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold">
+                      {audioRecords.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="resources" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5">
+                  <FileText className="size-3.5 shrink-0" />
+                  <span>{copy.resources}</span>
+                  {resources.length > 0 && (
+                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold">
+                      {resources.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="quizzes" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5">
+                  <HelpCircle className="size-3.5 shrink-0" />
+                  <span>{copy.quizzes}</span>
+                  {quizzes.length > 0 && (
+                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold">
+                      {quizzes.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="discussion" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1">
+                  <MessageCircle className="size-3.5 shrink-0" />
+                  <span>{copy.discussion}</span>
+                </TabsTrigger>
               </TabsList>
 
+              {/* 1. Summary Tab */}
               <TabsContent value="summary" className="mt-5">
                 <Card className="shadow-none">
                   <CardContent className="p-6 sm:p-8">
                     <h2 className="text-2xl font-bold">{copy.summary}</h2>
-                    <p className="mt-5 leading-7 text-muted-foreground">{details}</p>
+                    <p className="mt-5 leading-7 text-muted-foreground whitespace-pre-line">{details}</p>
                   </CardContent>
                 </Card>
               </TabsContent>
 
+              {/* 2. Voice Records Tab */}
+              <TabsContent value="records" className="mt-5 space-y-3">
+                {isGated ? (
+                  <Card className="shadow-none border-dashed border-amber-500/40 bg-amber-500/5">
+                    <CardContent className="p-6 text-center">
+                      <LockKeyhole className="mx-auto size-8 text-amber-600 mb-2" />
+                      <p className="text-sm font-semibold">{copy.lockedTitle}</p>
+                      <Button size="sm" className="mt-4" asChild>
+                        <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
+                          {copy.signInCta}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : audioRecords.length ? (
+                  <div className="space-y-3">
+                    {audioRecords.map((record) => (
+                      <MediaActionCard
+                        key={record.id}
+                        url={record.audio_url}
+                        title={isAr ? record.title_ar : record.title_en}
+                        kind="audio"
+                        durationSeconds={record.duration_seconds}
+                        badgeLabel={isAr ? "تسجيل صوتي" : "Voice Note"}
+                        isAr={isAr}
+                        onTrackClick={() =>
+                          trackResourceClick({
+                            resourceId: record.id,
+                            resourceTitle: isAr ? record.title_ar : record.title_en,
+                            resourceType: "audio",
+                            lectureId: lecture.id,
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="shadow-none">
+                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                      <Headphones className="mx-auto size-8 opacity-30 mb-2" />
+                      <p className="font-medium">{copy.noRecords}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* 3. Resources Tab */}
               <TabsContent value="resources" className="mt-5 space-y-3">
                 {isGated ? (
                   <Card className="shadow-none border-dashed border-amber-500/40 bg-amber-500/5">
@@ -615,48 +699,37 @@ export default function LecturePage({
                     </CardContent>
                   </Card>
                 ) : resources.length ? (
-                  resources.map((resource) => {
-                    const isImg = resource.type === "image" || resource.url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)$/) !== null
-                    const ResourceIcon = isImg ? FileImage : FileText
-                    const resTitle = isAr ? resource.title_ar : resource.title_en
-                    return (
-                      <a
+                  <div className="space-y-3">
+                    {resources.map((resource) => (
+                      <MediaActionCard
                         key={resource.id}
-                        href={resource.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={() =>
+                        url={resource.url}
+                        title={isAr ? resource.title_ar : resource.title_en}
+                        kind={resource.type === "image" ? "image" : "pdf"}
+                        badgeLabel={resource.type.toUpperCase()}
+                        isAr={isAr}
+                        onTrackClick={() =>
                           trackResourceClick({
                             resourceId: resource.id,
-                            resourceTitle: resTitle,
+                            resourceTitle: isAr ? resource.title_ar : resource.title_en,
                             resourceType: resource.type,
                             lectureId: lecture.id,
                           })
                         }
-                        className="flex items-center justify-between rounded-xl border bg-card p-4 transition-colors hover:border-primary/45"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="grid size-10 place-items-center rounded-lg bg-secondary text-primary shrink-0">
-                            <ResourceIcon className="size-5" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-bold truncate">{resTitle}</p>
-                            <p className="text-xs text-muted-foreground uppercase">{resource.type}</p>
-                          </div>
-                        </div>
-                        <Download className="size-5 text-muted-foreground shrink-0" />
-                      </a>
-                    )
-                  })
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <Card className="shadow-none">
-                    <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                      {copy.noResources}
+                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                      <FileText className="mx-auto size-8 opacity-30 mb-2" />
+                      <p className="font-medium">{copy.noResources}</p>
                     </CardContent>
                   </Card>
                 )}
               </TabsContent>
 
+              {/* 4. Quiz PDFs Tab (Kept separate from general resources!) */}
               <TabsContent value="quizzes" className="mt-5 space-y-3">
                 {isGated ? (
                   <Card className="shadow-none border-dashed border-amber-500/40 bg-amber-500/5">
@@ -671,32 +744,97 @@ export default function LecturePage({
                     </CardContent>
                   </Card>
                 ) : quizzes.length ? (
-                  quizzes.map((quiz) => (
-                    <Card key={quiz.id} className="shadow-none">
-                      <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 sm:p-6">
-                        <div className="min-w-0">
-                          <Badge variant="outline" className="badge-nowrap mb-2">
-                            <HelpCircle className="size-3 shrink-0" />
-                            <span>{copy.quiz}</span>
-                          </Badge>
-                          <h3 className="text-lg font-bold">{isAr ? quiz.title_ar : quiz.title_en}</h3>
-                          <p className="mt-1 text-sm text-muted-foreground">{copy.quizBody}</p>
+                  <div className="space-y-4">
+                    {quizzes.map((quiz) => {
+                      const quizTitle = isAr ? quiz.title_ar : quiz.title_en
+                      const desc = isAr ? quiz.description_ar : quiz.description_en
+
+                      return (
+                        <div key={quiz.id} className="space-y-2.5 rounded-2xl border bg-card/60 p-4 sm:p-5">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-3">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400 font-bold text-xs gap-1">
+                                  <FileText className="size-3" />
+                                  {isAr ? "اختبار المحاضرة" : "Lecture Quiz"}
+                                </Badge>
+                                <h3 className="font-bold text-base sm:text-lg">{quizTitle}</h3>
+                              </div>
+                              {desc && (
+                                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{desc}</p>
+                              )}
+                            </div>
+
+                            {/* Fallback to interactive online quiz if needed */}
+                            <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5 self-start sm:self-auto shrink-0" asChild>
+                              <Link href={`/quiz/${quiz.id}`}>
+                                <HelpCircle className="size-3.5" />
+                                <span>{isAr ? "بدء الاختبار التفاعلي" : "Online Interactive Mode"}</span>
+                              </Link>
+                            </Button>
+                          </div>
+
+                          <div className="grid gap-2.5 pt-1">
+                            {quiz.pdf_url ? (
+                              <MediaActionCard
+                                url={quiz.pdf_url}
+                                title={`${quizTitle} — ${isAr ? "ورقة الأسئلة" : "Questions Sheet"}`}
+                                kind="pdf"
+                                badgeLabel={isAr ? "ورقة الاختبار PDF" : "Quiz PDF"}
+                                isAr={isAr}
+                                onTrackClick={() =>
+                                  trackResourceClick({
+                                    resourceId: quiz.id,
+                                    resourceTitle: quizTitle,
+                                    resourceType: "quiz_pdf",
+                                    lectureId: lecture.id,
+                                  })
+                                }
+                              />
+                            ) : null}
+
+                            {quiz.solution_pdf_url ? (
+                              <MediaActionCard
+                                url={quiz.solution_pdf_url}
+                                title={`${quizTitle} — ${isAr ? "نموذج الإجابة والشرح" : "Model Answers & Explanation"}`}
+                                kind="pdf"
+                                badgeLabel={isAr ? "نموذج الإجابة PDF" : "Solution PDF"}
+                                isAr={isAr}
+                                onTrackClick={() =>
+                                  trackResourceClick({
+                                    resourceId: `${quiz.id}_solution`,
+                                    resourceTitle: `${quizTitle} (Solution)`,
+                                    resourceType: "quiz_solution_pdf",
+                                    lectureId: lecture.id,
+                                  })
+                                }
+                              />
+                            ) : null}
+
+                            {!quiz.pdf_url && !quiz.solution_pdf_url && (
+                              <div className="flex items-center justify-between rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+                                <span>{isAr ? "الملف الورقي غير متوفر، يمكنك أداء الاختبار التفاعلي أونلاين." : "PDF sheet not uploaded yet. You can take the interactive quiz online."}</span>
+                                <Button size="sm" className="h-8 text-xs font-bold" asChild>
+                                  <Link href={`/quiz/${quiz.id}`}>{copy.startQuiz}</Link>
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <Button className="btn-nowrap self-start sm:self-center" asChild>
-                          <Link href={`/quiz/${quiz.id}`}>{copy.startQuiz}</Link>
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))
+                      )
+                    })}
+                  </div>
                 ) : (
                   <Card className="shadow-none">
-                    <CardContent className="p-6 text-center text-sm text-muted-foreground">
-                      {copy.noQuizzes}
+                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                      <HelpCircle className="mx-auto size-8 opacity-30 mb-2" />
+                      <p className="font-medium">{copy.noQuizzes}</p>
                     </CardContent>
                   </Card>
                 )}
               </TabsContent>
 
+              {/* 5. Discussion Tab */}
               <TabsContent value="discussion" className="mt-5">
                 <Card className="shadow-none">
                   <CardHeader>
@@ -835,6 +973,7 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
   const id = params?.id as string
   let lecture: Lecture | null = null
   let resources: Resource[] = []
+  let audioRecords: AudioRecord[] = []
   let quizzes: Quiz[] = []
   let questions: CommunityQuestion[] = []
   let courseId: string | null = null
@@ -883,9 +1022,10 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
         }
       }
 
-      const [{ data: resourceData }, { data: quizData }, { data: questionData }] = await Promise.all([
+      const [{ data: resourceData }, { data: audioData }, { data: quizData }, { data: questionData }] = await Promise.all([
         supabase.from("resources").select("*").eq("lecture_id", id),
-        supabase.from("quizzes").select("*").eq("lecture_id", id),
+        supabase.from("audio_records").select("*").eq("lecture_id", id).order("order", { ascending: true }),
+        supabase.from("quizzes").select("*").eq("lecture_id", id).order("created_at", { ascending: false }),
         supabase
           .from("community_questions")
           .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
@@ -894,6 +1034,7 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
       ])
 
       if (resourceData) resources = resourceData
+      if (audioData) audioRecords = audioData
       if (quizData) quizzes = quizData
       if (questionData) questions = questionData
     } catch {}
@@ -903,6 +1044,7 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
     props: {
       lecture,
       resources,
+      audioRecords,
       quizzes,
       questions,
       courseId,
