@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { loadSiteContent, mergeSiteContent } from "@/lib/siteContent"
+import { loadSiteContent, mergeSiteContent, invalidateSiteContentCache } from "@/lib/siteContent"
 import type { EnrollmentSettings } from "@/types"
 
 const universitySchema = z.object({
@@ -103,6 +103,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .upsert({ id: "main", content: updatedContent }, { onConflict: "id" })
 
       if (error) throw error
+
+      invalidateSiteContentCache()
 
       return res.status(200).json({
         success: true,

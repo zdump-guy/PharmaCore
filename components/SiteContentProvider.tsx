@@ -11,7 +11,6 @@ import {
   mergeSiteContent,
   type SiteContent,
 } from "@/lib/siteContent"
-import { supabase } from "@/lib/supabaseClient"
 
 const SiteContentContext = createContext<SiteContent>(defaultSiteContent)
 
@@ -33,60 +32,25 @@ export function SiteContentProvider({
     }
   }, [initialContent])
 
-  // Fetch live site content on mount and listen to realtime updates
+  // Only fetch if no initialContent was provided from SSR/SSG
   useEffect(() => {
-    let isMounted = true
+    if (initialContent) return
 
-    // Fetch latest directly from Supabase
+    let isMounted = true
     loadSiteContent()
       .then((latest) => {
         if (isMounted && latest) {
           setContent(latest)
         }
       })
-      .catch((err) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("Failed to load site content:", err)
-        }
+      .catch(() => {
+        // Suppress
       })
-
-    // Supabase Realtime Listener for instant global maintenance & content sync
-    if (supabase) {
-      try {
-        const channel = supabase
-          .channel("public:site_content_sync")
-          .on(
-            "postgres_changes",
-            { event: "*", schema: "public", table: "site_content" },
-            (payload) => {
-              if (
-                payload.new &&
-                typeof payload.new === "object" &&
-                "content" in payload.new
-              ) {
-                const newContent = (payload.new as { content: Partial<SiteContent> })
-                  .content
-                if (newContent && isMounted) {
-                  setContent(mergeSiteContent(newContent))
-                }
-              }
-            }
-          )
-          .subscribe()
-
-        return () => {
-          isMounted = false
-          supabase?.removeChannel(channel)
-        }
-      } catch {
-        // Continue if realtime fails
-      }
-    }
 
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [initialContent])
 
   return (
     <SiteContentContext.Provider value={content}>

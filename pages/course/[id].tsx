@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { trackCourseView } from "@/lib/analytics"
 import type { Course, Lecture, Quiz } from "@/types"
@@ -39,8 +40,7 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
   const { locale } = useRouter()
   const isAr = locale === "ar"
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const { user, token: sessionToken, isAuthenticated } = useAuth()
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
   const [enrolling, setEnrolling] = useState(false)
@@ -51,62 +51,51 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
 
   // Track session status and check enrollment
   useEffect(() => {
-    if (!supabase || !course) return
+    if (!supabase || !course || !isAuthenticated || !sessionToken || !user) return
 
-    async function checkAuthAndEnrollment() {
-      const {
-        data: { session },
-      } = await supabase!.auth.getSession()
-      const isAuth = Boolean(session?.user)
-      setIsAuthenticated(isAuth)
-      setSessionToken(session?.access_token || null)
+    let isMounted = true
 
-      if (session?.user && session?.access_token) {
-        try {
-          const res = await fetch(`/api/courses/${course!.id}/enroll`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          })
-          if (res.ok) {
-            const data = await res.json()
-            setIsEnrolled(Boolean(data.isEnrolled))
-            setEnrollmentStatus(data.status || null)
-          }
-
-          // Fetch user completed lectures for this course from analytics
-          const { data: events } = await supabase!
+    async function checkEnrollmentAndProgress() {
+      try {
+        const [enrollRes, analyticsRes] = await Promise.all([
+          fetch(`/api/courses/${course!.id}/enroll`, {
+            headers: { Authorization: `Bearer ${sessionToken}` },
+          }),
+          supabase!
             .from("analytics_events")
             .select("properties")
-            .eq("user_id", session.user.id)
-            .eq("event_name", "video_milestone")
+            .eq("user_id", user!.id)
+            .eq("event_name", "video_milestone"),
+        ])
 
-          if (events) {
-            const completedIds = new Set<string>()
-            for (const evt of events) {
-              const props = evt.properties as Record<string, unknown> | null
-              if ((props?.percent === 100 || props?.milestone === 100) && typeof props?.lectureId === "string") {
-                completedIds.add(props.lectureId)
-              }
-            }
-            const count = lectures.filter((l) => completedIds.has(l.id)).length
-            setCompletedLecturesCount(count)
-          }
-        } catch {
-          // Continue
+        if (enrollRes.ok && isMounted) {
+          const data = await enrollRes.json()
+          setIsEnrolled(Boolean(data.isEnrolled))
+          setEnrollmentStatus(data.status || null)
         }
+
+        if (analyticsRes.data && isMounted) {
+          const completedIds = new Set<string>()
+          for (const evt of analyticsRes.data) {
+            const props = evt.properties as Record<string, unknown> | null
+            if ((props?.percent === 100 || props?.milestone === 100) && typeof props?.lectureId === "string") {
+              completedIds.add(props.lectureId)
+            }
+          }
+          const count = lectures.filter((l) => completedIds.has(l.id)).length
+          setCompletedLecturesCount(count)
+        }
+      } catch {
+        // Continue
       }
     }
 
-    checkAuthAndEnrollment()
+    checkEnrollmentAndProgress()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(Boolean(session?.user))
-      setSessionToken(session?.access_token || null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [course, lectures])
+    return () => {
+      isMounted = false
+    }
+  }, [course, isAuthenticated, sessionToken, user, lectures])
 
   const handleEnroll = async () => {
     if (!sessionToken || !course) return
@@ -571,41 +560,59 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
   )
 }
 
-export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ params, locale }) => {
+export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ params, locale, res }) => {
   const id = params?.id as string
   let course: Course | null = null
   let lectures: Lecture[] = []
   let quizzes: Quiz[] = []
 
+  if (res) {
+    res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+  }
+
   if (supabase) {
     try {
-      const { data: courseData } = await supabase.from("courses").select("*").eq("id", id).maybeSingle()
+      const [{ data: courseData }, { data: lecturesData }, { data: quizzesData }, siteContent, translations] =
+        await Promise.all([
+          supabase.from("courses").select("*").eq("id", id).maybeSingle(),
+          supabase
+            .from("lectures")
+            .select("*")
+            .eq("course_id", id)
+            .order("order", { ascending: true }),
+          supabase.from("quizzes").select("*").eq("course_id", id),
+          loadSiteContent(),
+          serverSideTranslations(locale ?? "en", ["common"]),
+        ])
+
       if (courseData) course = courseData
-
-      const { data: lecturesData } = await supabase
-        .from("lectures")
-        .select("*")
-        .eq("course_id", id)
-        .order("order", { ascending: true })
-
       if (lecturesData) lectures = lecturesData
-
-      const { data: quizzesData } = await supabase
-        .from("quizzes")
-        .select("*")
-        .eq("course_id", id)
-
       if (quizzesData) quizzes = quizzesData
+
+      return {
+        props: {
+          course,
+          lectures,
+          quizzes,
+          siteContent,
+          ...translations,
+        },
+      }
     } catch {}
   }
+
+  const [siteContent, translations] = await Promise.all([
+    loadSiteContent(),
+    serverSideTranslations(locale ?? "en", ["common"]),
+  ])
 
   return {
     props: {
       course,
       lectures,
       quizzes,
-      siteContent: await loadSiteContent(),
-      ...(await serverSideTranslations(locale ?? "en", ["common"])),
+      siteContent,
+      ...translations,
     },
   }
 }

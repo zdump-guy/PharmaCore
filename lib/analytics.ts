@@ -17,7 +17,6 @@ const MAX_BUFFER_SIZE = 50
 
 let currentUserId: string | null = null
 let currentUserProperties: Record<string, unknown> = {}
-let realtimeChannelSubscribed = false
 
 // Helper to get or generate anonymous visitor distinct ID
 function getDistinctId(): string {
@@ -49,56 +48,9 @@ export function initAnalytics() {
           currentUserId = session.user.id
         }
       })
-      .catch((err: unknown) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.warn("Analytics auth session warning:", err)
-        }
+      .catch(() => {
+        // Suppress session error
       })
-
-    // Listen to Supabase Realtime for live events stream across all tabs/users
-    if (!realtimeChannelSubscribed) {
-      try {
-        supabase
-          .channel("public:analytics_events")
-          .on(
-            "postgres_changes",
-            { event: "INSERT", schema: "public", table: "analytics_events" },
-            (payload) => {
-              const row = payload.new as {
-                id: string
-                event_name: string
-                properties: Record<string, unknown>
-                created_at: string
-                distinct_id?: string
-                user_id?: string | null
-              }
-              if (row) {
-                const eventObj: AnalyticsEvent = {
-                  id: row.id || String(Date.now()),
-                  name: row.event_name,
-                  properties: row.properties || {},
-                  timestamp: row.created_at || new Date().toISOString(),
-                  distinct_id: row.distinct_id,
-                  user_id: row.user_id,
-                }
-                // Avoid duplicating if already locally added
-                if (!recentEventsBuffer.some((e) => e.id === eventObj.id)) {
-                  recentEventsBuffer.unshift(eventObj)
-                  if (recentEventsBuffer.length > MAX_BUFFER_SIZE) {
-                    recentEventsBuffer.pop()
-                  }
-                  subscribers.forEach((fn) => fn(eventObj))
-                }
-              }
-            }
-          )
-          .subscribe()
-
-        realtimeChannelSubscribed = true
-      } catch (err) {
-        console.warn("Realtime subscription warning:", err)
-      }
-    }
   }
 }
 
@@ -198,13 +150,68 @@ export function trackPageView(url?: string) {
   })
 }
 
+let realtimeChannel: { unsubscribe: () => void } | null = null
+
+function ensureRealtimeSubscription() {
+  if (typeof window === "undefined" || !supabase || realtimeChannel) return
+  try {
+    const channel = supabase
+      .channel("admin:analytics_events")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "analytics_events" },
+        (payload) => {
+          const row = payload.new as {
+            id: string
+            event_name: string
+            properties: Record<string, unknown>
+            created_at: string
+            distinct_id?: string
+            user_id?: string | null
+          }
+          if (row) {
+            const eventObj: AnalyticsEvent = {
+              id: row.id || String(Date.now()),
+              name: row.event_name,
+              properties: row.properties || {},
+              timestamp: row.created_at || new Date().toISOString(),
+              distinct_id: row.distinct_id,
+              user_id: row.user_id,
+            }
+            if (!recentEventsBuffer.some((e) => e.id === eventObj.id)) {
+              recentEventsBuffer.unshift(eventObj)
+              if (recentEventsBuffer.length > MAX_BUFFER_SIZE) {
+                recentEventsBuffer.pop()
+              }
+              subscribers.forEach((fn) => fn(eventObj))
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    realtimeChannel = channel
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Realtime subscription error:", err)
+    }
+  }
+}
+
 /**
  * Subscribe to real-time events in the Admin UI
  */
 export function subscribeToEvents(callback: EventSubscriber): () => void {
   subscribers.add(callback)
+  ensureRealtimeSubscription()
   return () => {
     subscribers.delete(callback)
+    if (subscribers.size === 0 && realtimeChannel) {
+      try {
+        realtimeChannel.unsubscribe()
+      } catch {}
+      realtimeChannel = null
+    }
   }
 }
 

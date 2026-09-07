@@ -30,7 +30,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/components/AuthProvider"
 import { trackLocaleSwitch, trackThemeToggle, resetUser } from "@/lib/analytics"
 
 interface AuthUser {
@@ -48,7 +48,41 @@ export default function Navbar() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const isAr = locale === "ar"
   const [activeSection, setActiveSection] = useState<"home" | "about" | "courses" | "feedback">("home")
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+  const { user, role, fullName, isAuthenticated, signOut } = useAuth()
+  const authUser: AuthUser | null = isAuthenticated && user
+    ? {
+        id: user.id,
+        email: user.email || "",
+        fullName: fullName || "User",
+        role: role,
+      }
+    : null
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [userMenuOpen])
+
+  const switchLocale = () => {
+    const nextLocale = isAr ? "en" : "ar"
+    trackLocaleSwitch({ fromLocale: locale || "en", toLocale: nextLocale })
+    router.push({ pathname, query }, asPath, { locale: nextLocale })
+  }
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark"
+    trackThemeToggle({ theme: nextTheme })
+    toggleTheme()
+  }
 
   // Track active section on scroll when on homepage
   useEffect(() => {
@@ -80,101 +114,9 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [pathname])
 
-  // Real-time Supabase Auth state listener
-  useEffect(() => {
-    if (!supabase) return
-
-    async function loadUser() {
-      try {
-        const {
-          data: { session },
-        } = await supabase!.auth.getSession()
-
-        if (session?.user) {
-          const { data: profile } = await supabase!
-            .from("users")
-            .select("full_name, role")
-            .eq("id", session.user.id)
-            .maybeSingle()
-
-          setAuthUser({
-            id: session.user.id,
-            email: session.user.email || "",
-            fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
-            role: profile?.role || session.user.user_metadata?.role || "student",
-          })
-        } else {
-          setAuthUser(null)
-        }
-      } catch {
-        setAuthUser(null)
-      }
-    }
-
-    loadUser()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        if (session?.user) {
-          const { data: profile } = await supabase!
-            .from("users")
-            .select("full_name, role")
-            .eq("id", session.user.id)
-            .maybeSingle()
-
-          setAuthUser({
-            id: session.user.id,
-            email: session.user.email || "",
-            fullName: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
-            role: profile?.role || session.user.user_metadata?.role || "student",
-          })
-        } else {
-          setAuthUser(null)
-        }
-      } catch {
-        setAuthUser(null)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false)
-      }
-    }
-    if (userMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [userMenuOpen])
-
-  const switchLocale = () => {
-    const nextLocale = isAr ? "en" : "ar"
-    trackLocaleSwitch({ fromLocale: locale || "en", toLocale: nextLocale })
-    router.push({ pathname, query }, asPath, { locale: nextLocale })
-  }
-
-  const handleToggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark"
-    trackThemeToggle({ theme: nextTheme })
-    toggleTheme()
-  }
-
   const handleSignOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut()
-    }
+    await signOut()
     resetUser()
-    setAuthUser(null)
     router.push("/")
   }
 

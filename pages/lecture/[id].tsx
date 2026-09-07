@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { trackLectureView, trackResourceClick, trackCommunityQuestionSubmit } from "@/lib/analytics"
 import type { AudioRecord, CommunityQuestion, Course, Lecture, Quiz, Resource } from "@/types"
@@ -349,9 +350,14 @@ export default function LecturePage({
   const isLastLecture = !nextLecture || (totalLectures > 0 && currentIndex === totalLectures - 1)
   const [isMounted, setIsMounted] = useState(false)
   const [questions, setQuestions] = useState(initialQuestions)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [sessionToken, setSessionToken] = useState<string | null>(null)
-  const [currentUser, setCurrentUser] = useState<{ name?: string | null; email?: string | null } | null>(null)
+  const { user, token: sessionToken, fullName, isAuthenticated } = useAuth()
+  const currentUser = user
+    ? {
+        name: fullName || user.email?.split("@")[0] || "Student",
+        email: user.email || null,
+      }
+    : null
+
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
   const [enrolling, setEnrolling] = useState(false)
@@ -364,66 +370,33 @@ export default function LecturePage({
     setIsMounted(true)
   }, [])
 
-  // Check auth session & enrollment
+  // Check enrollment when authenticated
   useEffect(() => {
-    if (!supabase) return
+    if (!isAuthenticated || !sessionToken || !courseId) return
 
-    async function checkAuthAndEnrollment() {
-      const {
-        data: { session },
-      } = await supabase!.auth.getSession()
-      const isAuth = Boolean(session?.user)
-      setIsAuthenticated(isAuth)
-      setSessionToken(session?.access_token || null)
+    let isSubscribed = true
 
-      if (session?.user) {
-        const metaName =
-          (session.user.user_metadata?.full_name as string) ||
-          `${session.user.user_metadata?.first_name || ""} ${session.user.user_metadata?.last_name || ""}`.trim() ||
-          session.user.email?.split("@")[0] ||
-          "Student"
-        setCurrentUser({ name: metaName, email: session.user.email || null })
-      } else {
-        setCurrentUser(null)
-      }
-
-      if (session?.user && session?.access_token && courseId) {
-        try {
-          const res = await fetch(`/api/courses/${courseId}/enroll`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          })
-          if (res.ok) {
-            const data = await res.json()
-            setIsEnrolled(Boolean(data.isEnrolled))
-            setEnrollmentStatus(data.status || null)
-          }
-        } catch {
-          // Continue
+    async function checkEnrollment() {
+      try {
+        const res = await fetch(`/api/courses/${courseId}/enroll`, {
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        })
+        if (res.ok && isSubscribed) {
+          const data = await res.json()
+          setIsEnrolled(Boolean(data.isEnrolled))
+          setEnrollmentStatus(data.status || null)
         }
+      } catch {
+        // Continue
       }
     }
 
-    checkAuthAndEnrollment()
+    checkEnrollment()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(Boolean(session?.user))
-      setSessionToken(session?.access_token || null)
-      if (session?.user) {
-        const metaName =
-          (session.user.user_metadata?.full_name as string) ||
-          `${session.user.user_metadata?.first_name || ""} ${session.user.user_metadata?.last_name || ""}`.trim() ||
-          session.user.email?.split("@")[0] ||
-          "Student"
-        setCurrentUser({ name: metaName, email: session.user.email || null })
-      } else {
-        setCurrentUser(null)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [courseId])
+    return () => {
+      isSubscribed = false
+    }
+  }, [courseId, isAuthenticated, sessionToken])
 
   const handleQuickEnroll = async () => {
     if (!sessionToken || !courseId) return
@@ -1166,7 +1139,7 @@ export default function LecturePage({
   )
 }
 
-export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({ params, locale }) => {
+export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({ params, locale, res }) => {
   const id = params?.id as string
   let lecture: Lecture | null = null
   let resources: Resource[] = []
@@ -1181,6 +1154,10 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
   let currentIndex = 0
   let totalLectures = 1
 
+  if (res) {
+    res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+  }
+
   if (supabase) {
     try {
       const { data: lectureData } = await supabase.from("lectures").select("*").eq("id", id).maybeSingle()
@@ -1188,54 +1165,88 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
         lecture = lectureData
         courseId = lectureData.course_id
 
-        if (courseId) {
-          const [{ data: courseData }, { data: allLecturesData }] = await Promise.all([
-            supabase.from("courses").select("*").eq("id", courseId).maybeSingle(),
-            supabase
-              .from("lectures")
-              .select("id, course_id, title_en, title_ar, order")
-              .eq("course_id", courseId)
-              .order("order", { ascending: true }),
-          ])
+        const [
+          courseResult,
+          allLecturesResult,
+          resourceResult,
+          audioResult,
+          quizResult,
+          questionResult,
+          siteContent,
+          translations,
+        ] = await Promise.all([
+          courseId ? supabase.from("courses").select("*").eq("id", courseId).maybeSingle() : Promise.resolve({ data: null }),
+          courseId
+            ? supabase
+                .from("lectures")
+                .select("id, course_id, title_en, title_ar, order")
+                .eq("course_id", courseId)
+                .order("order", { ascending: true })
+            : Promise.resolve({ data: null }),
+          supabase.from("resources").select("*").eq("lecture_id", id),
+          supabase.from("audio_records").select("*").eq("lecture_id", id).order("order", { ascending: true }),
+          supabase.from("quizzes").select("*").eq("lecture_id", id).order("created_at", { ascending: false }),
+          supabase
+            .from("community_questions")
+            .select("id, lecture_id, user_id, author_name, text, created_at, is_anonymous, answers:community_answers(*)")
+            .eq("lecture_id", id)
+            .order("created_at", { ascending: false }),
+          loadSiteContent(),
+          serverSideTranslations(locale ?? "en", ["common"]),
+        ])
 
-          if (courseData) {
-            course = courseData
-            isLocked = Boolean(
-              courseData.is_locked ||
-              courseData.access_policy === "students_only" ||
-              courseData.access_policy === "enrolled_only"
-            )
-          }
+        const courseData = courseResult.data
+        if (courseData) {
+          course = courseData
+          isLocked = Boolean(
+            courseData.is_locked ||
+            courseData.access_policy === "students_only" ||
+            courseData.access_policy === "enrolled_only"
+          )
+        }
 
-          if (allLecturesData && allLecturesData.length > 0) {
-            totalLectures = allLecturesData.length
-            const idx = allLecturesData.findIndex((l) => l.id === id)
-            if (idx !== -1) {
-              currentIndex = idx
-              previousLecture = idx > 0 ? (allLecturesData[idx - 1] as unknown as Lecture) : null
-              nextLecture = idx < allLecturesData.length - 1 ? (allLecturesData[idx + 1] as unknown as Lecture) : null
-            }
+        const allLecturesData = allLecturesResult.data
+        if (allLecturesData && allLecturesData.length > 0) {
+          totalLectures = allLecturesData.length
+          const idx = allLecturesData.findIndex((l) => l.id === id)
+          if (idx !== -1) {
+            currentIndex = idx
+            previousLecture = idx > 0 ? (allLecturesData[idx - 1] as unknown as Lecture) : null
+            nextLecture = idx < allLecturesData.length - 1 ? (allLecturesData[idx + 1] as unknown as Lecture) : null
           }
         }
+
+        if (resourceResult.data) resources = resourceResult.data
+        if (audioResult.data) audioRecords = audioResult.data
+        if (quizResult.data) quizzes = quizResult.data
+        if (questionResult.data) questions = questionResult.data
+
+        return {
+          props: {
+            lecture,
+            resources,
+            audioRecords,
+            quizzes,
+            questions,
+            courseId,
+            course,
+            isLocked,
+            previousLecture,
+            nextLecture,
+            currentIndex,
+            totalLectures,
+            siteContent,
+            ...translations,
+          },
+        }
       }
-
-      const [{ data: resourceData }, { data: audioData }, { data: quizData }, { data: questionData }] = await Promise.all([
-        supabase.from("resources").select("*").eq("lecture_id", id),
-        supabase.from("audio_records").select("*").eq("lecture_id", id).order("order", { ascending: true }),
-        supabase.from("quizzes").select("*").eq("lecture_id", id).order("created_at", { ascending: false }),
-        supabase
-          .from("community_questions")
-          .select("id, lecture_id, user_id, author_name, text, created_at, is_anonymous, answers:community_answers(*)")
-          .eq("lecture_id", id)
-          .order("created_at", { ascending: false }),
-      ])
-
-      if (resourceData) resources = resourceData
-      if (audioData) audioRecords = audioData
-      if (quizData) quizzes = quizData
-      if (questionData) questions = questionData
     } catch {}
   }
+
+  const [siteContent, translations] = await Promise.all([
+    loadSiteContent(),
+    serverSideTranslations(locale ?? "en", ["common"]),
+  ])
 
   return {
     props: {
@@ -1251,8 +1262,8 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
       nextLecture,
       currentIndex,
       totalLectures,
-      siteContent: await loadSiteContent(),
-      ...(await serverSideTranslations(locale ?? "en", ["common"])),
+      siteContent,
+      ...translations,
     },
   }
 }

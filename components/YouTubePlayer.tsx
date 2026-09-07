@@ -92,6 +92,8 @@ export default function YouTubePlayer({
   const player = useRef<YouTubePlayerInstance | null>(null)
   const milestonesFired = useRef<{ [key: string]: boolean }>({ "25%": false, "50%": false, "75%": false, "100%": false })
   const hasStartedRef = useRef(false)
+  const [activated, setActivated] = useState(false)
+  const [posterError, setPosterError] = useState(false)
   const [ready, setReady] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -106,6 +108,12 @@ export default function YouTubePlayer({
   const [fullscreen, setFullscreen] = useState(false)
 
   useEffect(() => {
+    setActivated(false)
+    setPosterError(false)
+  }, [videoId])
+
+  useEffect(() => {
+    if (!activated) return
     let disposed = false
     milestonesFired.current = { "25%": false, "50%": false, "75%": false, "100%": false }
     hasStartedRef.current = false
@@ -113,7 +121,7 @@ export default function YouTubePlayer({
     void loadYouTubeApi().then((YT) => {
       if (disposed || !host.current) return
       const iframe = document.createElement("iframe")
-      const query = new URLSearchParams({ enablejsapi: "1", controls: "0", disablekb: "1", fs: "0", iv_load_policy: "3", playsinline: "1", rel: "0", origin: window.location.origin })
+      const query = new URLSearchParams({ autoplay: "1", enablejsapi: "1", controls: "0", disablekb: "1", fs: "0", iv_load_policy: "3", playsinline: "1", rel: "0", origin: window.location.origin })
       iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?${query}`
       iframe.title = title
       iframe.className = "h-full w-full"
@@ -131,6 +139,7 @@ export default function YouTubePlayer({
             setRate(target.getPlaybackRate())
             setRates(target.getAvailablePlaybackRates())
             setReady(true)
+            try { target.playVideo() } catch {}
           },
           onStateChange: ({ data }) => {
             const isNowPlaying = data === 1
@@ -182,7 +191,7 @@ export default function YouTubePlayer({
       })
     }).catch(() => setUnavailable(true))
     return () => { disposed = true; player.current?.destroy(); player.current = null }
-  }, [title, videoId, lectureId, lectureTitle])
+  }, [activated, title, videoId, lectureId, lectureTitle])
 
   useEffect(() => {
     const updateFullscreen = () => setFullscreen(document.fullscreenElement === shell.current)
@@ -292,6 +301,49 @@ export default function YouTubePlayer({
     window.addEventListener("keydown", handleKeydown)
     return () => window.removeEventListener("keydown", handleKeydown)
   }, [ready])
+
+  if (!activated) {
+    const posterSrc = posterError
+      ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+      : `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`
+
+    return (
+      <div
+        className="group relative h-full w-full cursor-pointer overflow-hidden bg-[#101819] text-white select-none"
+        tabIndex={0}
+        role="button"
+        aria-label={`Play video: ${title}`}
+        onClick={() => setActivated(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            setActivated(true)
+          }
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={posterSrc}
+          onError={() => setPosterError(true)}
+          alt={title}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-85 group-hover:opacity-95"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30" />
+        
+        <div className="absolute inset-0 grid place-items-center pointer-events-none">
+          <div className="flex size-16 sm:size-20 items-center justify-center rounded-full bg-[#1e515d]/90 text-white shadow-2xl backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-[#8BCDE1] group-hover:text-black">
+            <Play className="ms-1 size-7 sm:size-9 fill-current" />
+          </div>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none">
+          <p className="text-sm sm:text-base font-semibold text-white drop-shadow line-clamp-1">{title}</p>
+          <span className="text-xs text-white/70">Click to start lecture</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div ref={shell} className="group relative h-full w-full overflow-hidden bg-[#101819] text-white" tabIndex={0} aria-label={`${title}. Video player`} onClick={(event) => { event.currentTarget.focus(); if (event.target === event.currentTarget) togglePlay() }}>

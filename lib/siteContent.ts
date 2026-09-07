@@ -361,7 +361,21 @@ export const mergeSiteContent = (content?: Partial<SiteContent> | null): SiteCon
   },
 })
 
-export async function loadSiteContent(): Promise<SiteContent> {
+let cachedSiteContent: SiteContent | null = null
+let cacheExpiryTime = 0
+const SITE_CONTENT_CACHE_TTL_MS = 60_000 // 60 seconds TTL
+
+export function invalidateSiteContentCache() {
+  cachedSiteContent = null
+  cacheExpiryTime = 0
+}
+
+export async function loadSiteContent(forceFresh = false): Promise<SiteContent> {
+  const now = Date.now()
+  if (!forceFresh && cachedSiteContent && now < cacheExpiryTime) {
+    return cachedSiteContent
+  }
+
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -370,9 +384,13 @@ export async function loadSiteContent(): Promise<SiteContent> {
         .eq("id", "main")
         .single()
       if (!error && data?.content) {
-        return mergeSiteContent(data.content as Partial<SiteContent>)
+        const merged = mergeSiteContent(data.content as Partial<SiteContent>)
+        cachedSiteContent = merged
+        cacheExpiryTime = now + SITE_CONTENT_CACHE_TTL_MS
+        return merged
       }
     } catch {}
   }
+  if (cachedSiteContent) return cachedSiteContent
   return defaultSiteContent
 }

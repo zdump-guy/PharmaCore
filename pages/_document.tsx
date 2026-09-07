@@ -14,6 +14,7 @@ export default function Document(props: DocumentProps) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://www.youtube.com" />
+        <link rel="preconnect" href="https://www.youtube-nocookie.com" />
         <link rel="preconnect" href="https://i.ytimg.com" />
         <link rel="dns-prefetch" href="https://utfs.io" />
       </Head>

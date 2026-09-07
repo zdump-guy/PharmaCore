@@ -61,6 +61,7 @@ import {
   defaultSiteContent,
   loadSiteContent,
   mergeSiteContent,
+  invalidateSiteContentCache,
   type SiteContent,
 } from "@/lib/siteContent"
 import { trackAdminAction, resetUser } from "@/lib/analytics"
@@ -677,6 +678,7 @@ export default function AdminPage() {
       })
 
     if (!error) {
+      invalidateSiteContentCache()
       if (isContentObject) {
         setSiteContent(overrideContent as SiteContent)
       }

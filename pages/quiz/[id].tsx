@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { cn } from "@/lib/utils"
 import { trackQuizStart, trackQuestionAnswered, trackQuizSubmit, trackQuizRetry } from "@/lib/analytics"
@@ -43,30 +44,8 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
   const isAr = locale === "ar"
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const { isAuthenticated } = useAuth()
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
-
-  // Check auth
-  useEffect(() => {
-    if (!supabase) return
-
-    async function checkAuth() {
-      const {
-        data: { session },
-      } = await supabase!.auth.getSession()
-      setIsAuthenticated(Boolean(session?.user))
-    }
-
-    checkAuth()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(Boolean(session?.user))
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
 
   const title = quiz ? (isAr ? quiz.title_ar : quiz.title_en) : ""
 
@@ -454,13 +433,17 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
   )
 }
 
-export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ params, locale }) => {
+export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ params, locale, res }) => {
   const id = params?.id as string
   let quiz: Quiz | null = null
   let questions: Question[] = []
   let isLocked = false
   let course: Course | null = null
   let lecture: Lecture | null = null
+
+  if (res) {
+    res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
+  }
 
   if (supabase) {
     try {
@@ -470,42 +453,51 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
         const courseId = quizData.course_id
         const lectureId = quizData.lecture_id
 
-        if (courseId) {
-          const { data: courseData } = await supabase
-            .from("courses")
-            .select("*")
-            .eq("id", courseId)
-            .maybeSingle()
-          if (courseData) {
-            course = courseData
-            isLocked = Boolean(
-              courseData.is_locked ||
-              courseData.access_policy === "students_only" ||
-              courseData.access_policy === "enrolled_only"
-            )
-          }
+        const [courseResult, lectureResult, questionsResult, siteContent, translations] = await Promise.all([
+          courseId ? supabase.from("courses").select("*").eq("id", courseId).maybeSingle() : Promise.resolve({ data: null }),
+          lectureId ? supabase.from("lectures").select("*").eq("id", lectureId).maybeSingle() : Promise.resolve({ data: null }),
+          supabase.from("questions").select("*").eq("quiz_id", id).order("order", { ascending: true }),
+          loadSiteContent(),
+          serverSideTranslations(locale ?? "en", ["common"]),
+        ])
+
+        const courseData = courseResult.data
+        if (courseData) {
+          course = courseData
+          isLocked = Boolean(
+            courseData.is_locked ||
+            courseData.access_policy === "students_only" ||
+            courseData.access_policy === "enrolled_only"
+          )
         }
-        if (lectureId) {
-          const { data: lectureData } = await supabase
-            .from("lectures")
-            .select("*")
-            .eq("id", lectureId)
-            .maybeSingle()
-          if (lectureData) {
-            lecture = lectureData
-          }
+
+        if (lectureResult.data) {
+          lecture = lectureResult.data
+        }
+
+        if (questionsResult.data) {
+          questions = questionsResult.data
+        }
+
+        return {
+          props: {
+            quiz,
+            questions,
+            isLocked,
+            course,
+            lecture,
+            siteContent,
+            ...translations,
+          },
         }
       }
-
-      const { data: questionData } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("quiz_id", id)
-        .order("order", { ascending: true })
-
-      if (questionData) questions = questionData
     } catch {}
   }
+
+  const [siteContent, translations] = await Promise.all([
+    loadSiteContent(),
+    serverSideTranslations(locale ?? "en", ["common"]),
+  ])
 
   return {
     props: {
@@ -514,8 +506,8 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
       isLocked,
       course,
       lecture,
-      siteContent: await loadSiteContent(),
-      ...(await serverSideTranslations(locale ?? "en", ["common"])),
+      siteContent,
+      ...translations,
     },
   }
 }

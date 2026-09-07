@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabaseClient"
+import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { resetUser } from "@/lib/analytics"
 import { Progress } from "@/components/ui/progress"
@@ -89,31 +90,28 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
   const universitiesList = siteContent.enrollment_settings?.universities || []
   const facultiesList = siteContent.enrollment_settings?.faculties || []
 
+  const { token: authToken, loading: authLoading, isAuthenticated } = useAuth()
+
   // Load Session, Profile & Real Course Enrollments
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false)
+    if (authLoading) return
+
+    if (!isAuthenticated || !authToken) {
+      router.replace(`/login?redirect=${encodeURIComponent(router.asPath)}`)
       return
     }
+
+    let isMounted = true
 
     async function fetchStudentProfile() {
       setLoading(true)
       try {
-        const {
-          data: { session },
-        } = await supabase!.auth.getSession()
-
-        if (!session) {
-          router.replace(`/login?redirect=${encodeURIComponent(router.asPath)}`)
-          return
-        }
-
         const [profileRes, enrollmentsRes] = await Promise.all([
           fetch("/api/profile", {
-            headers: { Authorization: `Bearer ${session.access_token}` },
+            headers: { Authorization: `Bearer ${authToken}` },
           }),
           fetch("/api/students/enrollments", {
-            headers: { Authorization: `Bearer ${session.access_token}` },
+            headers: { Authorization: `Bearer ${authToken}` },
           }),
         ])
 
@@ -123,35 +121,45 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
         const data = await profileRes.json()
         const userProf = data.profile as UserProfile
-        setProfile(userProf)
-        if (data.metrics) setMetrics(data.metrics)
+        if (isMounted) {
+          setProfile(userProf)
+          if (data.metrics) setMetrics(data.metrics)
 
-        if (enrollmentsRes.ok) {
-          const enrollData = await enrollmentsRes.json()
-          setEnrolledCourses(enrollData.enrollments || [])
+          if (enrollmentsRes.ok) {
+            const enrollData = await enrollmentsRes.json()
+            setEnrolledCourses(enrollData.enrollments || [])
+          }
+
+          // Populate fields
+          setFirstName(userProf.first_name || userProf.full_name?.split(" ")[0] || "")
+          setLastName(userProf.last_name || userProf.full_name?.split(" ").slice(1).join(" ") || "")
+          setPhoneNumber(userProf.phone_number || "")
+          setUniversity(userProf.university || "")
+          setFaculty(userProf.faculty || "")
+          if (userProf.start_year) setStartYear(userProf.start_year)
+          if (userProf.predicted_end_year) setPredictedEndYear(userProf.predicted_end_year)
         }
-
-        // Populate fields
-        setFirstName(userProf.first_name || userProf.full_name?.split(" ")[0] || "")
-        setLastName(userProf.last_name || userProf.full_name?.split(" ").slice(1).join(" ") || "")
-        setPhoneNumber(userProf.phone_number || "")
-        setUniversity(userProf.university || "")
-        setFaculty(userProf.faculty || "")
-        if (userProf.start_year) setStartYear(userProf.start_year)
-        if (userProf.predicted_end_year) setPredictedEndYear(userProf.predicted_end_year)
       } catch (err: unknown) {
-        setProfileNotice({
-          error: true,
-          text: err instanceof Error ? err.message : tr("Failed to fetch profile.", "تعذر تحميل الملف الشخصي."),
-        })
+        if (isMounted) {
+          setProfileNotice({
+            error: true,
+            text: err instanceof Error ? err.message : tr("Failed to fetch profile.", "تعذر تحميل الملف الشخصي."),
+          })
+        }
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchStudentProfile()
+
+    return () => {
+      isMounted = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router])
+  }, [isAuthenticated, authToken, authLoading])
 
   // Calculate academic year
   const calculatedYear = Math.max(1, new Date().getFullYear() - startYear + 1)
