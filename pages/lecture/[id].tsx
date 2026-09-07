@@ -531,7 +531,7 @@ export default function LecturePage({
   const lectureUrl = `${siteUrl}${isAr ? "/ar" : ""}/lecture/${lecture.id}`
   const lectureThumbnail = videoId
     ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
-    : `${siteUrl}/og-course.png`
+    : `${siteUrl}/og-course.jpg`
 
   const lectureSchema = [
     {

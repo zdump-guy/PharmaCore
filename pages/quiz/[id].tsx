@@ -245,7 +245,7 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
       <Layout
         title={`${title} — PharmaCore`}
         description={copy.helper}
-        image="/og-quiz.png"
+        image="/og-quiz.jpg"
         schema={quizSchema}
       >
         <div className="page-shell section-space max-w-xl text-center">
@@ -278,7 +278,7 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
     <Layout
       title={`${title} — PharmaCore`}
       description={copy.helper}
-      image="/og-quiz.png"
+      image="/og-quiz.jpg"
       schema={quizSchema}
     >
       <section className="border-b bg-muted/45">

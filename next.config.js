@@ -62,6 +62,23 @@ const nextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
+      {
+        source: '/(og-.*\\.(?:jpg|jpeg|png|webp|svg)|.*\\.(?:jpg|jpeg|png|webp|svg|ico|webmanifest))',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, OPTIONS, HEAD',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
+          },
+        ],
+      },
     ];
   },
 };
