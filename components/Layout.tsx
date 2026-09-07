@@ -55,7 +55,10 @@ export default function Layout({
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : "") ||
     "https://pharma-core-edu.vercel.app"
-  const siteUrl = rawSiteUrl.replace(/\/+$/, "")
+  let siteUrl = rawSiteUrl.replace(/\/+$/, "")
+  if (!siteUrl.startsWith("http://") && !siteUrl.startsWith("https://")) {
+    siteUrl = `https://${siteUrl}`
+  }
   const currentPath = asPath.split("?")[0].split("#")[0] || "/"
   const cleanPath = currentPath.replace(/^\/(?:ar|en)(?=\/|$)/, "") || "/"
   const normalizedPath = cleanPath === "/" ? "" : cleanPath
@@ -73,6 +76,10 @@ export default function Layout({
       ogImage = `${siteUrl}${cleanImgPath}`
     }
   }
+  if (ogImage.startsWith("http://")) {
+    ogImage = ogImage.replace(/^http:\/\//, "https://")
+  }
+  const ogLogo = `${siteUrl}/android-chrome-512x512.png`
 
   const siteContent = useSiteContent()
   const activeSocialUrls = (
@@ -211,13 +218,21 @@ export default function Layout({
         {/* WhatsApp Preview Image Link Directives */}
         <link rel="image_src" href={ogImage} />
 
-        {/* Open Graph / Facebook / LinkedIn / WhatsApp */}
+        {/* Itemprop metadata for Google / Microdata / Schema Scrapers */}
+        <meta itemProp="name" content={resolvedTitle} />
+        <meta itemProp="description" content={resolvedDescription} />
+        <meta itemProp="image" content={ogImage} />
+        <meta itemProp="url" content={canonicalUrl} />
+        <meta itemProp="logo" content={ogLogo} />
+
+        {/* Standard Open Graph / Facebook / LinkedIn / WhatsApp / Telegram / Discord */}
         <meta property="og:type" content={type} />
         <meta property="og:site_name" content="PharmaCore" />
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:title" content={resolvedTitle} />
         <meta property="og:description" content={resolvedDescription} />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:image:url" content={ogImage} />
         <meta property="og:image:secure_url" content={ogImage} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -225,15 +240,26 @@ export default function Layout({
         <meta
           property="og:image:type"
           content={
-            ogImage.endsWith(".jpg") || ogImage.endsWith(".jpeg")
-              ? "image/jpeg"
+            ogImage.endsWith(".png")
+              ? "image/png"
               : ogImage.endsWith(".webp")
               ? "image/webp"
-              : "image/png"
+              : "image/jpeg"
           }
         />
+        <meta property="og:logo" content={ogLogo} />
         <meta property="og:locale" content={isAr ? "ar_EG" : "en_US"} />
         <meta property="og:locale:alternate" content={isAr ? "en_US" : "ar_EG"} />
+
+        {/* Name-based Open Graph fallbacks for legacy/non-standard crawlers */}
+        <meta name="og:type" content={type} />
+        <meta name="og:site_name" content="PharmaCore" />
+        <meta name="og:url" content={canonicalUrl} />
+        <meta name="og:title" content={resolvedTitle} />
+        <meta name="og:description" content={resolvedDescription} />
+        <meta name="og:image" content={ogImage} />
+        <meta name="og:logo" content={ogLogo} />
+        <meta name="image" content={ogImage} />
 
         {/* Twitter Card & Direct Message Preview Directives */}
         <meta name="twitter:card" content="summary_large_image" />

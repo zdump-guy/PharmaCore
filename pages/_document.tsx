@@ -5,7 +5,13 @@ export default function Document(props: DocumentProps) {
   const locale = props.__NEXT_DATA__?.locale || props.locale || "en";
   const dir = locale === "ar" ? "rtl" : "ltr";
   return (
-    <Html lang={locale} dir={dir} className={`${inter.variable} ${tajawal.variable}`} data-scroll-behavior="smooth">
+    <Html
+      lang={locale}
+      dir={dir}
+      prefix="og: https://ogp.me/ns#"
+      className={`${inter.variable} ${tajawal.variable}`}
+      data-scroll-behavior="smooth"
+    >
       <Head>
         <script
           dangerouslySetInnerHTML={{
