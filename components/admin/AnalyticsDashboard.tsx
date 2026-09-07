@@ -963,7 +963,7 @@ export default function AnalyticsDashboard({
         </CardHeader>
 
         <CardContent className="p-3.5 sm:p-6">
-          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[380px] overflow-y-auto pe-1">
             {filteredEvents.length > 0 ? (
               filteredEvents.map((evt) => {
                 const isVideo = evt.name.startsWith("video_")

@@ -119,7 +119,7 @@ export default function MaintenanceScreen({ config }: MaintenanceScreenProps) {
       {/* ─── Main Content Canvas ─────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 z-10 max-w-4xl mx-auto w-full text-center">
         {/* Headline */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-4 sm:mb-6">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground mb-4 sm:mb-6">
           {title}
         </h1>
 

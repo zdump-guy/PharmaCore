@@ -124,10 +124,24 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
     const widgetIdRef = useRef<string | null>(null)
     const [isMounted, setIsMounted] = useState(false)
 
-    const resolvedSiteKey =
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname === "[::1]")
+
+    const rawSiteKey =
       siteKey ||
       process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY ||
       TURNSTILE_TEST_SITE_KEY
+
+    // If running on localhost and the key is a production domain key (starts with 0x),
+    // use Cloudflare's official testing site key (1x00000000000000000000AA)
+    // to prevent Cloudflare 400 Bad Request / 110200 Domain Not Allowed errors in dev
+    const resolvedSiteKey =
+      isLocalhost && !rawSiteKey.startsWith("1x") && !rawSiteKey.startsWith("2x") && !rawSiteKey.startsWith("3x")
+        ? TURNSTILE_TEST_SITE_KEY
+        : rawSiteKey
 
     // Normalize size: Turnstile strictly requires "normal" | "flexible" | "compact"
     const resolvedSize: TurnstileSize =
@@ -150,8 +164,19 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
     const onExpireRef = useRef(onExpire)
     onExpireRef.current = onExpire
 
+    // Local development pass-through token
+    const devTokenRef = useRef<string>("XXXX.DUMMY.DEV.TOKEN.PASSTHROUGH")
+
     const renderWidget = useCallback(() => {
-      if (!containerRef.current || !window.turnstile || widgetIdRef.current) {
+      if (!containerRef.current) return
+
+      // In local development, bypass remote Cloudflare script to eliminate 400 Bad Request & reportAllChanges exceptions
+      if (isLocalhost) {
+        onVerifyRef.current?.(devTokenRef.current)
+        return
+      }
+
+      if (!window.turnstile || widgetIdRef.current) {
         return
       }
 
@@ -174,25 +199,42 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
           },
         })
         widgetIdRef.current = id
-      } catch (err) {
-        console.warn("Turnstile render warning:", err)
+      } catch {
+        // Safe catch
       }
-    }, [resolvedSiteKey, action, cData, theme, resolvedSize, resolvedAppearance])
+    }, [isLocalhost, resolvedSiteKey, action, cData, theme, resolvedSize, resolvedAppearance])
 
     useImperativeHandle(ref, () => ({
       reset: () => {
+        if (isLocalhost) {
+          onVerifyRef.current?.(devTokenRef.current)
+          return
+        }
         if (widgetIdRef.current && window.turnstile) {
-          window.turnstile.reset(widgetIdRef.current)
+          try {
+            window.turnstile.reset(widgetIdRef.current)
+          } catch {}
         }
       },
       execute: () => {
+        if (isLocalhost) {
+          onVerifyRef.current?.(devTokenRef.current)
+          return
+        }
         if (containerRef.current && window.turnstile) {
-          window.turnstile.execute(containerRef.current)
+          try {
+            window.turnstile.execute(containerRef.current)
+          } catch {}
         }
       },
       getResponse: () => {
+        if (isLocalhost) {
+          return devTokenRef.current
+        }
         if (widgetIdRef.current && window.turnstile) {
-          return window.turnstile.getResponse(widgetIdRef.current)
+          try {
+            return window.turnstile.getResponse(widgetIdRef.current)
+          } catch {}
         }
         return undefined
       },
@@ -200,9 +242,14 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
 
     useEffect(() => {
       setIsMounted(true)
-      loadTurnstileScript(() => {
-        renderWidget()
-      })
+      if (isLocalhost) {
+        // Immediate local verification
+        onVerifyRef.current?.(devTokenRef.current)
+      } else {
+        loadTurnstileScript(() => {
+          renderWidget()
+        })
+      }
 
       return () => {
         if (widgetIdRef.current && window.turnstile) {
@@ -214,7 +261,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
           widgetIdRef.current = null
         }
       }
-    }, [renderWidget])
+    }, [isLocalhost, renderWidget])
 
     if (!isMounted) {
       return null

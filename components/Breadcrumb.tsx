@@ -38,7 +38,7 @@ export default function Breadcrumb({ items: rawItems, className = "", showHome =
           const isCurrent = item.isCurrent ?? isLast
 
           return (
-            <li key={index} className="inline-flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <li key={item.href || item.label || index} className="inline-flex items-center gap-1.5 sm:gap-2 min-w-0">
               {index > 0 && (
                 <ChevronRight
                   className="size-3.5 text-muted-foreground/50 shrink-0 rtl:rotate-180"

@@ -236,7 +236,8 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
     setUpdatingPassword(true)
     try {
-      const { error } = await supabase!.auth.updateUser({ password: newPassword })
+      if (!supabase) throw new Error("Supabase client is not initialized")
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
 
       setNewPassword("")
@@ -309,7 +310,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                     className={`badge-nowrap ${
                       profile?.status === "active"
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500/30"
-                        : "bg-amber-500/15 text-amber-600 font-bold"
+                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold border-amber-500/30"
                     }`}
                   >
                     {profile?.status === "active"

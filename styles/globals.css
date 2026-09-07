@@ -94,7 +94,8 @@
     scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--muted) / 0.3);
   }
 
-  html {
+  html,
+  html[data-scroll-behavior="smooth"] {
     scroll-behavior: smooth;
     scroll-padding-top: 6rem;
   }
@@ -105,19 +106,19 @@
 
   [dir="rtl"] body,
   [dir="rtl"] {
-    font-family: var(--font-tajawal);
+    font-family: var(--font-tajawal), Tajawal, "Segoe UI", system-ui, -apple-system, sans-serif;
   }
 
   [dir="rtl"] .font-sans,
   [dir="rtl"] .font-display {
-    font-family: var(--font-tajawal), system-ui, sans-serif;
+    font-family: var(--font-tajawal), Tajawal, "Segoe UI", system-ui, -apple-system, sans-serif;
   }
 
   [dir="rtl"] h1,
   [dir="rtl"] h2,
   [dir="rtl"] h3,
   [dir="rtl"] h4 {
-    font-family: var(--font-tajawal);
+    font-family: var(--font-tajawal), Tajawal, "Segoe UI", system-ui, -apple-system, sans-serif;
   }
 
   h1,

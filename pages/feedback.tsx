@@ -354,7 +354,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
         {submittedId ? (
           <Card className="border-emerald-500/30 bg-emerald-500/5 shadow-xl">
             <CardContent className="p-8 text-center space-y-6">
-              <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-500/20 text-emerald-600">
+              <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="size-8" />
               </div>
 
@@ -495,7 +495,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                         <Label htmlFor="page-preset" className="text-xs sm:text-sm font-bold">
                           {tr("2. Where did this happen?", "2. في أي صفحة حدثت المشكلة؟")}
                         </Label>
-                        <Select value={pagePreset} onValueChange={(val) => setPagePreset(val)}>
+                        <Select name="page_preset" value={pagePreset} onValueChange={(val) => setPagePreset(val)}>
                           <SelectTrigger id="page-preset" className="min-h-[42px]">
                             <SelectValue placeholder={tr("Select page", "اختر الصفحة")} />
                           </SelectTrigger>
@@ -513,6 +513,9 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
 
                         {pagePreset === "custom" && (
                           <Input
+                            id="custom-page-url"
+                            name="custom_page_url"
+                            aria-label={tr("Specific Page URL", "رابط الصفحة المحددة")}
                             placeholder="e.g. /course/cardio-101"
                             value={customPageUrl}
                             onChange={(e) => setCustomPageUrl(e.target.value)}
@@ -526,7 +529,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                         <Label htmlFor="severity" className="text-xs sm:text-sm font-bold">
                           {tr("3. Severity / Impact *", "3. درجة التأثير *")}
                         </Label>
-                        <Select value={severity} onValueChange={(val) => setSeverity(val as FeedbackSeverity)}>
+                        <Select name="severity" value={severity} onValueChange={(val) => setSeverity(val as FeedbackSeverity)}>
                           <SelectTrigger id="severity" className="min-h-[42px]">
                             <SelectValue />
                           </SelectTrigger>
@@ -549,8 +552,10 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                             {tr("Client Environment & Device Telemetry", "بيانات الجهاز والمتصفح المكتشفة تلقائيًا")}
                           </span>
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-muted-foreground">
+                        <label htmlFor="include-device-info" className="flex items-center gap-2 cursor-pointer text-xs font-medium text-muted-foreground">
                           <input
+                            id="include-device-info"
+                            name="include_device_info"
                             type="checkbox"
                             checked={includeDeviceInfo}
                             onChange={(e) => setIncludeDeviceInfo(e.target.checked)}
@@ -636,7 +641,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                         <Label htmlFor="course-select" className="text-xs sm:text-sm font-bold">
                           {tr("2. Relevant Course (Optional)", "2. المقرر المعني (اختياري)")}
                         </Label>
-                        <Select value={selectedCourseId} onValueChange={(val) => setSelectedCourseId(val)}>
+                        <Select name="selected_course" value={selectedCourseId} onValueChange={(val) => setSelectedCourseId(val)}>
                           <SelectTrigger id="course-select" className="min-h-[42px]">
                             <SelectValue placeholder={tr("Select course", "اختر المقرر")} />
                           </SelectTrigger>
@@ -657,6 +662,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                         </Label>
                         <Input
                           id="lecture-context"
+                          name="lecture_context"
                           placeholder={tr("e.g. Lecture 4, Slide 18, or MCQ #3", "مثال: المحاضرة 4، الشريحة 18، أو السؤال 3")}
                           value={lectureTitleOrNum}
                           onChange={(e) => setLectureTitleOrNum(e.target.value)}
@@ -672,6 +678,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                       </Label>
                       <Input
                         id="academic-ref"
+                        name="academic_reference"
                         placeholder={tr(
                           "e.g. Goodman & Gilman 14th Ed. p. 450, or AHA/ACC 2024 Guidelines",
                           "مثال: مرجع كاتزنغ 15th ed، أو إرشادات الجمعية الأمريكية لأمراض القلب 2024"
@@ -694,6 +701,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                     </Label>
                     <Input
                       id="feedback-title"
+                      name="title"
                       required
                       placeholder={
                         feedbackType === "technical"
@@ -714,6 +722,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                     </Label>
                     <Textarea
                       id="feedback-desc"
+                      name="description"
                       required
                       rows={4}
                       placeholder={
@@ -741,6 +750,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                       </Label>
                       <Textarea
                         id="repro-steps"
+                        name="reproduction_steps"
                         rows={2}
                         placeholder={tr(
                           "1. Go to /login\n2. Click Create Account tab\n3. Notice text clipping on small screen",
@@ -762,6 +772,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                       <Paperclip className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="attachment-url"
+                        name="attachment_url"
                         type="url"
                         placeholder="https://imgur.com/... or cloud screenshot link"
                         value={attachmentUrl}
@@ -795,6 +806,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                         <User className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           id="contact-name"
+                          name="contact_name"
                           placeholder={tr("Dr. Ahmed Mohamed", "د. أحمد محمد")}
                           value={contactName}
                           onChange={(e) => setContactName(e.target.value)}
@@ -811,6 +823,7 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                         <Mail className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           id="contact-email"
+                          name="contact_email"
                           type="email"
                           placeholder="doctor@example.com"
                           value={contactEmail}

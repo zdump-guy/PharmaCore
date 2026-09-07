@@ -147,8 +147,8 @@ export default function Layout({
         <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
 
-        {/* Apple iOS Web App & Site Name Capabilities */}
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        {/* Web App & Site Name Capabilities */}
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="PharmaCore" />
         <meta name="application-name" content="PharmaCore" />

@@ -188,7 +188,11 @@ function ensureRealtimeSubscription() {
           }
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (err && process.env.NODE_ENV !== "production") {
+          console.warn("Realtime channel status:", status, err)
+        }
+      })
 
     realtimeChannel = channel
   } catch (err) {

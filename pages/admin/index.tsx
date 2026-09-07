@@ -312,10 +312,10 @@ export default function AdminPage() {
           client.from("questions").select("*").order("order"),
           client
             .from("community_questions")
-            .select("id, lecture_id, user_id, author_name, author_email, text, created_at, is_anonymous, answers:community_answers(*)")
+            .select("id, lecture_id, user_id, author_name, text, created_at, is_anonymous, answers:community_answers(*)")
             .order("created_at", { ascending: false }),
           client.from("site_content").select("content").eq("id", "main").maybeSingle(),
-          client.from("audio_records").select("*").order("order", { ascending: true }),
+          client.from("audio_records").select("*").order("created_at", { ascending: true }),
         ])
 
         if (data[0].data) {

@@ -27,7 +27,6 @@ import type { SocialPlatform } from "@/lib/siteContent"
 const devSocialLinks = [
   { label: "LinkedIn", href: "https://www.linkedin.com/in/mohamed-mostafa-uiux", Icon: FaLinkedinIn },
   { label: "Portfolio", href: "https://mohamed-mostafa-uiux.vercel.app", Icon: Globe },
-  { label: "GitHub", href: "https://github.com/zdump-guy", Icon: FaGithub },
 ]
 
 export function getPlatformIcon(platform: SocialPlatform) {

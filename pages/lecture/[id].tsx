@@ -1184,7 +1184,7 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
                 .order("order", { ascending: true })
             : Promise.resolve({ data: null }),
           supabase.from("resources").select("*").eq("lecture_id", id),
-          supabase.from("audio_records").select("*").eq("lecture_id", id).order("order", { ascending: true }),
+          supabase.from("audio_records").select("*").eq("lecture_id", id).order("created_at", { ascending: true }),
           supabase.from("quizzes").select("*").eq("lecture_id", id).order("created_at", { ascending: false }),
           supabase
             .from("community_questions")

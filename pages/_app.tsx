@@ -52,7 +52,8 @@ function App({ Component, pageProps }: AppProps) {
     return () => {
       router.events.off("routeChangeComplete", handleRouteChange)
     }
-  }, [router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.events])
 
   useEffect(() => {
     const isArabic = locale === "ar"
@@ -78,6 +79,40 @@ function App({ Component, pageProps }: AppProps) {
       } else {
         window.addEventListener("load", registerSW, { once: true })
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const handleGlobalError = (event: ErrorEvent) => {
+      if (
+        event.filename?.includes("cloudflare") ||
+        event.filename?.includes("turnstile") ||
+        (typeof event.message === "string" &&
+          (event.message.includes("startTime") || event.message.includes("reportAllChanges")))
+      ) {
+        event.preventDefault()
+        event.stopImmediatePropagation?.()
+        return true
+      }
+    }
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (
+        typeof event.reason?.message === "string" &&
+        (event.reason.message.includes("startTime") || event.reason.message.includes("reportAllChanges"))
+      ) {
+        event.preventDefault()
+      }
+    }
+
+    window.addEventListener("error", handleGlobalError)
+    window.addEventListener("unhandledrejection", handleUnhandledRejection)
+
+    return () => {
+      window.removeEventListener("error", handleGlobalError)
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection)
     }
   }, [])
 

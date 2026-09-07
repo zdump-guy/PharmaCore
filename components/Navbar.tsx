@@ -90,22 +90,30 @@ export default function Navbar() {
 
     const handleScroll = () => {
       const scrollY = window.scrollY
-      const aboutEl = document.getElementById("about")
-      const coursesEl = document.getElementById("courses")
-      const feedbackEl = document.getElementById("feedback")
-
-      const aboutOffset = (aboutEl?.offsetTop ?? 600) - 150
-      const coursesOffset = (coursesEl?.offsetTop ?? 1200) - 150
-      const feedbackOffset = (feedbackEl?.offsetTop ?? 2000) - 150
-
-      if (feedbackEl && scrollY >= feedbackOffset) {
-        setActiveSection("feedback")
-      } else if (coursesEl && scrollY >= coursesOffset) {
-        setActiveSection("courses")
-      } else if (aboutEl && scrollY >= aboutOffset) {
-        setActiveSection("about")
-      } else {
+      if (scrollY < 100) {
         setActiveSection("home")
+        return
+      }
+
+      // If at or near the very bottom of the page, activate feedback
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80) {
+        setActiveSection("feedback")
+        return
+      }
+
+      const header = document.querySelector("header")
+      const navBottom = (header?.getBoundingClientRect().bottom ?? 76) + 60
+
+      const sectionIds: Array<"about" | "courses" | "feedback"> = ["feedback", "courses", "about"]
+      for (const id of sectionIds) {
+        const el = document.getElementById(id)
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          if (rect.top <= navBottom && rect.bottom > 0) {
+            setActiveSection(id)
+            return
+          }
+        }
       }
     }
 
@@ -129,12 +137,19 @@ export default function Navbar() {
       e.preventDefault()
       if (sectionId === "home") {
         window.scrollTo({ top: 0, behavior: "smooth" })
-        window.history.replaceState(null, "", "/")
+        window.history.replaceState(null, "", isAr ? "/ar" : "/")
       } else {
         const el = document.getElementById(sectionId)
         if (el) {
-          el.scrollIntoView({ behavior: "smooth" })
-          window.history.replaceState(null, "", `#${sectionId}`)
+          const header = document.querySelector("header")
+          const navHeight = header ? header.getBoundingClientRect().height : 76
+          const elementPosition = el.getBoundingClientRect().top + window.scrollY
+          const offsetPosition = Math.max(0, elementPosition - navHeight - 16)
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth",
+          })
+          window.history.replaceState(null, "", `${isAr ? "/ar" : ""}#${sectionId}`)
         }
       }
       setActiveSection(sectionId)
@@ -323,6 +338,7 @@ export default function Navbar() {
                   )}
 
                   <button
+                    type="button"
                     onClick={() => {
                       setUserMenuOpen(false)
                       handleSignOut()
@@ -456,6 +472,7 @@ export default function Navbar() {
                       </SheetClose>
 
                       <button
+                        type="button"
                         onClick={handleSignOut}
                         className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-bold bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-all min-h-[48px]"
                       >

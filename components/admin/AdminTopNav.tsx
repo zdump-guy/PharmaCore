@@ -11,7 +11,6 @@ import {
   FiSun as Sun,
   FiX as X,
   FiChevronRight as ChevronRight,
-  FiChevronLeft as ChevronLeft,
 } from "react-icons/fi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,7 +42,6 @@ export default function AdminTopNav({
   const { pathname, query, asPath, locale } = router
   const { theme, toggleTheme } = useTheme()
   const tr = (en: string, ar: string) => (isAr ? ar : en)
-  const BreadcrumbArrow = isAr ? ChevronLeft : ChevronRight
 
   const switchLocale = () => {
     const nextLocale = isAr ? "en" : "ar"
@@ -154,14 +152,14 @@ export default function AdminTopNav({
           <ol className="flex items-center gap-1.5 min-w-0 truncate">
             <li className="hidden sm:inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap">
               <span>{isAr ? currentMeta.category_ar : currentMeta.category_en}</span>
-              <BreadcrumbArrow className="size-3 text-muted-foreground/50 rtl:rotate-180" aria-hidden="true" />
+              <ChevronRight className="size-3 text-muted-foreground/50 rtl:rotate-180" aria-hidden="true" />
             </li>
             <li className="inline-flex items-center gap-1.5 min-w-0 truncate whitespace-nowrap">
               <span className={`${currentSubMeta ? "text-muted-foreground" : "font-bold text-foreground"} truncate`} {...(!currentSubMeta ? { "aria-current": "page" as const } : {})}>
                 {isAr ? currentMeta.ar : currentMeta.en}
               </span>
               {currentSubMeta && (
-                <BreadcrumbArrow className="size-3 shrink-0 text-muted-foreground/50 rtl:rotate-180" aria-hidden="true" />
+                <ChevronRight className="size-3 shrink-0 text-muted-foreground/50 rtl:rotate-180" aria-hidden="true" />
               )}
             </li>
             {currentSubMeta && (

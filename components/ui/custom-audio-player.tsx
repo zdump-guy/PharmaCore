@@ -202,6 +202,7 @@ export default function CustomAudioPlayer({
             onClick={() => handleSkip(-10)}
             className="size-8 text-muted-foreground hover:text-foreground shrink-0"
             title={tr("Rewind 10 seconds", "ترجيع 10 ثوانٍ")}
+            aria-label={tr("Rewind 10 seconds", "ترجيع 10 ثوانٍ")}
           >
             <RotateCcw className="size-3.5" />
           </Button>
@@ -212,6 +213,7 @@ export default function CustomAudioPlayer({
             onClick={() => handleSkip(10)}
             className="size-8 text-muted-foreground hover:text-foreground shrink-0"
             title={tr("Forward 10 seconds", "تقديم 10 ثوانٍ")}
+            aria-label={tr("Forward 10 seconds", "تقديم 10 ثوانٍ")}
           >
             <RotateCw className="size-3.5" />
           </Button>
@@ -225,6 +227,7 @@ export default function CustomAudioPlayer({
             onClick={cycleSpeed}
             className="h-7 px-2 text-xs font-mono font-bold text-muted-foreground hover:text-foreground"
             title={tr("Playback speed", "سرعة التشغيل")}
+            aria-label={tr("Playback speed", "سرعة التشغيل")}
           >
             {playbackRate}x
           </Button>
@@ -235,6 +238,7 @@ export default function CustomAudioPlayer({
             onClick={toggleMute}
             className="size-7 text-muted-foreground hover:text-foreground"
             title={isMuted ? tr("Unmute", "إلغاء الكتم") : tr("Mute", "كتم الصوت")}
+            aria-label={isMuted ? tr("Unmute", "إلغاء الكتم") : tr("Mute", "كتم الصوت")}
           >
             {isMuted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
           </Button>
