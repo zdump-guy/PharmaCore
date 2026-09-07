@@ -389,6 +389,41 @@ export default function AdminModals({
                   className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px] font-mono"
                 />
               </div>
+
+              {/* Lecture Summary / Outline (details_en & details_ar) */}
+              <div className="space-y-1.5 sm:col-span-2 pt-1" dir="ltr">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lecture-details-en" className="text-xs font-bold">
+                    English Summary / Key Concepts
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">Markdown supported</span>
+                </div>
+                <Textarea
+                  id="lecture-details-en"
+                  rows={4}
+                  value={lectureForm.details_en || ""}
+                  onChange={(e) => setLectureForm((prev) => ({ ...prev, details_en: e.target.value }))}
+                  placeholder="Comprehensive lecture summary, core pharmacology principles, clinical takeaways, etc."
+                  className="text-sm sm:text-xs font-normal leading-relaxed"
+                />
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-2" dir="rtl">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lecture-details-ar" className="text-xs font-bold">
+                    ملخص المحاضرة والمفاهيم الأساسية بالعربية
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">يدعم التنسيق والتعداد</span>
+                </div>
+                <Textarea
+                  id="lecture-details-ar"
+                  rows={4}
+                  value={lectureForm.details_ar || ""}
+                  onChange={(e) => setLectureForm((prev) => ({ ...prev, details_ar: e.target.value }))}
+                  placeholder="ملخص شامل للمحاضرة، الآليات الحركية والدوائية الأساسية، والنقاط الإكلينيكية الهامة..."
+                  className="text-sm sm:text-xs font-normal leading-relaxed"
+                />
+              </div>
             </div>
 
             <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">

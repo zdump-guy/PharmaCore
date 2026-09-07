@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const filterSchema = z.object({
   feedback_type: z.enum(["all", "technical", "academic"]).optional().default("all"),
@@ -36,6 +37,10 @@ async function authorize(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 40, windowMs: 60_000, prefix: "admin_feedback_list" })) {
+    return
+  }
+
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" })
   }

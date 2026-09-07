@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { supabase } from "@/lib/supabaseClient"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const feedbackSubmitSchema = z.object({
   feedback_type: z.enum(["technical", "academic"]),
@@ -34,6 +35,10 @@ const feedbackSubmitSchema = z.object({
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" })
+  }
+
+  if (!checkRateLimit(req, res, { limit: 8, windowMs: 60_000, prefix: "feedback_submit" })) {
+    return
   }
 
   const client = supabaseAdmin || supabase

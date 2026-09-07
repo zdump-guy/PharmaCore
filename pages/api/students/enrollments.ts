@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { checkRateLimit } from "@/lib/rateLimit"
 import type { EnrolledCourseProgress, Course, Lecture, Quiz } from "@/types"
 
 async function authorizeUser(req: NextApiRequest) {
@@ -20,6 +21,10 @@ async function authorizeUser(req: NextApiRequest) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" })
+  }
+
+  if (!checkRateLimit(req, res, { limit: 30, windowMs: 60_000, prefix: "student_enrollments" })) {
+    return
   }
 
   if (!supabaseAdmin) {

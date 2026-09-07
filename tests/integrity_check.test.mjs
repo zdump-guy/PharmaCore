@@ -482,9 +482,8 @@ describe("Suite 5: Database Schema Consolidation & RLS Hardening (R2, F5–F9)",
       "Must revoke unrestricted SELECT on community_questions from anon/authenticated"
     )
     assert(
-      /GRANT\s+SELECT\s*\(\s*id\s*,\s*lecture_id\s*,\s*author_name\s*,\s*text\s*,\s*created_at\s*\)\s+ON\s+public\.community_questions/i.test(
-        sql
-      ),
+      /GRANT\s+SELECT\s*\([^)]+\)\s+ON\s+public\.community_questions/i.test(sql) &&
+      !/GRANT\s+SELECT\s*\([^)]*author_email[^)]*\)\s+ON\s+public\.community_questions/i.test(sql),
       "Must grant SELECT exclusively on non-sensitive columns (excluding author_email)"
     )
     assert(

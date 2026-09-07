@@ -1,12 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { createRouteHandler } from "uploadthing/next-legacy"
 import { ourFileRouter } from "@/server/uploadthing"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const handler = createRouteHandler({
   router: ourFileRouter,
 })
 
 export default async function uploadthingApi(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 30, windowMs: 60_000, prefix: "uploadthing" })) {
+    return
+  }
+
   const token = (process.env.UPLOADTHING_TOKEN || process.env.UPLOADTHING_SECRET || "").trim()
 
   if (!token || token.length < 10) {

@@ -2,7 +2,9 @@ import { useState } from "react"
 import {
   FiCheckCircle as CheckCircle2,
   FiClock as Clock,
+  FiEyeOff as EyeOff,
   FiHelpCircle as HelpCircle,
+  FiMail as Mail,
   FiMessageCircle as MessageCircle,
   FiSearch as Search,
   FiSend as Send,
@@ -87,12 +89,39 @@ export default function CommunityManager({
           {/* Header */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
-              <span className="grid size-9 sm:size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary font-bold text-sm">
-                {question.author_name.charAt(0).toUpperCase()}
+              <span
+                className={`grid size-9 sm:size-10 shrink-0 place-items-center rounded-full font-bold text-sm ${
+                  question.is_anonymous
+                    ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                    : "bg-primary/10 text-primary"
+                }`}
+              >
+                {question.is_anonymous ? <EyeOff className="size-4" /> : question.author_name.charAt(0).toUpperCase()}
               </span>
               <div className="min-w-0">
-                <p className="font-extrabold text-sm text-foreground truncate">{question.author_name}</p>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="font-extrabold text-sm text-foreground truncate">{question.author_name}</p>
+                  {question.is_anonymous && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] h-4 px-1.5 font-bold border-purple-500/40 text-purple-700 dark:text-purple-300 bg-purple-500/10 gap-1"
+                    >
+                      <EyeOff className="size-2.5" />
+                      <span>{tr("Anonymous to Students", "مجهول للطلاب")}</span>
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                  {question.author_email && (
+                    <>
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-foreground/70">
+                        <Mail className="size-3" />
+                        {question.author_email}
+                      </span>
+                      <span>·</span>
+                    </>
+                  )}
                   <Clock className="size-3 shrink-0" />
                   <span suppressHydrationWarning>
                     {new Date(question.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US", {

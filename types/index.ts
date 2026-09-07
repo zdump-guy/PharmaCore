@@ -106,8 +106,10 @@ export interface Question {
 export interface CommunityQuestion {
   id: string;
   lecture_id: string;
+  user_id?: string | null;
   author_name: string;
-  author_email?: string;
+  author_email?: string | null;
+  is_anonymous?: boolean;
   text: string;
   created_at: string;
   answers?: CommunityAnswer[];

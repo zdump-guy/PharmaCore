@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const querySchema = z.object({
   timeRange: z.enum(["today", "7d", "30d"]).optional().default("7d"),
@@ -50,6 +51,10 @@ export interface PedagogicalInsight {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 40, windowMs: 60_000, prefix: "admin_analytics" })) {
+    return
+  }
+
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" })
   }

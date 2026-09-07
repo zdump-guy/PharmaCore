@@ -8,6 +8,7 @@ import {
   FiArrowRight as ArrowRight,
   FiCheckCircle as CheckCircle2,
   FiClock as Clock,
+  FiEyeOff as EyeOff,
   FiFileText as FileText,
   FiHeadphones as Headphones,
   FiHelpCircle as HelpCircle,
@@ -17,6 +18,7 @@ import {
   FiPlayCircle as PlayCircle,
   FiSend as Send,
   FiShield as ShieldCheck,
+  FiUser as UserIcon,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import Breadcrumb from "@/components/Breadcrumb"
@@ -55,119 +57,271 @@ interface LecturePageProps {
 function QuestionForm({
   lectureId,
   isAr,
+  currentUser,
+  sessionToken,
   onAdded,
 }: {
   lectureId: string
   isAr: boolean
+  currentUser: { name?: string | null; email?: string | null } | null
+  sessionToken?: string | null
   onAdded: (question: CommunityQuestion) => void
 }) {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
+  const isAuthenticated = Boolean(currentUser)
+  const [name, setName] = useState(currentUser?.name || "")
+  const [email, setEmail] = useState(currentUser?.email || "")
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  const [guestMode, setGuestMode] = useState<"named" | "anonymous">("named")
   const [question, setQuestion] = useState("")
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [turnstileToken, setTurnstileToken] = useState("")
   const turnstileRef = useRef<TurnstileRef>(null)
 
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.name) setName(currentUser.name)
+      if (currentUser.email) setEmail(currentUser.email)
+    }
+  }, [currentUser])
+
   async function submit(event: React.FormEvent) {
     event.preventDefault()
-    if (!name.trim() || !email.trim() || !question.trim()) return
+    const willPostAnonymous = isAuthenticated ? isAnonymous : guestMode === "anonymous"
+
+    if (!question.trim()) return
+    if (!willPostAnonymous && (!name.trim() || !email.trim())) {
+      setErrorMsg(
+        isAr
+          ? "يرجى كتابة الاسم والبريد الإلكتروني أو اختيار الإرسال كطالب مجهول."
+          : "Please enter your name and email, or choose anonymous submission."
+      )
+      return
+    }
+
     setStatus("submitting")
+    setErrorMsg(null)
+
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (sessionToken) {
+        headers["Authorization"] = `Bearer ${sessionToken}`
+      }
+
       const response = await fetch("/api/questions/submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           lectureId,
-          authorName: name,
-          authorEmail: email,
-          text: question,
+          authorName: willPostAnonymous && !isAuthenticated ? "" : name.trim(),
+          authorEmail: willPostAnonymous && !isAuthenticated ? "" : email.trim(),
+          text: question.trim(),
+          isAnonymous: willPostAnonymous,
           turnstileToken,
         }),
       })
+
+      const data = await response.json()
       if (!response.ok) {
         turnstileRef.current?.reset()
-        throw new Error()
+        setErrorMsg(data.error_ar && isAr ? data.error_ar : data.error || (isAr ? "تعذر الإرسال" : "Submission failed"))
+        setStatus("error")
+        return
       }
-      const data = await response.json()
+
       onAdded(data.question)
       trackCommunityQuestionSubmit({
         lectureId,
-        authorName: name,
+        authorName: willPostAnonymous ? "Anonymous Student" : name,
         textLength: question.length,
       })
-      setName("")
-      setEmail("")
+
+      if (!isAuthenticated) {
+        setName("")
+        setEmail("")
+      }
       setQuestion("")
       setStatus("success")
       turnstileRef.current?.reset()
     } catch {
       turnstileRef.current?.reset()
       setStatus("error")
+      setErrorMsg(isAr ? "حدث خطأ في الشبكة أثناء إرسال السؤال" : "Network error while submitting question")
     }
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5" aria-label={isAr ? "نموذج طرح سؤال" : "Ask a question form"}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="qa-name">{isAr ? "الاسم" : "Name"}</Label>
-          <Input
-            id="qa-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="name"
-            required
-          />
+    <form onSubmit={submit} className="space-y-4" aria-label={isAr ? "نموذج طرح سؤال" : "Ask a question form"}>
+      {isAuthenticated ? (
+        <div className="rounded-xl border bg-card/60 p-3.5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <span className="grid size-8 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs shrink-0">
+                <UserIcon className="size-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="font-bold text-xs sm:text-sm truncate">{name || (isAr ? "طالب مسجل" : "Enrolled Student")}</p>
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-normal">
+                    {isAr ? "حساب مفعل" : "Verified"}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground truncate">{email}</p>
+              </div>
+            </div>
+
+            {/* Anonymous Toggle Button */}
+            <Button
+              type="button"
+              variant={isAnonymous ? "default" : "outline"}
+              size="sm"
+              onClick={() => setIsAnonymous(!isAnonymous)}
+              className={`h-8 text-xs font-semibold gap-1.5 self-start sm:self-auto transition-all ${
+                isAnonymous
+                  ? "bg-purple-600 hover:bg-purple-700 text-white border-purple-600"
+                  : "border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              <EyeOff className="size-3.5 shrink-0" />
+              <span>{isAnonymous ? (isAr ? "مفعل: إرسال كمجهول" : "Posting Anonymously") : (isAr ? "إرسال كمجهول؟" : "Post Anonymously")}</span>
+            </Button>
+          </div>
+
+          {isAnonymous && (
+            <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-2.5 text-xs text-purple-700 dark:text-purple-300">
+              <p className="leading-relaxed">
+                {isAr
+                  ? "🔒 سيظهر سؤالك لزملائك الطلاب تحت اسم (طالب مجهول)، ويبقى اسمك الحقيقي متاحًا للمرشد فقط لمتابعة إجابتك."
+                  : "🔒 Your name will appear to classmates as (Anonymous Student). Your identity remains visible only to course instructors for academic support."}
+              </p>
+            </div>
+          )}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="qa-email">{isAr ? "البريد الإلكتروني" : "Email address"}</Label>
-          <Input
-            id="qa-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
+      ) : (
+        /* Guest Mode Selector */
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-muted-foreground">
+              {isAr ? "خيارات المشاركة:" : "Submission Options:"}
+            </span>
+            <div className="inline-flex rounded-lg border bg-muted/40 p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setGuestMode("named")}
+                className={`rounded-md px-2.5 py-1 font-semibold transition-all ${
+                  guestMode === "named"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {isAr ? "إضافة اسم وإيميل" : "Enter Name & Email"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setGuestMode("anonymous")}
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-semibold transition-all ${
+                  guestMode === "anonymous"
+                    ? "bg-purple-600 text-white shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <EyeOff className="size-3" />
+                <span>{isAr ? "إرسال كمجهول" : "1-Click Anonymous"}</span>
+              </button>
+            </div>
+          </div>
+
+          {guestMode === "named" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-name" className="text-xs font-bold">{isAr ? "الاسم" : "Your Name"}</Label>
+                <Input
+                  id="qa-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={isAr ? "مثال: أحمد محمد" : "e.g. Alex Morgan"}
+                  autoComplete="name"
+                  className="h-9 text-xs"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-email" className="text-xs font-bold">{isAr ? "البريد الإلكتروني" : "Email Address"}</Label>
+                <Input
+                  id="qa-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  autoComplete="email"
+                  className="h-9 text-xs"
+                  required
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-2.5 text-xs text-purple-700 dark:text-purple-300">
+              <p className="leading-relaxed">
+                {isAr
+                  ? "⚡ الإرسال الفوري كطالب مجهول مفعل. لا حاجة لكتابة اسم أو بريد إلكتروني."
+                  : "⚡ Fast Anonymous posting active. No name or email required."}
+              </p>
+            </div>
+          )}
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="qa-question">{isAr ? "سؤالك" : "Your question"}</Label>
+      )}
+
+      {/* Question Text Area */}
+      <div className="space-y-1.5">
+        <Label htmlFor="qa-question" className="text-xs font-bold">{isAr ? "سؤالك العلمي" : "Your Question"}</Label>
         <Textarea
           id="qa-question"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          rows={4}
-          placeholder={isAr ? "اكتب سؤالًا محددًا عن المحاضرة..." : "Ask a focused question about this lecture..."}
+          rows={3}
+          placeholder={isAr ? "اكتب سؤالك بوضوح عن موضوع المحاضرة أو النقاط الصعبة..." : "Ask a specific question about the pharmacology concepts in this lecture..."}
+          className="text-xs leading-relaxed"
           required
         />
       </div>
 
-      {/* Background Cloudflare Turnstile bot verification */}
-      <Turnstile
-        ref={turnstileRef}
-        action="question_submit"
-        size="flexible"
-        appearance="interaction-only"
-        onVerify={(token) => setTurnstileToken(token)}
-        onExpire={() => setTurnstileToken("")}
-      />
+      {/* Turnstile Bot Protection */}
+      <div className="w-full overflow-hidden flex justify-center my-0.5">
+        <Turnstile
+          ref={turnstileRef}
+          action="question_submit"
+          size="flexible"
+          appearance="interaction-only"
+          onVerify={(token) => setTurnstileToken(token)}
+          onExpire={() => setTurnstileToken("")}
+        />
+      </div>
 
-      <Button type="submit" disabled={status === "submitting"}>
-        <Send />
-        {status === "submitting" ? (isAr ? "جارٍ الإرسال..." : "Sending...") : isAr ? "إرسال السؤال" : "Submit question"}
-      </Button>
+      <div className="flex items-center gap-3">
+        <Button
+          type="submit"
+          disabled={status === "submitting" || !question.trim()}
+          className="gap-1.5 font-bold text-xs min-h-[36px]"
+        >
+          <Send className="size-3.5 rtl:rotate-180" />
+          <span>{status === "submitting" ? (isAr ? "جارٍ الإرسال..." : "Submitting...") : isAr ? "إرسال السؤال" : "Submit Question"}</span>
+        </Button>
+      </div>
+
       {status === "success" && (
-        <Alert className="border-primary/30">
-          <CheckCircle2 className="size-4 text-primary" />
-          <AlertDescription>
-            {isAr ? "تمت إضافة سؤالك إلى النقاش." : "Your question has been added to the discussion."}
+        <Alert className="border-primary/30 bg-primary/5 py-2.5">
+          <CheckCircle2 className="size-4 text-primary shrink-0" />
+          <AlertDescription className="text-xs font-semibold">
+            {isAr ? "تمت إضافة سؤالك إلى النقاش بنجاح." : "Your question has been posted to the discussion."}
           </AlertDescription>
         </Alert>
       )}
+
       {status === "error" && (
-        <Alert variant="destructive">
-          <AlertDescription>{isAr ? "تعذر الإرسال. حاول مرة أخرى." : "Could not submit. Please try again."}</AlertDescription>
+        <Alert variant="destructive" className="py-2.5">
+          <AlertDescription className="text-xs font-semibold">
+            {errorMsg || (isAr ? "تعذر إرسال السؤال. يرجى المحاولة لاحقًا." : "Could not submit question. Please try again.")}
+          </AlertDescription>
         </Alert>
       )}
     </form>
@@ -197,6 +351,7 @@ export default function LecturePage({
   const [questions, setQuestions] = useState(initialQuestions)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [sessionToken, setSessionToken] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<{ name?: string | null; email?: string | null } | null>(null)
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
   const [enrolling, setEnrolling] = useState(false)
@@ -221,6 +376,17 @@ export default function LecturePage({
       setIsAuthenticated(isAuth)
       setSessionToken(session?.access_token || null)
 
+      if (session?.user) {
+        const metaName =
+          (session.user.user_metadata?.full_name as string) ||
+          `${session.user.user_metadata?.first_name || ""} ${session.user.user_metadata?.last_name || ""}`.trim() ||
+          session.user.email?.split("@")[0] ||
+          "Student"
+        setCurrentUser({ name: metaName, email: session.user.email || null })
+      } else {
+        setCurrentUser(null)
+      }
+
       if (session?.user && session?.access_token && courseId) {
         try {
           const res = await fetch(`/api/courses/${courseId}/enroll`, {
@@ -244,6 +410,16 @@ export default function LecturePage({
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(Boolean(session?.user))
       setSessionToken(session?.access_token || null)
+      if (session?.user) {
+        const metaName =
+          (session.user.user_metadata?.full_name as string) ||
+          `${session.user.user_metadata?.first_name || ""} ${session.user.user_metadata?.last_name || ""}`.trim() ||
+          session.user.email?.split("@")[0] ||
+          "Student"
+        setCurrentUser({ name: metaName, email: session.user.email || null })
+      } else {
+        setCurrentUser(null)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -845,6 +1021,8 @@ export default function LecturePage({
                     <QuestionForm
                       lectureId={lecture.id}
                       isAr={isAr}
+                      currentUser={currentUser}
+                      sessionToken={sessionToken}
                       onAdded={(newQ) => setQuestions((curr) => [newQ, ...curr])}
                     />
                   </CardContent>
@@ -922,38 +1100,57 @@ export default function LecturePage({
               </p>
             </div>
 
-            {questions.map((question) => (
-              <Card key={question.id} className="shadow-none">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary font-bold text-primary"
-                      aria-hidden="true"
-                    >
-                      {question.author_name.charAt(0)}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate font-bold">{question.author_name}</p>
-                      <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-                        {isMounted ? new Date(question.created_at).toLocaleDateString(locale) : ""}
-                      </p>
+            {questions.map((question) => {
+              const isAnon = Boolean(question.is_anonymous)
+              const displayName = isAnon
+                ? (isAr ? "طالب (مجهول)" : "Anonymous Student")
+                : question.author_name
+              const initialLetter = isAnon ? "?" : (displayName.charAt(0).toUpperCase() || "S")
+
+              return (
+                <Card key={question.id} className="shadow-none">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`grid size-10 shrink-0 place-items-center rounded-full font-bold text-sm ${
+                          isAnon
+                            ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                            : "bg-secondary text-primary"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {isAnon ? <EyeOff className="size-4" /> : initialLetter}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="truncate font-bold text-sm">{displayName}</p>
+                          {isAnon && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/5">
+                              {isAr ? "مجهول" : "Anonymous"}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+                          {isMounted ? new Date(question.created_at).toLocaleDateString(locale) : ""}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <p className="mt-4 break-words text-pretty text-sm leading-6">{question.text}</p>
-                  {question.answers?.map((answer) => (
-                    <div key={answer.id} className="mt-4 border-s-2 border-primary bg-secondary/45 p-4">
-                      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-                        <ShieldCheck className="size-3.5 shrink-0" />
-                        {copy.mentor}
-                      </p>
-                      <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
-                        {answer.text}
-                      </p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
+                    <p className="mt-4 break-words text-pretty text-sm leading-6">{question.text}</p>
+                    {question.answers?.map((answer) => (
+                      <div key={answer.id} className="mt-4 border-s-2 border-primary bg-secondary/45 p-4 rounded-e-xl">
+                        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                          <ShieldCheck className="size-3.5 shrink-0" />
+                          {copy.mentor}
+                        </p>
+                        <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
+                          {answer.text}
+                        </p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )
+            })}
 
             {!questions.length && (
               <Alert>
@@ -1028,7 +1225,7 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
         supabase.from("quizzes").select("*").eq("lecture_id", id).order("created_at", { ascending: false }),
         supabase
           .from("community_questions")
-          .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
+          .select("id, lecture_id, user_id, author_name, text, created_at, is_anonymous, answers:community_answers(*)")
           .eq("lecture_id", id)
           .order("created_at", { ascending: false }),
       ])

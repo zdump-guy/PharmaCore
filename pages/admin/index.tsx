@@ -311,7 +311,7 @@ export default function AdminPage() {
           client.from("questions").select("*").order("order"),
           client
             .from("community_questions")
-            .select("id, lecture_id, author_name, text, created_at, answers:community_answers(*)")
+            .select("id, lecture_id, user_id, author_name, author_email, text, created_at, is_anonymous, answers:community_answers(*)")
             .order("created_at", { ascending: false }),
           client.from("site_content").select("content").eq("id", "main").maybeSingle(),
           client.from("audio_records").select("*").order("order", { ascending: true }),
@@ -477,7 +477,8 @@ export default function AdminPage() {
     e.preventDefault()
     if (!supabase || !profile) return
     setSaving(true)
-    const { id, course_id: _courseId, ...form } = voiceRecordForm
+    const { id, course_id, ...form } = voiceRecordForm
+    void course_id
     const payload = {
       ...form,
       duration_seconds: form.duration_seconds || 0,

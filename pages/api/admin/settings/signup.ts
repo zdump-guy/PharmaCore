@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { checkRateLimit } from "@/lib/rateLimit"
 import { loadSiteContent, mergeSiteContent } from "@/lib/siteContent"
 import type { EnrollmentSettings } from "@/types"
 
@@ -50,6 +51,10 @@ async function authorizeStaff(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 20, windowMs: 60_000, prefix: "admin_signup_settings" })) {
+    return
+  }
+
   if (req.method === "GET") {
     const staff = await authorizeStaff(req)
     if ("error" in staff) {

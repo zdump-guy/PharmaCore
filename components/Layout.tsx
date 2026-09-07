@@ -101,7 +101,13 @@ export default function Layout({
       "@id": `${siteUrl}/#website`,
       "url": siteUrl,
       "name": "PharmaCore",
-      "alternateName": isAr ? "فارماكور للتعليم الصيدلي" : "PharmaCore Clinical Education",
+      "alternateName": [
+        "PharmaCore Edu",
+        "PharmaCore Clinical Education",
+        "فارماكور",
+        "فارماكور للتعليم الصيدلي",
+        "pharma-core-edu"
+      ],
       "publisher": {
         "@id": `${siteUrl}/#organization`
       },
@@ -141,7 +147,7 @@ export default function Layout({
         <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
 
-        {/* Apple iOS Web App Capabilities */}
+        {/* Apple iOS Web App & Site Name Capabilities */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="PharmaCore" />
@@ -168,9 +174,9 @@ export default function Layout({
         )}
 
         {/* Complete Favicons & App Icons Suite for Google Favicon Bot & Browsers */}
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -213,13 +219,16 @@ export default function Layout({
         <meta property="og:locale" content={isAr ? "ar_EG" : "en_US"} />
         <meta property="og:locale:alternate" content={isAr ? "en_US" : "ar_EG"} />
 
-        {/* Twitter Card */}
+        {/* Twitter Card & Direct Message Preview Directives */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@PharmaCore" />
         <meta name="twitter:creator" content="@PharmaCore" />
+        <meta name="twitter:domain" content={siteUrl.replace(/^https?:\/\//, "")} />
+        <meta name="twitter:url" content={canonicalUrl} />
         <meta name="twitter:title" content={resolvedTitle} />
         <meta name="twitter:description" content={resolvedDescription} />
         <meta name="twitter:image" content={ogImage} />
+        <meta name="twitter:image:src" content={ogImage} />
         <meta name="twitter:image:alt" content={resolvedTitle} />
 
         {/* Schema.org Structured Data */}

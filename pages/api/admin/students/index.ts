@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const getQuerySchema = z.object({
   search: z.string().optional(),
@@ -97,6 +98,10 @@ async function authorizeStaff(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 40, windowMs: 60_000, prefix: "admin_students" })) {
+    return
+  }
+
   // ─── GET: List and filter students ──────────────────────────────────────────
   if (req.method === "GET") {
     const parsedQuery = getQuerySchema.safeParse(req.query)

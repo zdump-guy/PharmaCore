@@ -424,7 +424,9 @@ export default function CurriculumManager({
               const courseTitle = getCourseTitle(lecture.course_id)
               const title = isAr ? lecture.title_ar : lecture.title_en
               const attachedResources = resources.filter((r) => r.lecture_id === lecture.id)
+              const attachedAudioRecords = (audioRecords || []).filter((a) => a.lecture_id === lecture.id)
               const attachedQuiz = quizzes.find((q) => q.lecture_id === lecture.id)
+              const hasSummary = Boolean(lecture.details_en || lecture.details_ar)
 
               return (
                 <Card key={lecture.id} className="card-interactive shadow-none flex flex-col justify-between">
@@ -446,9 +448,9 @@ export default function CurriculumManager({
 
                     <div>
                       <h4 className="font-bold text-sm leading-snug line-clamp-2">{title}</h4>
-                      {lecture.details_en && (
+                      {hasSummary && (
                         <p className="mt-1 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                          {isAr ? lecture.details_ar : lecture.details_en}
+                          {isAr ? lecture.details_ar || lecture.details_en : lecture.details_en || lecture.details_ar}
                         </p>
                       )}
                     </div>
@@ -460,25 +462,48 @@ export default function CurriculumManager({
                           {attachedResources.length} {tr("Files", "ملفات")}
                         </Badge>
                       )}
+                      {attachedAudioRecords.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] gap-1 text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">
+                          <Headphones className="size-3" />
+                          {attachedAudioRecords.length} {tr("Audio", "صوتيات")}
+                        </Badge>
+                      )}
                       {attachedQuiz && (
                         <Badge variant="outline" className="text-[10px] gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
                           <CheckCircle2 className="size-3" />
                           {tr("Quiz Ready", "اختبار متاح")}
                         </Badge>
                       )}
+                      {hasSummary && (
+                        <Badge variant="outline" className="text-[10px] gap-1 text-blue-600 dark:text-blue-400 border-blue-500/30 bg-blue-500/10">
+                          {tr("Summary", "ملخص")}
+                        </Badge>
+                      )}
                     </div>
                   </CardContent>
 
                   <div className="border-t bg-muted/20 p-2.5 flex items-center justify-between">
-                    <a
-                      href={lecture.youtube_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline px-2 min-h-[32px]"
-                    >
-                      <ExternalLink className="size-3" />
-                      {tr("Watch", "مشاهدة")}
-                    </a>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`/lecture/${lecture.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline px-1.5 min-h-[32px]"
+                        title={tr("Preview student lecture page", "معاينة صفحة المحاضرة للطلاب")}
+                      >
+                        <ExternalLink className="size-3" />
+                        {tr("Preview", "معاينة")}
+                      </a>
+                      <a
+                        href={lecture.youtube_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground px-1.5 min-h-[32px]"
+                      >
+                        <YoutubeIcon className="size-3 text-red-500" />
+                        YouTube
+                      </a>
+                    </div>
 
                     <div className="flex items-center gap-1">
                       <Button

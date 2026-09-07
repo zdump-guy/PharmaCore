@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { loadSiteContent } from "@/lib/siteContent"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const updateProfileSchema = z.object({
   first_name: z.string().trim().max(60).optional(),
@@ -36,6 +37,10 @@ async function authorizeUser(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 30, windowMs: 60_000, prefix: "student_profile" })) {
+    return
+  }
+
   if (req.method === "GET") {
     const auth = await authorizeUser(req)
     if ("error" in auth) {

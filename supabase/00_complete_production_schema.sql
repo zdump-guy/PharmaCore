@@ -229,16 +229,20 @@ ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS "order" INTEGER DEFAULT 0;
 CREATE TABLE IF NOT EXISTS public.community_questions (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   lecture_id    UUID NOT NULL REFERENCES public.lectures(id) ON DELETE CASCADE,
+  user_id       UUID REFERENCES public.users(id) ON DELETE SET NULL,
   author_name   TEXT NOT NULL,
-  author_email  TEXT NOT NULL,
+  author_email  TEXT,
+  is_anonymous  BOOLEAN DEFAULT false,
   text          TEXT NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Ensure all community_questions columns exist
 ALTER TABLE public.community_questions ADD COLUMN IF NOT EXISTS lecture_id UUID REFERENCES public.lectures(id) ON DELETE CASCADE;
+ALTER TABLE public.community_questions ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE public.community_questions ADD COLUMN IF NOT EXISTS author_name TEXT;
 ALTER TABLE public.community_questions ADD COLUMN IF NOT EXISTS author_email TEXT;
+ALTER TABLE public.community_questions ADD COLUMN IF NOT EXISTS is_anonymous BOOLEAN DEFAULT false;
 ALTER TABLE public.community_questions ADD COLUMN IF NOT EXISTS text TEXT;
 ALTER TABLE public.community_questions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 
@@ -599,8 +603,8 @@ CREATE POLICY "Admins manage questions" ON public.questions
 -- ------------------------------------------------------------------------------
 -- Prevent browser clients from selecting student email addresses directly
 REVOKE SELECT ON public.community_questions FROM anon, authenticated;
-GRANT SELECT (id, lecture_id, author_name, text, created_at) ON public.community_questions TO anon;
-GRANT SELECT (id, lecture_id, author_name, text, created_at) ON public.community_questions TO authenticated;
+GRANT SELECT (id, lecture_id, user_id, author_name, text, created_at, is_anonymous) ON public.community_questions TO anon;
+GRANT SELECT (id, lecture_id, user_id, author_name, text, created_at, is_anonymous) ON public.community_questions TO authenticated;
 
 -- Disallow open client-side insertion; questions must flow through /api/questions/submit
 DROP POLICY IF EXISTS "Anyone insert community questions" ON public.community_questions;

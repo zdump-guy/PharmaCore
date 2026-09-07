@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const patchSchema = z.object({
   status: z.enum(["open", "under_review", "in_progress", "resolved", "dismissed"]).optional(),
@@ -33,6 +34,10 @@ async function authorize(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 30, windowMs: 60_000, prefix: "admin_feedback_update" })) {
+    return
+  }
+
   const { id } = req.query
   if (!id || typeof id !== "string") {
     return res.status(400).json({ error: "Invalid feedback ID" })

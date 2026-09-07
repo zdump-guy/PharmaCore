@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { checkRateLimit } from "@/lib/rateLimit"
 
 const updateProfileSchema = z.object({
   first_name: z.string().trim().max(60).optional(),
@@ -30,6 +31,10 @@ async function authorizeUser(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkRateLimit(req, res, { limit: 30, windowMs: 60_000, prefix: "user_profile" })) {
+    return
+  }
+
   const auth = await authorizeUser(req)
   if ("error" in auth) return res.status(auth.status).json({ error: auth.error })
   if (!supabaseAdmin) return res.status(503).json({ error: "Supabase not configured" })
