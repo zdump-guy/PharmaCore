@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { sanitizeInputText } from '@/lib/utils';
 import { z } from 'zod';
+
 
 const schema = z.object({
   questionId: z.string().uuid(),
@@ -47,12 +49,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { questionId, text } = parsed.data;
+  const cleanText = sanitizeInputText(text);
 
   const { data: answer, error } = await supabaseAdmin.from('community_answers').insert([{
     question_id: questionId,
     responder_id: user.id,
-    text,
+    text: cleanText,
   }]).select().single();
+
 
   if (error) {
     return res.status(500).json({ error: 'Failed to post answer' });

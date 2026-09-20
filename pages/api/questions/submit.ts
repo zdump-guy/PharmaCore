@@ -2,7 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyTurnstileToken, extractClientIp } from '@/lib/turnstile';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { sanitizeInputText } from '@/lib/utils';
 import { z } from 'zod';
+
 
 const schema = z.object({
   lectureId: z.string().uuid(),
@@ -100,20 +102,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const cleanName = sanitizeInputText(resolvedName);
+    const cleanText = sanitizeInputText(text);
+
     const { data: question, error } = await supabaseAdmin
       .from('community_questions')
       .insert([
         {
           lecture_id: lectureId,
           user_id: authenticatedUserId,
-          author_name: resolvedName,
+          author_name: cleanName,
           author_email: resolvedEmail || null,
           is_anonymous: Boolean(isAnonymous),
-          text: text.trim(),
+          text: cleanText,
         },
       ])
       .select()
       .single();
+
 
     if (error) {
       console.error('Error inserting community question:', error);

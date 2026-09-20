@@ -3,6 +3,8 @@ import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { supabase } from "@/lib/supabaseClient"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { verifyTurnstileToken, extractClientIp } from "@/lib/turnstile"
+import { sanitizeInputText, isSafeUrl } from "@/lib/utils"
 
 const feedbackSubmitSchema = z.object({
   feedback_type: z.enum(["technical", "academic"]),
@@ -25,7 +27,7 @@ const feedbackSubmitSchema = z.object({
     })
     .optional()
     .nullable(),
-  attachment_url: z.string().url().max(1000).optional().nullable().or(z.literal("")),
+  attachment_url: z.string().max(1000).optional().nullable().or(z.literal("")),
   academic_reference: z.string().max(2000).optional().nullable(),
   contact_email: z.string().email().max(255).optional().nullable().or(z.literal("")),
   contact_name: z.string().max(120).optional().nullable(),
@@ -56,27 +58,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const payload = parsed.data
 
-  // Optional bot protection verification (Cloudflare Turnstile)
-  const turnstileSecret = process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
-  if (turnstileSecret && payload.turnstileToken) {
-    try {
-      const turnstileRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          secret: turnstileSecret,
-          response: payload.turnstileToken,
-          remoteip: (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "",
-        }),
-      })
-      const turnstileData = await turnstileRes.json()
-      if (!turnstileData.success) {
-        return res.status(400).json({ error: "Security verification failed. Please try again." })
-      }
-    } catch (err) {
-      console.warn("Turnstile validation exception (proceeding safely):", err)
-    }
+  // Bot protection verification (Cloudflare Turnstile)
+  const clientIp = extractClientIp(req)
+  const turnstileResult = await verifyTurnstileToken({
+    token: payload.turnstileToken,
+    remoteIp: clientIp,
+    expectedAction: "feedback_submit",
+  })
+
+  if (!turnstileResult.success) {
+    return res.status(403).json({
+      error: "Security verification failed. Please try again.",
+      error_ar: "فشل التحقق الأمني من النشاط التلقائي. يرجى المحاولة مرة أخرى.",
+    })
   }
+
 
   // Resolve authenticated user if session header is present
   let authenticatedUserId: string | null = null
@@ -104,31 +100,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
+  const cleanTitle = sanitizeInputText(payload.title)
+  const cleanDescription = sanitizeInputText(payload.description)
+  const cleanSteps = payload.reproduction_steps ? sanitizeInputText(payload.reproduction_steps) : null
+  const cleanRef = payload.academic_reference ? sanitizeInputText(payload.academic_reference) : null
+  const cleanContactName = sanitizeInputText(payload.contact_name || authenticatedName || "") || null
+  const cleanContactEmail = (payload.contact_email || authenticatedEmail || "").trim().toLowerCase() || null
+
+  const cleanAttachmentUrl = payload.attachment_url && isSafeUrl(payload.attachment_url) ? payload.attachment_url.trim() : null
+  const cleanPageUrl = payload.page_url && (payload.page_url.startsWith("/") || isSafeUrl(payload.page_url)) ? payload.page_url.trim() : null
+
   try {
     const { data, error } = await client
       .from("feedback_submissions")
       .insert({
         user_id: authenticatedUserId,
         feedback_type: payload.feedback_type,
-        category: payload.category,
-        page_url: payload.page_url || null,
+        category: sanitizeInputText(payload.category),
+        page_url: cleanPageUrl,
         course_id: payload.course_id || null,
         lecture_id: payload.lecture_id || null,
-        title: payload.title.trim(),
-        description: payload.description.trim(),
-        reproduction_steps: payload.reproduction_steps?.trim() || null,
+        title: cleanTitle,
+        description: cleanDescription,
+        reproduction_steps: cleanSteps,
         severity: payload.severity,
         device_info: payload.device_info || {},
-        attachment_url: payload.attachment_url || null,
-        academic_reference: payload.academic_reference?.trim() || null,
-        contact_email: (payload.contact_email || authenticatedEmail || "").trim() || null,
-        contact_name: (payload.contact_name || authenticatedName || "").trim() || null,
+        attachment_url: cleanAttachmentUrl,
+        academic_reference: cleanRef,
+        contact_email: cleanContactEmail,
+        contact_name: cleanContactName,
         status: "open",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .select("id, feedback_type, status, created_at")
       .single()
+
 
     if (error) {
       console.error("Feedback insert error:", error)

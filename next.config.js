@@ -1,6 +1,21 @@
 const path = require('path');
 const { i18n } = require('./next-i18next.config');
 
+const cspHeader = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com https://va.vercel-scripts.com https://www.youtube.com https://s.ytimg.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.uploadthing.com https://uploadthing.com https://utfs.io https://ufs.sh https://api.uploadthing.com",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://challenges.cloudflare.com",
+  "media-src 'self' https://utfs.io https://ufs.sh blob: data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 const securityHeaders = [
   {
     key: 'Strict-Transport-Security',
@@ -22,7 +37,24 @@ const securityHeaders = [
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(self), geolocation=(), browsing-topics=()',
   },
+  {
+    key: 'X-DNS-Prefetch-Control',
+    value: 'on',
+  },
+  {
+    key: 'Cross-Origin-Opener-Policy',
+    value: 'same-origin',
+  },
+  {
+    key: 'Cross-Origin-Resource-Policy',
+    value: 'same-origin',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: cspHeader,
+  },
 ];
+
 
 const nextConfig = {
   poweredByHeader: false,

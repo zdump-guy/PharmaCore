@@ -6,6 +6,8 @@ import Footer from "@/components/Footer"
 import Breadcrumb from "@/components/Breadcrumb"
 import { siteMetadata, defaultSocialLinks } from "@/lib/siteContent"
 import { useSiteContent } from "@/components/SiteContentProvider"
+import { escapeJsonLd } from "@/lib/utils"
+
 
 interface LayoutProps {
   children: ReactNode
@@ -276,8 +278,9 @@ export default function Layout({
         {/* Schema.org Structured Data */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          dangerouslySetInnerHTML={{ __html: escapeJsonLd(JSON.stringify(structuredData)) }}
         />
+
       </Head>
 
       <div

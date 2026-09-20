@@ -3,11 +3,16 @@ import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { checkRateLimit } from "@/lib/rateLimit"
 
+const querySchema = z.object({
+  id: z.string().uuid("Invalid feedback ID format"),
+})
+
 const patchSchema = z.object({
   status: z.enum(["open", "under_review", "in_progress", "resolved", "dismissed"]).optional(),
   admin_notes: z.string().max(5000).optional().nullable(),
   severity: z.enum(["low", "medium", "high", "critical"]).optional(),
 })
+
 
 async function authorize(req: NextApiRequest) {
   if (!supabaseAdmin) return { error: "Supabase is not configured", status: 503 } as const
@@ -38,10 +43,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return
   }
 
-  const { id } = req.query
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ error: "Invalid feedback ID" })
+  const parsedQuery = querySchema.safeParse(req.query)
+  if (!parsedQuery.success) {
+    return res.status(400).json({ error: "Invalid feedback ID format", details: parsedQuery.error.flatten() })
   }
+  const { id } = parsedQuery.data
+
 
   const requester = await authorize(req)
   if ("error" in requester) {

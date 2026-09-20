@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { sanitizePostgrestFilter } from "@/lib/utils"
+
 
 const filterSchema = z.object({
   feedback_type: z.enum(["all", "technical", "academic"]).optional().default("all"),
@@ -88,10 +90,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       query = query.eq("severity", severity)
     }
 
-    if (search && search.trim()) {
-      const term = `%${search.trim()}%`
+    const cleanSearch = sanitizePostgrestFilter(search)
+    if (cleanSearch) {
+      const term = `%${cleanSearch}%`
       query = query.or(`title.ilike.${term},description.ilike.${term},contact_email.ilike.${term},contact_name.ilike.${term}`)
     }
+
 
     const { data: submissions, count, error } = await query
 

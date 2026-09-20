@@ -33,10 +33,22 @@ if (typeof setInterval !== "undefined") {
 }
 
 /**
- * Extracts client IP from request headers or socket remote address.
+ * Extracts real client IP from request headers or socket remote address.
+ * Prioritizes trusted Cloudflare connecting IP, followed by x-real-ip,
+ * then x-forwarded-for, to prevent header spoofing bypasses.
  */
 export function getClientIp(req: NextApiRequest): string {
   if (!req) return "127.0.0.1"
+
+  const cfIp = req.headers?.["cf-connecting-ip"]
+  if (typeof cfIp === "string" && cfIp.trim().length > 0) {
+    return cfIp.trim()
+  }
+
+  const realIp = req.headers?.["x-real-ip"]
+  if (typeof realIp === "string" && realIp.trim().length > 0) {
+    return realIp.trim()
+  }
 
   const forwarded = req.headers?.["x-forwarded-for"]
   if (typeof forwarded === "string" && forwarded.trim().length > 0) {
@@ -46,13 +58,18 @@ export function getClientIp(req: NextApiRequest): string {
     return forwarded[0].split(",")[0].trim()
   }
 
-  const realIp = req.headers?.["x-real-ip"]
-  if (typeof realIp === "string" && realIp.trim().length > 0) {
-    return realIp.trim()
-  }
-
   return req.socket?.remoteAddress || "127.0.0.1"
 }
+
+/**
+ * Optional progressive slow-down delay (sleep) when rate limit capacity is depleted,
+ * mitigating rapid brute force attempts.
+ */
+export async function applySlowDown(delayMs = 250): Promise<void> {
+  if (delayMs <= 0) return
+  await new Promise((resolve) => setTimeout(resolve, delayMs))
+}
+
 
 /**
  * Checks whether an incoming request exceeds the configured rate limit
