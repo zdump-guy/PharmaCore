@@ -13,7 +13,9 @@ const updateProfileSchema = z.object({
   start_year: z.number().int().min(2000).max(2100).optional().nullable(),
   predicted_end_year: z.number().int().min(2000).max(2100).optional().nullable(),
   current_year: z.number().int().min(1).max(10).optional().nullable(),
+  email_notifications_enabled: z.boolean().optional(),
 })
+
 
 async function authorizeUser(req: NextApiRequest) {
   if (!supabaseAdmin) return { error: "Supabase not configured", status: 503 } as const

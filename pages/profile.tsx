@@ -1,22 +1,29 @@
 import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import {
   FiActivity as Activity,
   FiAward as Award,
+  FiBell as Bell,
   FiBookOpen as BookOpen,
   FiCheck as Check,
   FiCheckCircle as CheckCircle2,
+  FiChevronDown as ChevronDown,
+  FiChevronUp as ChevronUp,
   FiClock as Clock,
+  FiExternalLink as ExternalLink,
+  FiHelpCircle as HelpCircle,
   FiKey as Key,
   FiLoader as Loader2,
   FiLock as Lock,
   FiLogOut as LogOut,
   FiMail as Mail,
+  FiMessageSquare as MessageSquare,
   FiPlayCircle as PlayCircle,
   FiSave as Save,
+  FiSearch as Search,
   FiUser as UserIcon,
   FiZap as Zap,
 } from "react-icons/fi"
@@ -34,7 +41,7 @@ import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { resetUser } from "@/lib/analytics"
 import { Progress } from "@/components/ui/progress"
-import type { UserProfile, EnrolledCourseProgress } from "@/types"
+import type { UserProfile, EnrolledCourseProgress, StudentQuestionItem, NotificationItem } from "@/types"
 
 interface ProfilePageProps {
   siteContent: SiteContent
@@ -48,14 +55,21 @@ interface ProfileMetrics {
   coursesEnrolled: number
 }
 
+interface QaStats {
+  totalQuestions: number
+  answeredQuestions: number
+  pendingQuestions: number
+  totalReplies: number
+}
+
 export default function ProfilePage({ siteContent }: ProfilePageProps) {
   const router = useRouter()
   const { locale, query } = router
   const isAr = locale === "ar"
   const tr = (en: string, ar: string) => (isAr ? ar : en)
 
-  const [activeTab, setActiveTab] = useState<"info" | "learning" | "security">(
-    (query.tab as "info" | "learning" | "security") || "info"
+  const [activeTab, setActiveTab] = useState<"info" | "learning" | "qa" | "security">(
+    (query.tab as "info" | "learning" | "qa" | "security") || "info"
   )
 
   const [loading, setLoading] = useState(true)
@@ -68,6 +82,21 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     coursesEnrolled: 0,
   })
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourseProgress[]>([])
+
+  // Q&A & Notifications State
+  const [myQuestions, setMyQuestions] = useState<StudentQuestionItem[]>([])
+  const [qaStats, setQaStats] = useState<QaStats>({
+    totalQuestions: 0,
+    answeredQuestions: 0,
+    pendingQuestions: 0,
+    totalReplies: 0,
+  })
+  const [qaFilter, setQaFilter] = useState<"all" | "answered" | "pending">("all")
+  const [qaSearch, setQaSearch] = useState("")
+  const [expandedQuestionIds, setExpandedQuestionIds] = useState<Record<string, boolean>>({})
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [unreadNotifCount, setUnreadNotifCount] = useState<number>(0)
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState<boolean>(true)
 
   // Form State
   const [firstName, setFirstName] = useState("")
@@ -92,7 +121,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
   const { token: authToken, loading: authLoading, isAuthenticated } = useAuth()
 
-  // Load Session, Profile & Real Course Enrollments
+  // Load Session, Profile, Enrollments, Q&A, and Notifications
   useEffect(() => {
     if (authLoading) return
 
@@ -106,11 +135,17 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     async function fetchStudentProfile() {
       setLoading(true)
       try {
-        const [profileRes, enrollmentsRes] = await Promise.all([
+        const [profileRes, enrollmentsRes, questionsRes, notifsRes] = await Promise.all([
           fetch("/api/profile", {
             headers: { Authorization: `Bearer ${authToken}` },
           }),
           fetch("/api/students/enrollments", {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }),
+          fetch("/api/students/questions", {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }),
+          fetch("/api/students/notifications", {
             headers: { Authorization: `Bearer ${authToken}` },
           }),
         ])
@@ -130,12 +165,25 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
             setEnrolledCourses(enrollData.enrollments || [])
           }
 
-          // Populate fields
+          if (questionsRes.ok) {
+            const qData = await questionsRes.json()
+            setMyQuestions(qData.questions || [])
+            if (qData.stats) setQaStats(qData.stats)
+          }
+
+          if (notifsRes.ok) {
+            const nData = await notifsRes.json()
+            setNotifications(nData.notifications || [])
+            setUnreadNotifCount(nData.unreadCount || 0)
+          }
+
+          // Populate form fields
           setFirstName(userProf.first_name || userProf.full_name?.split(" ")[0] || "")
           setLastName(userProf.last_name || userProf.full_name?.split(" ").slice(1).join(" ") || "")
           setPhoneNumber(userProf.phone_number || "")
           setUniversity(userProf.university || "")
           setFaculty(userProf.faculty || "")
+          setEmailNotificationsEnabled(userProf.email_notifications_enabled ?? true)
           if (userProf.start_year) setStartYear(userProf.start_year)
           if (userProf.predicted_end_year) setPredictedEndYear(userProf.predicted_end_year)
         }
@@ -163,6 +211,81 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
   // Calculate academic year
   const calculatedYear = Math.max(1, new Date().getFullYear() - startYear + 1)
+
+  // Filtered Questions Memo
+  const filteredQuestions = useMemo(() => {
+    return myQuestions.filter((q) => {
+      // Filter by status
+      const hasAnswers = (q.answers?.length ?? 0) > 0
+      if (qaFilter === "answered" && !hasAnswers) return false
+      if (qaFilter === "pending" && hasAnswers) return false
+
+      // Filter by search query
+      if (qaSearch.trim()) {
+        const query = qaSearch.toLowerCase()
+        const textMatch = q.text?.toLowerCase().includes(query)
+        const courseEnMatch = q.course_title_en?.toLowerCase().includes(query)
+        const courseArMatch = q.course_title_ar?.toLowerCase().includes(query)
+        const lecEnMatch = q.lecture_title_en?.toLowerCase().includes(query)
+        const lecArMatch = q.lecture_title_ar?.toLowerCase().includes(query)
+        const answersMatch = q.answers?.some((a) => a.text?.toLowerCase().includes(query))
+        return textMatch || courseEnMatch || courseArMatch || lecEnMatch || lecArMatch || answersMatch
+      }
+
+      return true
+    })
+  }, [myQuestions, qaFilter, qaSearch])
+
+  const toggleQuestionExpanded = (id: string) => {
+    setExpandedQuestionIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
+
+  // Handle Mark Single Notification Read
+  const handleMarkNotificationRead = async (id: string) => {
+    if (!authToken) return
+    try {
+      const res = await fetch("/api/students/notifications/read", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ notification_id: id }),
+      })
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+        )
+        setUnreadNotifCount((prev) => Math.max(0, prev - 1))
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
+  // Handle Mark All Notifications Read
+  const handleMarkAllNotificationsRead = async () => {
+    if (!authToken) return
+    try {
+      const res = await fetch("/api/students/notifications/read", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ mark_all: true }),
+      })
+      if (res.ok) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+        setUnreadNotifCount(0)
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
 
   // Handle Profile Update
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -192,6 +315,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           start_year: Number(startYear),
           predicted_end_year: Number(predictedEndYear),
           current_year: calculatedYear,
+          email_notifications_enabled: Boolean(emailNotificationsEnabled),
         }),
       })
 
@@ -291,6 +415,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
     >
       <div className="page-shell section-space space-y-8" dir={isAr ? "rtl" : "ltr"}>
         <Breadcrumb items={[{ label: isAr ? "الملف الأكاديمي للطالب" : "Student Profile" }]} />
+        
         {/* ─── Top Hero / Profile Banner Card ──────────────────────────────── */}
         <div className="rounded-3xl border bg-card p-6 sm:p-8 shadow-xs relative overflow-hidden">
           <div className="absolute top-0 end-0 size-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
@@ -310,7 +435,9 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                     className={`badge-nowrap ${
                       profile?.status === "active"
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500/30"
-                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold border-amber-500/30"
+                        : profile?.status === "needs_setup"
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold border-amber-500/30"
+                        : "bg-primary/15 text-primary font-bold border-primary/30"
                     }`}
                   >
                     {profile?.status === "active"
@@ -366,11 +493,11 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           <Card className="card-interactive card-equal shadow-none">
             <CardContent className="p-4 sm:p-5 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Videos Watched", "المحاضرات المكتملة")}</span>
+                <span className="text-xs font-bold uppercase whitespace-nowrap">{tr("Videos Watched", "المحاضرات")}</span>
                 <BookOpen className="size-4 text-blue-500 shrink-0" />
               </div>
               <p className="text-2xl sm:text-3xl font-black font-mono">{metrics.videosWatched}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{tr("Completed lecture sessions", "محاضرة تم اجتيازها")}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{tr("Completed sessions", "محاضرة تم اجتيازها")}</p>
             </CardContent>
           </Card>
 
@@ -423,6 +550,24 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           >
             <Activity className="size-4 shrink-0" />
             <span>{tr("Learning Activity", "سجل التقدم الدراسي")}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("qa")}
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 relative ${
+              activeTab === "qa"
+                ? "bg-primary text-primary-foreground shadow-2xs"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <MessageSquare className="size-4 shrink-0" />
+            <span>{tr("My Q&A Discussions", "مناقشاتي وأسئلتي")}</span>
+            {unreadNotifCount > 0 && (
+              <span className="inline-flex items-center justify-center size-5 text-[10px] font-bold rounded-full bg-rose-500 text-white animate-pulse">
+                {unreadNotifCount}
+              </span>
+            )}
           </button>
 
           <button
@@ -587,6 +732,58 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
               </CardContent>
             </Card>
 
+            {/* Notification Preferences Card */}
+            <Card className="shadow-none">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <Bell className="size-4 text-primary" />
+                  <span>{tr("Notification Preferences", "تفضيلات الإشعارات")}</span>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {tr(
+                    "Control how you receive updates and alerts regarding mentor responses and academic announcements.",
+                    "التحكم في طريقة استقبال التنبيهات وإشعارات ردود المعلمين على استفساراتك."
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-4 rounded-2xl border bg-card hover:bg-muted/10 transition-colors">
+                  <div className="space-y-1 pe-4">
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      <Mail className="size-4 text-primary" />
+                      <span>{tr("Mentor Reply Email Alerts", "إشعارات البريد الإلكتروني عند رد المعلم")}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {tr(
+                        "Receive an instant email with direct lecture discussion links whenever a mentor answers your question.",
+                        "استلام رسالة بريد إلكتروني فورية برابط المحاضرة المباشر عندما يقوم المعلم بالرد على سؤالك."
+                      )}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={emailNotificationsEnabled}
+                    onClick={() => setEmailNotificationsEnabled((prev) => !prev)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      emailNotificationsEnabled ? "bg-primary" : "bg-muted-foreground/30"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        emailNotificationsEnabled
+                          ? isAr
+                            ? "-translate-x-5"
+                            : "translate-x-5"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
             <Button
               type="submit"
               size="lg"
@@ -746,7 +943,298 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           </div>
         )}
 
-        {/* ─── 3. SECURITY & PASSWORD TAB ──────────────────────────────────── */}
+        {/* ─── 3. COMMUNITY Q&A & MENTOR DISCUSSIONS TAB ──────────────────── */}
+        {activeTab === "qa" && (
+          <div className="space-y-6 max-w-4xl">
+            {/* Unread Notifications Banner (if any) */}
+            {unreadNotifCount > 0 && (
+              <div className="p-4 rounded-2xl border border-primary/30 bg-primary/10 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0">
+                      <Bell className="size-4 animate-bounce" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">
+                        {tr(
+                          `You have ${unreadNotifCount} unread mentor response${unreadNotifCount > 1 ? "s" : ""}!`,
+                          `لديك ${unreadNotifCount} ${unreadNotifCount > 1 ? "إشعارات جديدة لردود المعلمين" : "إشعار جديد لرد المعلم"}!`
+                        )}
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        {tr(
+                          "Mentors have posted answers to your questions on course lectures.",
+                          "قام المعلمون بالرد على تساؤلاتك واستفساراتك في المحاضرات."
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleMarkAllNotificationsRead}
+                    className="font-bold text-xs shrink-0 self-start sm:self-auto rounded-xl"
+                  >
+                    <Check className="size-3.5 me-1.5" />
+                    <span>{tr("Mark all as read", "تحديد الكل كمقروء")}</span>
+                  </Button>
+                </div>
+
+                {/* Individual Unread Items */}
+                <div className="space-y-2 pt-1 border-t border-primary/20">
+                  {notifications
+                    .filter((n) => !n.is_read)
+                    .slice(0, 3)
+                    .map((n) => (
+                      <div
+                        key={n.id}
+                        className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-card/60 text-xs border border-primary/10"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="size-2 rounded-full bg-rose-500 shrink-0 animate-ping" />
+                          <p className="truncate text-foreground font-medium">
+                            {isAr ? n.message_ar : n.message_en}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {n.lecture_id && (
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] font-bold" asChild>
+                              <Link
+                                href={`/lecture/${n.lecture_id}#discussion`}
+                                onClick={() => handleMarkNotificationRead(n.id)}
+                              >
+                                <span>{tr("View", "عرض")}</span>
+                                <ExternalLink className="size-3 ms-1" />
+                              </Link>
+                            </Button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleMarkNotificationRead(n.id)}
+                            className="p-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                            title={tr("Mark as read", "تحديد كمقروء")}
+                          >
+                            <Check className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Q&A Hub Controls & Stats */}
+            <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-1.5 p-1 bg-muted/40 border rounded-2xl overflow-x-auto scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setQaFilter("all")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    qaFilter === "all"
+                      ? "bg-card text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tr("All Questions", "جميع الأسئلة")} ({qaStats.totalQuestions})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQaFilter("answered")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    qaFilter === "answered"
+                      ? "bg-card text-emerald-600 dark:text-emerald-400 shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tr("Answered", "مجاب عليها")} ({qaStats.answeredQuestions})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQaFilter("pending")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    qaFilter === "pending"
+                      ? "bg-card text-amber-600 dark:text-amber-400 shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tr("Awaiting Mentor", "بانتظار الرد")} ({qaStats.pendingQuestions})
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full md:w-72">
+                <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  value={qaSearch}
+                  onChange={(e) => setQaSearch(e.target.value)}
+                  placeholder={tr("Search questions & answers...", "بحث في الأسئلة والإجابات...")}
+                  className="ps-9 h-9 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            {/* Questions List */}
+            {filteredQuestions.length === 0 ? (
+              <div className="text-center py-12 border border-dashed rounded-3xl p-6 bg-muted/20 space-y-3">
+                <HelpCircle className="size-10 text-muted-foreground/50 mx-auto" />
+                <h4 className="text-sm font-bold">
+                  {qaSearch
+                    ? tr("No questions match your search", "لا توجد أسئلة تطابق بحثك")
+                    : qaFilter === "pending"
+                    ? tr("No pending questions awaiting replies", "لا توجد أسئلة معلقة بانتظار ردود")
+                    : tr("No questions asked yet", "لم تقم بطرح أي سؤال بعد")}
+                </h4>
+                <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                  {tr(
+                    "You can ask questions directly inside any lecture page under the Discussion section to get answers from instructors.",
+                    "يمكنك طرح أسئلتك مباشرة داخل صفحة أي محاضرة من خلال قسم المناقشات ليرد عليها المعلمون."
+                  )}
+                </p>
+                <Button size="sm" className="font-bold mt-2" asChild>
+                  <Link href="/#courses">{tr("Explore Lectures", "استعراض المحاضرات")}</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredQuestions.map((q) => {
+                  const hasAnswers = (q.answers?.length ?? 0) > 0
+                  const isExpanded = Boolean(expandedQuestionIds[q.id])
+                  const courseTitle = isAr ? q.course_title_ar || q.course_title_en : q.course_title_en || q.course_title_ar
+                  const lectureTitle = isAr ? q.lecture_title_ar || q.lecture_title_en : q.lecture_title_en || q.lecture_title_ar
+                  const lectureLink = `/lecture/${q.lecture_id}#discussion`
+
+                  return (
+                    <Card
+                      key={q.id}
+                      className="shadow-none rounded-2xl border transition-all hover:border-primary/30 overflow-hidden"
+                    >
+                      <CardContent className="p-5 space-y-4">
+                        {/* Course / Lecture Breadcrumb Tag & Status Badge */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+                            <GraduationCap className="size-3.5 text-primary shrink-0" />
+                            <span className="font-semibold text-foreground">{courseTitle || tr("Course", "المقرر")}</span>
+                            <span>•</span>
+                            <span className="text-primary font-bold">{lectureTitle || tr("Lecture", "المحاضرة")}</span>
+                          </div>
+
+                          <Badge
+                            variant="outline"
+                            className={`badge-nowrap text-[10px] font-bold ${
+                              hasAnswers
+                                ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                                : "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10"
+                            }`}
+                          >
+                            {hasAnswers
+                              ? tr(`${q.answers?.length} Mentor Answer${(q.answers?.length ?? 0) > 1 ? "s" : ""}`, `${q.answers?.length} إجابة من المعلم`)
+                              : tr("Awaiting Mentor Reply", "بانتظار رد المعلم")}
+                          </Badge>
+                        </div>
+
+                        {/* Question Text */}
+                        <div className="space-y-1.5">
+                          <p className="text-sm font-bold text-foreground leading-relaxed">
+                            {q.text}
+                          </p>
+                          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                            <span>
+                              {new Date(q.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </span>
+                            {q.is_anonymous && (
+                              <Badge variant="secondary" className="text-[9px] py-0 px-1.5 font-normal">
+                                {tr("Posted anonymously", "نشر مجهول")}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Answers Section */}
+                        {hasAnswers && (
+                          <div className="space-y-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleQuestionExpanded(q.id)}
+                              className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>
+                                {isExpanded
+                                  ? tr("Hide mentor answers", "إخفاء إجابات المعلم")
+                                  : tr(`View ${q.answers?.length} mentor answer${(q.answers?.length ?? 0) > 1 ? "s" : ""}`, `عرض ${q.answers?.length} إجابة من المعلم`)}
+                              </span>
+                              {isExpanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                            </button>
+
+                            {isExpanded && (
+                              <div className="space-y-2.5 pt-1">
+                                {q.answers?.map((ans) => {
+                                  const responderName = ans.responder?.full_name || tr("Course Mentor", "معلم المقرر")
+                                  const responderRole = ans.responder?.role || "mentor"
+
+                                  return (
+                                    <div
+                                      key={ans.id}
+                                      className="p-3.5 rounded-xl border bg-muted/30 space-y-1.5 relative border-l-4 border-l-emerald-500"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="size-6 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold grid place-items-center">
+                                            {responderName[0]}
+                                          </div>
+                                          <span className="text-xs font-bold text-foreground">{responderName}</span>
+                                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[9px] px-1.5 py-0 border-emerald-500/20 font-bold">
+                                            {responderRole === "super_admin" || responderRole === "dev"
+                                              ? tr("Instructor", "المحاضر")
+                                              : tr("Mentor", "معلم")}
+                                          </Badge>
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {new Date(ans.created_at).toLocaleDateString(isAr ? "ar-EG" : "en-US", {
+                                            month: "short",
+                                            day: "numeric",
+                                          })}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-foreground leading-relaxed ps-8">
+                                        {ans.text}
+                                      </p>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Deep link button to Lecture Discussion */}
+                        <div className="flex items-center justify-end pt-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs font-bold text-primary hover:text-primary gap-1.5 h-8"
+                            asChild
+                          >
+                            <Link href={lectureLink}>
+                              <span>{tr("Open in Lecture Discussion", "فتح في مناقشة المحاضرة")}</span>
+                              <ExternalLink className="size-3.5" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── 4. SECURITY & PASSWORD TAB ──────────────────────────────────── */}
         {activeTab === "security" && (
           <form onSubmit={handleUpdatePassword} className="space-y-6 max-w-xl">
             {passwordNotice && (
