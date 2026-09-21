@@ -42,6 +42,19 @@ export function sanitizePostgrestFilter(term: string | null | undefined): string
 }
 
 /**
+ * Sanitizes exact values (such as email addresses or IDs) for PostgREST .or() filter clauses,
+ * neutralizing PostgREST syntax injection operators while preserving valid value characters.
+ */
+export function sanitizePostgrestExactValue(value: string | null | undefined): string {
+  if (!value) return ""
+  return value
+    .normalize("NFKC")
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    .replace(/[(),"\\]/g, "") // Strip PostgREST delimiters, parentheses, and quotes
+    .trim()
+}
+
+/**
  * Validates that a user-supplied URL uses a safe protocol (http or https).
  * Blocks dangerous schemes like javascript:, data:, vbscript:.
  */

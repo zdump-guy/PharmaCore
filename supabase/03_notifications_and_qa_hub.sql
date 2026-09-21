@@ -58,11 +58,7 @@ CREATE POLICY "Users can delete own notifications" ON public.notifications
 DROP POLICY IF EXISTS "Staff can manage all notifications" ON public.notifications;
 CREATE POLICY "Staff can manage all notifications" ON public.notifications
   FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE users.id = auth.uid()
-        AND users.role IN ('dev', 'super_admin', 'mentor')
-    )
+    public.get_user_role() IN ('dev', 'super_admin', 'mentor')
   );
 
 -- 5. Realtime Publication

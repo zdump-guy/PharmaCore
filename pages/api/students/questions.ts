@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { checkRateLimit } from "@/lib/rateLimit"
+import { sanitizePostgrestExactValue } from "@/lib/utils"
 import type { StudentQuestionItem, UserRole } from "@/types"
 
 const querySchema = z.object({
@@ -90,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           )
         )
       `)
-      .or(`user_id.eq.${userId}${userEmail ? `,author_email.eq.${userEmail}` : ""}`)
+      .or(`user_id.eq.${userId}${userEmail ? `,author_email.eq."${sanitizePostgrestExactValue(userEmail)}"` : ""}`)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 

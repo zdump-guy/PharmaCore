@@ -128,6 +128,26 @@ export function checkRateLimit(
 }
 
 /**
+ * User-aware or IP-based rate limiter helper.
+ * Uses authenticated user ID when available, falling back to client IP.
+ */
+export function checkUserOrIpRateLimit(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  options: RateLimitOptions,
+  userId?: string | null
+): boolean {
+  if (userId && typeof userId === "string" && userId.trim().length > 0) {
+    const userPrefix = options.prefix ? `${options.prefix}:user` : "user"
+    return checkRateLimit(req, res, {
+      ...options,
+      prefix: `${userPrefix}:${userId.trim()}`,
+    })
+  }
+  return checkRateLimit(req, res, options)
+}
+
+/**
  * Clears all rate limit tracking buckets (useful for test resets).
  */
 export function resetRateLimits(): void {
