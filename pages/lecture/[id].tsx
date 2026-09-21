@@ -350,13 +350,49 @@ export default function LecturePage({
   const isLastLecture = !nextLecture || (totalLectures > 0 && currentIndex === totalLectures - 1)
   const [isMounted, setIsMounted] = useState(false)
   const [questions, setQuestions] = useState(initialQuestions)
-  const { user, token: sessionToken, fullName, isAuthenticated } = useAuth()
+  const { user, token: sessionToken, fullName, isAuthenticated, isStaff } = useAuth()
   const currentUser = user
     ? {
         name: fullName || user.email?.split("@")[0] || "Student",
         email: user.email || null,
       }
     : null
+
+  const [replyDraft, setReplyDraft] = useState<Record<string, string>>({})
+  const [replyingId, setReplyingId] = useState<string | null>(null)
+
+  const handleInstructorReply = async (questionId: string) => {
+    const text = replyDraft[questionId]?.trim()
+    if (!text || !sessionToken) return
+
+    setReplyingId(questionId)
+    try {
+      const res = await fetch("/api/questions/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          questionId,
+          text,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data.answer) {
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.id === questionId ? { ...q, answers: [...(q.answers ?? []), data.answer] } : q
+          )
+        )
+        setReplyDraft((prev) => ({ ...prev, [questionId]: "" }))
+      }
+    } catch {
+      // Non-blocking catch
+    } finally {
+      setReplyingId(null)
+    }
+  }
 
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
@@ -1120,6 +1156,36 @@ export default function LecturePage({
                         </p>
                       </div>
                     ))}
+
+                    {/* Inline Instructor Reply Box */}
+                    {isStaff && (
+                      <div className="mt-4 pt-3 border-t border-dashed border-border/80 space-y-2">
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            placeholder={isAr ? "كتابة إجابة المشرف الأكاديمي..." : "Reply as instructor/mentor..."}
+                            value={replyDraft[question.id] || ""}
+                            onChange={(e) => setReplyDraft((prev) => ({ ...prev, [question.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault()
+                                handleInstructorReply(question.id)
+                              }
+                            }}
+                            className="text-xs h-9 flex-1 rounded-lg border bg-background px-3 focus:outline-none focus:ring-1 focus:ring-primary"
+                          />
+                          <Button
+                            size="sm"
+                            className="h-9 text-xs font-semibold px-3.5 shrink-0 gap-1.5"
+                            disabled={replyingId === question.id || !replyDraft[question.id]?.trim()}
+                            onClick={() => handleInstructorReply(question.id)}
+                          >
+                            <Send className="size-3" />
+                            <span>{replyingId === question.id ? (isAr ? "جارٍ الإرسال..." : "Posting...") : (isAr ? "إرسال الإجابة" : "Post Answer")}</span>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )

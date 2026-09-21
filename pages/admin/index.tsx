@@ -637,25 +637,51 @@ export default function AdminPage() {
   async function sendReply(id: string) {
     const text = reply[id]?.trim()
     if (!text || !supabase || !profile) return
-    const { data, error } = await supabase
-      .from("community_answers")
-      .insert([{ question_id: id, responder_id: profile.id, text }])
-      .select()
-      .single()
 
-    if (data) {
-      setCommunity((rows) =>
-        rows.map((q) => (q.id === id ? { ...q, answers: [...(q.answers ?? []), data] } : q))
-      )
-      setReply((r) => ({ ...r, [id]: "" }))
-      trackAdminAction({
-        action: "created",
-        entityType: "qa_reply",
-        entityId: id,
-        details: { responder_role: profile.role },
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        result(new Error("Session expired"), tr("Session expired. Please log in again.", "انتهت الجلسة. يرجى تسجيل الدخول مجددًا."))
+        return
+      }
+
+      const res = await fetch("/api/questions/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          questionId: id,
+          text,
+        }),
       })
+
+      const data = await res.json()
+      if (!res.ok) {
+        result(new Error(data.error || "Failed to post reply"), data.error || tr("Failed to post reply.", "تعذر نشر الإجابة."))
+        return
+      }
+
+      if (data.answer) {
+        setCommunity((rows) =>
+          rows.map((q) => (q.id === id ? { ...q, answers: [...(q.answers ?? []), data.answer] } : q))
+        )
+        setReply((r) => ({ ...r, [id]: "" }))
+        trackAdminAction({
+          action: "created",
+          entityType: "qa_reply",
+          entityId: id,
+          details: { responder_role: profile.role },
+        })
+      }
+      result(null, tr("Reply posted & student notified.", "تم نشر الإجابة وإشعار الطالب بنجاح."))
+    } catch (err: unknown) {
+      result(err as Error, tr("Failed to post reply.", "تعذر نشر الإجابة."))
     }
-    result(error, tr("Reply posted successfully.", "تم نشر الإجابة بنجاح."))
   }
 
   async function saveSiteContent(overrideContent?: SiteContent | unknown) {

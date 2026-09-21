@@ -46,7 +46,9 @@ export interface BroadcastAnnouncementEmailOptions {
 }
 
 /**
+ * /**
  * Builds the responsive, bilingual HTML template for mentor answer notifications.
+ * Designed to mirror the modern PharmaCore platform interface.
  */
 export function buildMentorReplyEmailHtml({
   studentName,
@@ -60,113 +62,406 @@ export function buildMentorReplyEmailHtml({
   siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app",
 }: Omit<MentorReplyEmailOptions, "toEmail">): string {
   const safeStudentName = escapeHtml(studentName || "Student / طالب")
-  const safeMentorName = escapeHtml(mentorName || "Instructor / المحاضر")
+  const safeMentorName = escapeHtml(mentorName || "Faculty Instructor / المحاضر")
   const safeMentorRole = escapeHtml(mentorRole)
   const safeLectureEn = escapeHtml(lectureTitleEn || "Clinical Pharmacology Lecture")
   const safeLectureAr = escapeHtml(lectureTitleAr || "محاضرة علم الأدوية السريري")
-  const safeQuestion = escapeHtml(questionText.length > 250 ? questionText.slice(0, 250) + "..." : questionText)
-  const safeAnswer = escapeHtml(answerText.length > 500 ? answerText.slice(0, 500) + "..." : answerText)
+  const safeQuestion = escapeHtml(questionText.length > 350 ? questionText.slice(0, 350) + "..." : questionText)
+  const safeAnswer = escapeHtml(answerText.length > 800 ? answerText.slice(0, 800) + "..." : answerText)
 
   const cleanBaseUrl = siteUrl.replace(/\/+$/, "")
   const lectureUrl = `${cleanBaseUrl}/lecture/${encodeURIComponent(lectureId)}#discussion`
   const profileUrl = `${cleanBaseUrl}/profile?tab=info`
   const logoUrl = `${cleanBaseUrl}/android-chrome-192x192.png`
 
+  const preheaderText = `New response from ${safeMentorName} on "${safeLectureEn}". View your answer on PharmaCore.`
+
   return `<!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>New Mentor Response — PharmaCore</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #0f172a; }
-    .wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); }
-    .header { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 32px 24px 28px 24px; text-align: center; color: #ffffff; }
-    .logo-img { display: inline-block; width: 64px; height: 64px; border-radius: 14px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.18); background: #ffffff; padding: 2px; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
-    .header p { margin: 6px 0 0 0; font-size: 13px; opacity: 0.92; }
-    .do-not-reply-badge { display: inline-block; background-color: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-top: 10px; border: 1px solid rgba(255, 255, 255, 0.35); text-transform: uppercase; letter-spacing: 0.5px; }
-    .content { padding: 32px 24px; }
-    .greeting { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #0f172a; }
-    .announcement { font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 24px; }
-    .box { background-color: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 14px; padding: 18px; margin-bottom: 20px; }
-    .box-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #0f766e; margin-bottom: 8px; }
-    .box-content { font-size: 14px; line-height: 1.5; color: #134e4a; font-style: italic; }
-    .mentor-badge { display: inline-block; background: #14b8a6; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 6px; }
-    .cta-container { text-align: center; margin: 32px 0 24px 0; }
-    .cta-button { display: inline-block; background-color: #0d9488; color: #ffffff !important; text-decoration: none; font-size: 14px; font-weight: 700; padding: 14px 30px; border-radius: 12px; box-shadow: 0 3px 8px rgba(13, 148, 136, 0.35); }
-    .cta-button:hover { background-color: #0f766e; }
-    .ar-section { direction: rtl; text-align: right; margin-top: 24px; padding-top: 20px; border-top: 1px dashed #e2e8f0; }
-    .no-reply-alert { background-color: #fff1f2; border: 1px solid #ffe4e6; border-radius: 12px; padding: 14px 16px; margin: 24px 0 0 0; text-align: center; color: #9f1239; font-size: 12px; line-height: 1.5; font-weight: 600; }
-    .footer { background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 24px; text-align: center; font-size: 12px; color: #64748b; line-height: 1.5; }
-    .footer a { color: #0d9488; text-decoration: underline; font-weight: 600; }
+    :root {
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
+    }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, 'Tajawal', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .email-container {
+      max-width: 620px;
+      margin: 32px auto;
+      background-color: #ffffff;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    }
+    .header-bg {
+      background: linear-gradient(135deg, #092e3b 0%, #0e5a6f 50%, #083344 100%);
+      padding: 36px 28px 30px 28px;
+      text-align: center;
+      color: #ffffff;
+      border-bottom: 3px solid #14b8a6;
+    }
+    .logo-wrapper {
+      display: inline-block;
+      width: 68px;
+      height: 68px;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 4px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      margin-bottom: 14px;
+    }
+    .brand-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin: 0;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+    .brand-subtitle {
+      font-size: 13px;
+      font-weight: 500;
+      color: #99f6e4;
+      margin: 6px 0 0 0;
+      letter-spacing: 0.2px;
+    }
+    .badge-do-not-reply {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 5px 14px;
+      border-radius: 30px;
+      margin-top: 14px;
+    }
+    .content-body {
+      padding: 36px 32px;
+      color: #1e293b;
+    }
+    .greeting-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.3px;
+    }
+    .lead-text {
+      font-size: 15px;
+      line-height: 1.65;
+      color: #334155;
+      margin: 0 0 24px 0;
+    }
+    .context-card {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 22px;
+    }
+    .context-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .context-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .question-card {
+      background-color: #f8fafc;
+      border-left: 4px solid #64748b;
+      border-radius: 0 14px 14px 0;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+    .card-meta-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+    }
+    .question-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #475569;
+      font-style: italic;
+    }
+    .answer-card {
+      background: linear-gradient(180deg, #f0fdfa 0%, #e6fffa 100%);
+      border: 1px solid #99f6e4;
+      border-left: 5px solid #0d9488;
+      border-radius: 0 16px 16px 0;
+      padding: 22px 22px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 14px -3px rgba(13, 148, 136, 0.12);
+    }
+    .mentor-tag {
+      display: inline-block;
+      background-color: #0d9488;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+    .answer-text {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #115e59;
+      font-weight: 500;
+      white-space: pre-line;
+    }
+    .cta-wrapper {
+      text-align: center;
+      margin: 34px 0 28px 0;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 16px 36px;
+      border-radius: 14px;
+      box-shadow: 0 6px 20px -2px rgba(13, 148, 136, 0.4);
+      letter-spacing: 0.2px;
+    }
+    .ar-divider {
+      margin: 28px 0 24px 0;
+      border: 0;
+      height: 1px;
+      background: linear-gradient(to right, rgba(226, 232, 240, 0), rgba(203, 213, 225, 1), rgba(226, 232, 240, 0));
+    }
+    .ar-card {
+      direction: rtl;
+      text-align: right;
+      font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 24px;
+    }
+    .ar-greeting {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .ar-body {
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #334155;
+      margin: 0;
+    }
+    .alert-box {
+      background-color: #fff1f2;
+      border: 1px solid #fecdd3;
+      border-radius: 14px;
+      padding: 18px 20px;
+      text-align: center;
+      margin: 28px 0 0 0;
+    }
+    .alert-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #9f1239;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+    .alert-desc-en {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #881337;
+      font-weight: 600;
+    }
+    .alert-desc-ar {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #9f1239;
+      direction: rtl;
+      font-family: 'Tajawal', Tahoma, sans-serif;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .footer-section {
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 28px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .footer-links {
+      margin-bottom: 12px;
+    }
+    .footer-links a {
+      color: #0d9488;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 8px;
+    }
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-container { margin: 0 !important; border-radius: 0 !important; border: none !important; }
+      .content-body { padding: 24px 18px !important; }
+      .header-bg { padding: 28px 18px !important; }
+      .brand-title { font-size: 22px !important; }
+      .cta-btn { display: block !important; padding: 14px 20px !important; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <!-- Header with PharmaCore Logo -->
-    <div class="header">
-      <img src="${logoUrl}" alt="PharmaCore Logo" class="logo-img" width="64" height="64" />
-      <h1>PharmaCore | فارما كور</h1>
-      <p>Clinical Pharmacology & Medical Education Platform</p>
+  <!-- Preheader text preview snippet -->
+  <div style="display:none;font-size:1px;color:#f1f5f9;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
+    ${preheaderText}
+  </div>
+
+  <div class="email-container">
+    <!-- Platform Header with Brand Gradient and Official Logo -->
+    <div class="header-bg">
+      <div class="logo-wrapper">
+        <img src="${logoUrl}" alt="PharmaCore Logo" width="60" height="60" style="display:block; border-radius: 12px;" />
+      </div>
+      <h1 class="brand-title">PharmaCore | فارما كور</h1>
+      <p class="brand-subtitle">Clinical Pharmacology & Medical Education Platform</p>
       <div>
-        <span class="do-not-reply-badge">⚠️ Automated Notification • Do Not Reply</span>
+        <span class="badge-do-not-reply">⚠️ Automated Notification • Do Not Reply</span>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="content">
-      <div class="greeting">Hello, ${safeStudentName} 👋</div>
-      <p class="announcement">
-        <strong>${safeMentorName}</strong> (<span class="mentor-badge">${safeMentorRole}</span>) has replied to your clinical question regarding the lecture:
-        <br>
-        <strong>"${safeLectureEn}"</strong>
+    <!-- Main Content Body -->
+    <div class="content-body">
+      <div class="greeting-text">Hello, ${safeStudentName} 👋</div>
+      
+      <p class="lead-text">
+        An academic mentor has answered your clinical pharmacology inquiry on the <strong>PharmaCore Q&amp;A Hub</strong>.
       </p>
 
-      <div class="box">
-        <div class="box-title">Your Question / استفسارك:</div>
-        <div class="box-content">"${safeQuestion}"</div>
+      <!-- Lecture Context Banner -->
+      <div class="context-card">
+        <div class="context-label">Course Lecture / المحاضرة المعنية</div>
+        <div class="context-value">${safeLectureEn} <span style="font-weight: normal; color: #64748b;">(${safeLectureAr})</span></div>
       </div>
 
-      <div class="box" style="background-color: #f8fafc; border-color: #cbd5e1;">
-        <div class="box-title" style="color: #334155;">Instructor's Answer / إجابة المشرف الأكاديمي:</div>
-        <div class="box-content" style="color: #1e293b; font-style: normal; font-weight: 500;">
+      <!-- Student Question Box -->
+      <div class="question-card">
+        <div class="card-meta-title" style="color: #64748b;">
+          ❓ Your Question / استفسارك:
+        </div>
+        <div class="question-text">
+          "${safeQuestion}"
+        </div>
+      </div>
+
+      <!-- Instructor Response Box -->
+      <div class="answer-card">
+        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 13px; font-weight: 800; color: #0f766e;">
+            👨‍⚕️ ${safeMentorName}
+          </span>
+          <span class="mentor-tag">
+            ✓ ${safeMentorRole}
+          </span>
+        </div>
+        <div class="answer-text">
           ${safeAnswer}
         </div>
       </div>
 
-      <div class="cta-container">
-        <a href="${lectureUrl}" class="cta-button" target="_blank">
-          View Discussion & Continue Lecture →
+      <!-- Primary Action CTA -->
+      <div class="cta-wrapper">
+        <a href="${lectureUrl}" class="cta-btn" target="_blank" rel="noopener noreferrer">
+          View Discussion &amp; Continue Lecture →
         </a>
+        <div style="margin-top: 10px; font-size: 12px; color: #94a3b8;">
+          Or copy link: <a href="${lectureUrl}" style="color: #0d9488; word-break: break-all;">${lectureUrl}</a>
+        </div>
       </div>
 
-      <!-- Arabic Translation Section -->
-      <div class="ar-section">
-        <div class="greeting" style="font-size: 16px;">مرحبًا ${safeStudentName}،</div>
-        <p class="announcement" style="margin-bottom: 0;">
-          قام الدكتور/المشرف <strong>${safeMentorName}</strong> بالرد على استفسارك في محاضرة <strong>"${safeLectureAr}"</strong>. يمكنك مراجعة النقاش الكامل ومتابعة دراسة المحاضرة عبر الرابط أعلاه.
+      <hr class="ar-divider" />
+
+      <!-- Arabic RTL Card -->
+      <div class="ar-card">
+        <div class="ar-greeting">مرحبًا ${safeStudentName}،</div>
+        <p class="ar-body">
+          قام المشرف الأكاديمي <strong>${safeMentorName}</strong> بالرد على استفسارك المتعلق بمحاضرة <strong>"${safeLectureAr}"</strong>. يمكنك مراجعة الشرح الكامل والتفاعل عبر منصة فارما كور من خلال الرابط أعلاه.
         </p>
       </div>
 
-      <!-- Strict Do Not Reply Banner -->
-      <div class="no-reply-alert">
-        <div>⚠️ <strong>Do Not Reply:</strong> This is an automated email from an unmonitored mailbox. Please do not reply directly to this message.</div>
-        <div style="direction: rtl; margin-top: 4px; font-weight: normal; font-size: 11px;">
-          ⚠️ <strong>تنبيه:</strong> هذا إشعار تلقائي صادر من بريد آلي غير مخصص لاستقبال الرسائل. يرجى عدم الرد على هذا الإيميل، واستخدام قسم النقاش داخل المنصة لأي استفسار.
+      <!-- Strict Do Not Reply Security Warning -->
+      <div class="alert-box">
+        <div class="alert-title">⚠️ Do Not Reply • بريد آلي غير مخصص لاستقبال الردود</div>
+        <div class="alert-desc-en">
+          This is an automated notification from an unmonitored mailbox. Please do not reply directly to this email as incoming messages are not delivered. To ask follow-up questions, use the lecture discussion section on PharmaCore.
+        </div>
+        <div class="alert-desc-ar">
+          تنبيه: هذا إشعار تلقائي صادر من نظام فارما كور. يرجى عدم الرد على هذا الإيميل مباشرة، واستخدام تبويب النقاش داخل المنصة لأي استفسارات إضافية.
         </div>
       </div>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-      <p>
-        You received this notification because you are enrolled in PharmaCore and asked a lecture question.
+    <!-- Email Footer -->
+    <div class="footer-section">
+      <div class="footer-links">
+        <a href="${cleanBaseUrl}" target="_blank">PharmaCore Platform</a> &bull;
+        <a href="${profileUrl}" target="_blank">Notification Settings</a> &bull;
+        <a href="${cleanBaseUrl}/feedback" target="_blank">Support &amp; Feedback</a>
+      </div>
+      <p style="margin: 0 0 6px 0;">
+        You received this notification because you are enrolled in PharmaCore and submitted a question.
         <br>
-        To manage your email alert preferences, visit your <a href="${profileUrl}">Profile Notification Settings</a>.
+        To manage your email preferences or opt out, visit your <a href="${profileUrl}" style="color: #0d9488; font-weight: 600;">Profile Settings</a>.
       </p>
-      <p style="margin-top: 8px; font-size: 11px; color: #94a3b8;">
-        © ${new Date().getFullYear()} PharmaCore Clinical Education. All rights reserved.
+      <p style="margin: 10px 0 0 0; font-size: 11px; color: #94a3b8;">
+        &copy; ${new Date().getFullYear()} PharmaCore Clinical Education &amp; Pharmacology Platform. All rights reserved.
       </p>
     </div>
   </div>
@@ -176,6 +471,7 @@ export function buildMentorReplyEmailHtml({
 
 /**
  * Builds the responsive, bilingual HTML template for admin broadcast announcements.
+ * Styled to match the modern executive PharmaCore theme.
  */
 export function buildAnnouncementEmailHtml({
   titleEn,
@@ -199,93 +495,336 @@ export function buildAnnouncementEmailHtml({
   const profileUrl = `${cleanBaseUrl}/profile?tab=info`
   const logoUrl = `${cleanBaseUrl}/android-chrome-192x192.png`
 
+  const preheaderText = `Official announcement from PharmaCore: ${safeTitleEn}.`
+
   return `<!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>${safeTitleEn} — PharmaCore</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #0f172a; }
-    .wrapper { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); }
-    .header { background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 32px 24px 28px 24px; text-align: center; color: #ffffff; }
-    .logo-img { display: inline-block; width: 64px; height: 64px; border-radius: 14px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.18); background: #ffffff; padding: 2px; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
-    .header p { margin: 6px 0 0 0; font-size: 13px; opacity: 0.92; }
-    .do-not-reply-badge { display: inline-block; background-color: rgba(255, 255, 255, 0.2); color: #ffffff; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-top: 10px; border: 1px solid rgba(255, 255, 255, 0.35); text-transform: uppercase; letter-spacing: 0.5px; }
-    .content { padding: 32px 24px; }
-    .greeting { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #0f172a; }
-    .announcement-box { background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
-    .announcement-title { font-size: 16px; font-weight: 800; color: #0369a1; margin-bottom: 10px; }
-    .announcement-text { font-size: 14px; line-height: 1.6; color: #0c4a6e; white-space: pre-line; }
-    .cta-container { text-align: center; margin: 32px 0 24px 0; }
-    .cta-button { display: inline-block; background-color: #0284c7; color: #ffffff !important; text-decoration: none; font-size: 14px; font-weight: 700; padding: 14px 30px; border-radius: 12px; box-shadow: 0 3px 8px rgba(2, 132, 199, 0.35); }
-    .cta-button:hover { background-color: #0369a1; }
-    .ar-section { direction: rtl; text-align: right; margin-top: 24px; padding-top: 20px; border-top: 1px dashed #e2e8f0; }
-    .no-reply-alert { background-color: #fff1f2; border: 1px solid #ffe4e6; border-radius: 12px; padding: 14px 16px; margin: 24px 0 0 0; text-align: center; color: #9f1239; font-size: 12px; line-height: 1.5; font-weight: 600; }
-    .footer { background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 24px; text-align: center; font-size: 12px; color: #64748b; line-height: 1.5; }
-    .footer a { color: #0284c7; text-decoration: underline; font-weight: 600; }
+    :root {
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
+    }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, 'Tajawal', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .email-container {
+      max-width: 620px;
+      margin: 32px auto;
+      background-color: #ffffff;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+    }
+    .header-bg {
+      background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #075985 100%);
+      padding: 36px 28px 30px 28px;
+      text-align: center;
+      color: #ffffff;
+      border-bottom: 3px solid #38bdf8;
+    }
+    .logo-wrapper {
+      display: inline-block;
+      width: 68px;
+      height: 68px;
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 4px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      margin-bottom: 14px;
+    }
+    .brand-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin: 0;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+    .brand-subtitle {
+      font-size: 13px;
+      font-weight: 500;
+      color: #bae6fd;
+      margin: 6px 0 0 0;
+      letter-spacing: 0.2px;
+    }
+    .badge-do-not-reply {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 5px 14px;
+      border-radius: 30px;
+      margin-top: 14px;
+    }
+    .content-body {
+      padding: 36px 32px;
+      color: #1e293b;
+    }
+    .greeting-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 18px 0;
+      letter-spacing: -0.3px;
+    }
+    .announcement-card {
+      background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
+      border: 1px solid #bae6fd;
+      border-left: 5px solid #0284c7;
+      border-radius: 0 16px 16px 0;
+      padding: 24px 24px;
+      margin-bottom: 26px;
+      box-shadow: 0 4px 14px -3px rgba(2, 132, 199, 0.12);
+    }
+    .announcement-badge {
+      display: inline-block;
+      background-color: #0284c7;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      letter-spacing: 0.4px;
+    }
+    .announcement-headline {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0369a1;
+      margin: 0 0 12px 0;
+      line-height: 1.35;
+    }
+    .announcement-body {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #0c4a6e;
+      white-space: pre-line;
+      margin: 0;
+    }
+    .cta-wrapper {
+      text-align: center;
+      margin: 34px 0 28px 0;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 16px 36px;
+      border-radius: 14px;
+      box-shadow: 0 6px 20px -2px rgba(2, 132, 199, 0.4);
+      letter-spacing: 0.2px;
+    }
+    .ar-divider {
+      margin: 28px 0 24px 0;
+      border: 0;
+      height: 1px;
+      background: linear-gradient(to right, rgba(226, 232, 240, 0), rgba(203, 213, 225, 1), rgba(226, 232, 240, 0));
+    }
+    .ar-card {
+      direction: rtl;
+      text-align: right;
+      font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 24px;
+    }
+    .ar-greeting {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+    .ar-headline {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+    .ar-body {
+      font-size: 14px;
+      line-height: 1.75;
+      color: #334155;
+      white-space: pre-line;
+      margin: 0 0 14px 0;
+    }
+    .alert-box {
+      background-color: #fff1f2;
+      border: 1px solid #fecdd3;
+      border-radius: 14px;
+      padding: 18px 20px;
+      text-align: center;
+      margin: 28px 0 0 0;
+    }
+    .alert-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #9f1239;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+    .alert-desc-en {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #881337;
+      font-weight: 600;
+    }
+    .alert-desc-ar {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #9f1239;
+      direction: rtl;
+      font-family: 'Tajawal', Tahoma, sans-serif;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .footer-section {
+      background-color: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 28px 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    .footer-links {
+      margin-bottom: 12px;
+    }
+    .footer-links a {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 8px;
+    }
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-container { margin: 0 !important; border-radius: 0 !important; border: none !important; }
+      .content-body { padding: 24px 18px !important; }
+      .header-bg { padding: 28px 18px !important; }
+      .brand-title { font-size: 22px !important; }
+      .cta-btn { display: block !important; padding: 14px 20px !important; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <!-- Header with Logo -->
-    <div class="header">
-      <img src="${logoUrl}" alt="PharmaCore Logo" class="logo-img" width="64" height="64" />
-      <h1>PharmaCore | فارما كور</h1>
-      <p>Official Academic Announcement</p>
+  <!-- Preheader text preview snippet -->
+  <div style="display:none;font-size:1px;color:#f1f5f9;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;">
+    ${preheaderText}
+  </div>
+
+  <div class="email-container">
+    <!-- Platform Header with Blue Academic Gradient and Official Logo -->
+    <div class="header-bg">
+      <div class="logo-wrapper">
+        <img src="${logoUrl}" alt="PharmaCore Logo" width="60" height="60" style="display:block; border-radius: 12px;" />
+      </div>
+      <h1 class="brand-title">PharmaCore | فارما كور</h1>
+      <p class="brand-subtitle">Official Academic Announcement</p>
       <div>
-        <span class="do-not-reply-badge">⚠️ Automated Broadcast • Do Not Reply</span>
+        <span class="badge-do-not-reply">⚠️ Automated Broadcast • Do Not Reply</span>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="content">
-      <div class="greeting">Hello, ${safeStudentName} 👋</div>
+    <!-- Main Content Body -->
+    <div class="content-body">
+      <div class="greeting-text">Hello, ${safeStudentName} 👋</div>
       
-      <div class="announcement-box">
-        <div class="announcement-title">📢 ${safeTitleEn}</div>
-        <div class="announcement-text">${safeMessageEn}</div>
+      <div class="announcement-card">
+        <span class="announcement-badge">📢 Official Notice</span>
+        <h2 class="announcement-headline">${safeTitleEn}</h2>
+        <div class="announcement-body">${safeMessageEn}</div>
       </div>
 
-      <div class="cta-container">
-        <a href="${safeActionUrl}" class="cta-button" target="_blank">
+      <!-- Primary Action CTA -->
+      <div class="cta-wrapper">
+        <a href="${safeActionUrl}" class="cta-btn" target="_blank" rel="noopener noreferrer">
           ${escapeHtml(actionTextEn)}
         </a>
+        <div style="margin-top: 10px; font-size: 12px; color: #94a3b8;">
+          Or copy link: <a href="${safeActionUrl}" style="color: #0284c7; word-break: break-all;">${safeActionUrl}</a>
+        </div>
       </div>
 
-      <!-- Arabic Translation Section -->
-      <div class="ar-section">
-        <div class="greeting" style="font-size: 16px;">مرحبًا ${safeStudentName}،</div>
-        <div class="announcement-box" style="background-color: #f8fafc; border-color: #e2e8f0; margin-top: 12px;">
-          <div class="announcement-title" style="color: #0f172a;">📢 ${safeTitleAr}</div>
-          <div class="announcement-text" style="color: #334155;">${safeMessageAr}</div>
-        </div>
-        <div style="text-align: center; margin-top: 16px;">
-          <a href="${safeActionUrl}" style="color: #0284c7; font-weight: 700; text-decoration: underline; font-size: 13px;" target="_blank">
+      <hr class="ar-divider" />
+
+      <!-- Arabic RTL Section -->
+      <div class="ar-card">
+        <div class="ar-greeting">مرحبًا ${safeStudentName}،</div>
+        <div class="ar-headline">📢 ${safeTitleAr}</div>
+        <div class="ar-body">${safeMessageAr}</div>
+        <div style="text-align: center; margin-top: 14px;">
+          <a href="${safeActionUrl}" style="color: #0284c7; font-weight: 700; text-decoration: underline; font-size: 13.5px;" target="_blank">
             ${escapeHtml(actionTextAr)}
           </a>
         </div>
       </div>
 
-      <!-- Strict Do Not Reply Banner -->
-      <div class="no-reply-alert">
-        <div>⚠️ <strong>Do Not Reply:</strong> This is an automated announcement from an unmonitored mailbox. Please do not reply directly to this message.</div>
-        <div style="direction: rtl; margin-top: 4px; font-weight: normal; font-size: 11px;">
-          ⚠️ <strong>تنبيه:</strong> هذا إعلان تلقائي صادر من بريد آلي غير مخصص لاستقبال الرسائل. يرجى عدم الرد على هذا الإيميل.
+      <!-- Strict Do Not Reply Security Warning -->
+      <div class="alert-box">
+        <div class="alert-title">⚠️ Do Not Reply • بريد آلي غير مخصص لاستقبال الردود</div>
+        <div class="alert-desc-en">
+          This is an automated announcement from an unmonitored mailbox. Please do not reply directly to this email. For inquiries or technical support, visit the PharmaCore platform.
+        </div>
+        <div class="alert-desc-ar">
+          تنبيه: هذا إعلان تلقائي صادر من نظام فارما كور. يرجى عدم الرد على هذا الإيميل مباشرة.
         </div>
       </div>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-      <p>
+    <!-- Email Footer -->
+    <div class="footer-section">
+      <div class="footer-links">
+        <a href="${cleanBaseUrl}" target="_blank">PharmaCore Platform</a> &bull;
+        <a href="${profileUrl}" target="_blank">Notification Settings</a> &bull;
+        <a href="${cleanBaseUrl}/feedback" target="_blank">Support &amp; Feedback</a>
+      </div>
+      <p style="margin: 0 0 6px 0;">
         You received this announcement because you are an active student at PharmaCore.
         <br>
-        To manage your email alert preferences, visit your <a href="${profileUrl}">Profile Notification Settings</a>.
+        To manage your email preferences or opt out, visit your <a href="${profileUrl}" style="color: #0284c7; font-weight: 600;">Profile Settings</a>.
       </p>
-      <p style="margin-top: 8px; font-size: 11px; color: #94a3b8;">
-        © ${new Date().getFullYear()} PharmaCore Clinical Education. All rights reserved.
+      <p style="margin: 10px 0 0 0; font-size: 11px; color: #94a3b8;">
+        &copy; ${new Date().getFullYear()} PharmaCore Clinical Education &amp; Pharmacology Platform. All rights reserved.
       </p>
     </div>
   </div>

@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { sanitizeInputText } from '@/lib/utils';
+import { sendMentorReplyEmail } from '@/lib/email';
 import { z } from 'zod';
-
 
 const schema = z.object({
   questionId: z.string().uuid(),
@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Failed to post answer: ' + error.message });
   }
 
-  // 3. Trigger In-App Notification and Transactional Email Alert (Non-blocking)
+  // 3. Trigger In-App Notification and Transactional Email Alert
   if (question) {
     const lectureObj = Array.isArray(question.lecture) ? question.lecture[0] : question.lecture;
     const lectureTitleEn = lectureObj?.title_en || 'Pharmacology Lecture';
@@ -115,40 +115,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Check student email notification preference and dispatch Resend email
-    const targetEmail = question.author_email || (question.user_id ? (await supabaseAdmin.from('users').select('email, email_notifications_enabled').eq('id', question.user_id).maybeSingle()).data?.email : null);
+    // Resolve target recipient email & preference
+    let targetEmail: string | null = question.author_email || null;
+    let isEmailEnabled = true;
 
-    if (targetEmail) {
-      let isEmailEnabled = true;
-      if (question.user_id) {
+    if (question.user_id) {
+      try {
         const { data: userPref } = await supabaseAdmin
           .from('users')
-          .select('email_notifications_enabled')
+          .select('email, email_notifications_enabled')
           .eq('id', question.user_id)
           .maybeSingle();
+
+        if (userPref?.email && !targetEmail) {
+          targetEmail = userPref.email;
+        }
         if (userPref && userPref.email_notifications_enabled === false) {
           isEmailEnabled = false;
         }
+      } catch (prefErr) {
+        console.warn('Error reading user notification preferences:', prefErr);
       }
 
-      if (isEmailEnabled) {
-        import('@/lib/email').then(({ sendMentorReplyEmail }) => {
-          sendMentorReplyEmail({
-            toEmail: targetEmail,
-            studentName: question.author_name || 'Student',
-            mentorName: responderName,
-            mentorRole: profile?.role === 'dev' ? 'Lead Platform Architect' : 'Clinical Faculty Mentor',
-            lectureId: question.lecture_id,
-            lectureTitleEn,
-            lectureTitleAr,
-            questionText: question.text,
-            answerText: cleanText,
-          }).catch((err) => console.warn('Resend email error (non-fatal):', err));
-        }).catch(() => {});
+      // Fallback: check Auth user email if still empty
+      if (!targetEmail) {
+        try {
+          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(question.user_id);
+          if (authUser?.user?.email) {
+            targetEmail = authUser.user.email;
+          }
+        } catch {
+          // Ignore
+        }
+      }
+    }
+
+    // Await email delivery so serverless execution context does not terminate prematurely
+    if (targetEmail && isEmailEnabled) {
+      try {
+        const emailResult = await sendMentorReplyEmail({
+          toEmail: targetEmail,
+          studentName: question.author_name || 'Student',
+          mentorName: responderName,
+          mentorRole: profile?.role === 'dev' ? 'Lead Platform Architect' : 'Clinical Faculty Mentor',
+          lectureId: question.lecture_id,
+          lectureTitleEn,
+          lectureTitleAr,
+          questionText: question.text,
+          answerText: cleanText,
+        });
+        if (!emailResult.success) {
+          console.warn('[Resend] Mentor reply email dispatch notice:', emailResult.error);
+        }
+      } catch (err) {
+        console.warn('[Resend] Exception in sendMentorReplyEmail (non-fatal):', err);
       }
     }
   }
 
   return res.status(201).json({ success: true, answer });
-
 }
