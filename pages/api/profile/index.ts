@@ -115,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Build strict database update payload excluding computed/virtual fields like current_year
-    const dbUpdatePayload: Record<string, any> = {}
+    const dbUpdatePayload: Record<string, string | number | boolean | null | undefined> = {}
     if (payload.first_name !== undefined) dbUpdatePayload.first_name = payload.first_name
     if (payload.last_name !== undefined) dbUpdatePayload.last_name = payload.last_name
     if (payload.full_name !== undefined) dbUpdatePayload.full_name = payload.full_name
