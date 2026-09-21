@@ -1,20 +1,27 @@
 import { useState } from "react"
 import {
+  FiAlertCircle as AlertCircle,
   FiCheckCircle as CheckCircle2,
   FiClock as Clock,
   FiEyeOff as EyeOff,
   FiHelpCircle as HelpCircle,
+  FiLoader as Loader2,
   FiMail as Mail,
   FiMessageCircle as MessageCircle,
   FiSearch as Search,
   FiSend as Send,
   FiShield as ShieldCheck,
+  FiVolume2 as Volume2,
 } from "react-icons/fi"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { supabase } from "@/lib/supabaseClient"
 import type { CommunityQuestion, Lecture, UserProfile } from "@/types"
 
 interface CommunityManagerProps {
@@ -33,15 +40,28 @@ export default function CommunityManager({
   searchQuery,
   community,
   lectures,
+  profile,
   reply,
   setReply,
   onSendReply,
 }: CommunityManagerProps) {
-  const [activeTab, setActiveTab] = useState<"unanswered" | "answered">("unanswered")
+  const [activeTab, setActiveTab] = useState<"unanswered" | "answered" | "broadcast">("unanswered")
   const [localSearch, setLocalSearch] = useState("")
+
+  // Broadcast state
+  const [annTitleEn, setAnnTitleEn] = useState("")
+  const [annTitleAr, setAnnTitleAr] = useState("")
+  const [annMessageEn, setAnnMessageEn] = useState("")
+  const [annMessageAr, setAnnMessageAr] = useState("")
+  const [targetAudience, setTargetAudience] = useState<"all" | "active_only">("all")
+  const [sendEmailAlert, setSendEmailAlert] = useState(true)
+  const [actionUrl, setActionUrl] = useState("")
+  const [broadcasting, setBroadcasting] = useState(false)
+  const [broadcastNotice, setBroadcastNotice] = useState<{ error?: boolean; text: string } | null>(null)
 
   const tr = (en: string, ar: string) => (isAr ? ar : en)
   const effectiveSearch = (searchQuery || localSearch).trim().toLowerCase()
+  const canBroadcast = profile && ["dev", "super_admin"].includes(profile.role)
 
   const getLectureName = (lectureId: string | null) => {
     const lecture = lectures.find((l) => l.id === lectureId)
@@ -63,6 +83,73 @@ export default function CommunityManager({
 
   const filteredUnanswered = filterQuestions(unanswered)
   const filteredAnswered = filterQuestions(answered)
+
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!supabase) return
+    setBroadcastNotice(null)
+
+    if (!annTitleEn.trim() || !annTitleAr.trim() || !annMessageEn.trim() || !annMessageAr.trim()) {
+      setBroadcastNotice({
+        error: true,
+        text: tr(
+          "Please fill in both English and Arabic titles and messages.",
+          "يرجى كتابة عنوان ونص الإعلان باللغتين العربية والإنجليزية."
+        ),
+      })
+      return
+    }
+
+    setBroadcasting(true)
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) throw new Error(tr("Session expired", "انتهت الجلسة"))
+
+      const res = await fetch("/api/admin/announcements/broadcast", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          title_en: annTitleEn.trim(),
+          title_ar: annTitleAr.trim(),
+          message_en: annMessageEn.trim(),
+          message_ar: annMessageAr.trim(),
+          target_audience: targetAudience,
+          send_email_alert: sendEmailAlert,
+          action_url: actionUrl.trim() || null,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to broadcast announcement.")
+
+      setBroadcastNotice({
+        error: false,
+        text: isAr
+          ? `تم إرسال الإعلان بنجاح إلى ${data.count} طالب (${data.emailsDispatched} إشعار بريد إلكتروني).`
+          : `Announcement successfully broadcast to ${data.count} student(s) (${data.emailsDispatched} email alerts dispatched).`,
+      })
+
+      // Reset fields
+      setAnnTitleEn("")
+      setAnnTitleAr("")
+      setAnnMessageEn("")
+      setAnnMessageAr("")
+      setActionUrl("")
+    } catch (err: unknown) {
+      setBroadcastNotice({
+        error: true,
+        text: err instanceof Error ? err.message : tr("Broadcast failed.", "فشل إرسال الإعلان."),
+      })
+    } finally {
+      setBroadcasting(false)
+    }
+  }
 
   const renderQuestionCard = (question: CommunityQuestion) => {
     const isUnanswered = !question.answers?.length
@@ -226,32 +313,34 @@ export default function CommunityManager({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <MessageCircle className="size-5 text-primary" />
-            <h3 className="text-xl font-bold tracking-tight">{tr("Student Q&A Moderation", "إدارة أسئلة واستفسارات الطلاب")}</h3>
+            <h3 className="text-xl font-bold tracking-tight">{tr("Student Q&A & Announcements", "إدارة أسئلة واستفسارات وإعلانات الطلاب")}</h3>
           </div>
           <p className="text-xs text-muted-foreground">
             {tr(
-              "Review student inquiries, answer lecture questions, and build community knowledge.",
-              "متابعة استفسارات الطلاب، والرد على أسئلة المحاضرات لبناء مرجع علمي يستفيد منه الجميع."
+              "Review student inquiries, answer lecture questions, and broadcast official announcements to learners.",
+              "متابعة استفسارات الطلاب، والرد على أسئلة المحاضرات، وإرسال التنبيهات والإعلانات العامة لجميع الطلاب."
             )}
           </p>
         </div>
 
         {/* Search */}
-        <div className="relative w-full sm:w-60">
-          <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            placeholder={tr("Search questions & students...", "بحث بالاسم أو نص السؤال...")}
-            className="h-9 ps-8 pe-3 text-xs w-full"
-          />
-        </div>
+        {activeTab !== "broadcast" && (
+          <div className="relative w-full sm:w-60">
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder={tr("Search questions & students...", "بحث بالاسم أو نص السؤال...")}
+              className="h-9 ps-8 pe-3 text-xs w-full"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Tabs: Unanswered vs Answered */}
+      {/* Tabs: Unanswered vs Answered vs Broadcast */}
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="space-y-4">
-        <TabsList className="grid grid-cols-2 h-auto min-h-10 w-full sm:w-80 p-1 bg-muted/60 gap-1">
+        <TabsList className="grid grid-cols-3 h-auto min-h-10 w-full sm:w-[480px] p-1 bg-muted/60 gap-1">
           <TabsTrigger value="unanswered" className="badge-nowrap text-xs font-bold gap-2 min-h-[34px]">
             <span>{tr("Unanswered", "غير مجابة")}</span>
             <Badge
@@ -268,8 +357,16 @@ export default function CommunityManager({
               {answered.length}
             </Badge>
           </TabsTrigger>
+
+          {canBroadcast && (
+            <TabsTrigger value="broadcast" className="badge-nowrap text-xs font-bold gap-1.5 min-h-[34px]">
+              <Volume2 className="size-3.5 text-primary shrink-0" />
+              <span>{tr("Broadcast", "إرسال إعلان")}</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
+        {/* 1. Unanswered Tab */}
         <TabsContent value="unanswered" className="space-y-4">
           {filteredUnanswered.map(renderQuestionCard)}
 
@@ -288,6 +385,7 @@ export default function CommunityManager({
           )}
         </TabsContent>
 
+        {/* 2. Answered Tab */}
         <TabsContent value="answered" className="space-y-4">
           {filteredAnswered.map(renderQuestionCard)}
 
@@ -302,6 +400,171 @@ export default function CommunityManager({
             </div>
           )}
         </TabsContent>
+
+        {/* 3. Broadcast Announcement Tab */}
+        {canBroadcast && (
+          <TabsContent value="broadcast" className="space-y-4">
+            <Card className="shadow-none border-primary/20">
+              <CardHeader className="pb-3 border-b bg-primary/5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                      <Volume2 className="size-4 text-primary" />
+                      <span>{tr("Broadcast Official Announcement", "إرسال إعلان وتنبيه رسمي للطلاب")}</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
+                      {tr(
+                        "Send simultaneous in-app notifications and transactional emails to enrolled students.",
+                        "إرسال إشعارات فورية داخل حسابات الطلاب ورسائل بريد إلكتروني آلية ومحمية."
+                      )}
+                    </CardDescription>
+                  </div>
+                  <Badge className="bg-primary/20 text-primary border-primary/30 font-bold text-[10px]">
+                    {tr("Super Admin", "الإدارة العليا")}
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-5 space-y-5">
+                {broadcastNotice && (
+                  <div
+                    className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
+                      broadcastNotice.error
+                        ? "border-destructive/30 bg-destructive/10 text-destructive"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
+                    }`}
+                  >
+                    {broadcastNotice.error ? <AlertCircle className="size-4 shrink-0" /> : <CheckCircle2 className="size-4 shrink-0" />}
+                    <span>{broadcastNotice.text}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSendBroadcast} className="space-y-4">
+                  {/* Titles */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold">{tr("Title (English)", "عنوان الإعلان (بالإنجليزية)")}</Label>
+                      <Input
+                        value={annTitleEn}
+                        onChange={(e) => setAnnTitleEn(e.target.value)}
+                        placeholder="e.g. New Live Review Session Scheduled"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold">{tr("Title (Arabic)", "عنوان الإعلان (بالعربية)")}</Label>
+                      <Input
+                        value={annTitleAr}
+                        onChange={(e) => setAnnTitleAr(e.target.value)}
+                        placeholder="مثال: موعد جلسة المراجعة الإكلينيكية المباشرة"
+                        required
+                        dir="rtl"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Messages */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold">{tr("Message (English)", "نص الإعلان (بالإنجليزية)")}</Label>
+                      <Textarea
+                        value={annMessageEn}
+                        onChange={(e) => setAnnMessageEn(e.target.value)}
+                        placeholder="Write detailed announcement content..."
+                        rows={4}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold">{tr("Message (Arabic)", "نص الإعلان (بالعربية)")}</Label>
+                      <Textarea
+                        value={annMessageAr}
+                        onChange={(e) => setAnnMessageAr(e.target.value)}
+                        placeholder="اكتب تفاصيل الإعلان والتوجيهات الأكاديمية..."
+                        rows={4}
+                        required
+                        dir="rtl"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Target Audience & Action Link */}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold">{tr("Target Audience", "الفئة المستهدفة")}</Label>
+                      <Select
+                        value={targetAudience}
+                        onValueChange={(v) => setTargetAudience(v as "all" | "active_only")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{tr("All Registered Students", "جميع الطلاب المسجلين بالمنصة")}</SelectItem>
+                          <SelectItem value="active_only">{tr("Active Students Only", "الطلاب المفعلين فقط (Active)")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold">{tr("Action Button Link (Optional)", "رابط الإجراء السريع (اختياري)")}</Label>
+                      <Input
+                        value={actionUrl}
+                        onChange={(e) => setActionUrl(e.target.value)}
+                        placeholder="https://pharma-core-edu.vercel.app/course/..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email Alert Toggle */}
+                  <div className="flex items-center justify-between p-3.5 rounded-xl border bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="space-y-0.5 pe-3">
+                      <p className="text-xs font-bold flex items-center gap-1.5">
+                        <Mail className="size-3.5 text-primary" />
+                        <span>{tr("Send Resend Email Broadcast (Do Not Reply)", "إرسال نسخة بريد إلكتروني تلقائية (Do Not Reply)")}</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {tr(
+                          "Dispatches formatted bilingual email alerts with PharmaCore logo and automated unmonitored mailbox notices.",
+                          "يتم إرسال تنبيهات بريد إلكتروني بشعار فارما كور وتنبيه واضح بعدم الرد المباشر على الرسالة الآلية."
+                        )}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={sendEmailAlert}
+                      onClick={() => setSendEmailAlert((prev) => !prev)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        sendEmailAlert ? "bg-primary" : "bg-muted-foreground/30"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block size-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                          sendEmailAlert
+                            ? isAr
+                              ? "-translate-x-4"
+                              : "translate-x-4"
+                            : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={broadcasting}
+                    className="gap-2 font-bold w-full sm:w-auto text-xs min-h-[40px]"
+                  >
+                    {broadcasting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4 rtl:rotate-180" />}
+                    <span>{broadcasting ? tr("Broadcasting Announcement...", "جارٍ إرسال الإعلان...") : tr("Broadcast Announcement", "إرسال الإعلان الآن")}</span>
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

@@ -17,9 +17,11 @@ export interface UserProfile {
   predicted_end_year?: number | null;
   status?: StudentStatus;
   must_change_password?: boolean;
+  email_notifications_enabled?: boolean;
   role: UserRole;
   created_at: string;
 }
+
 
 export type CourseAccessPolicy = 'open' | 'students_only' | 'enrolled_only';
 
@@ -121,8 +123,33 @@ export interface CommunityAnswer {
   responder_id: string | null;
   text: string;
   created_at: string;
-  responder?: UserProfile;
+  responder?: Partial<UserProfile>;
 }
+
+export type NotificationType = 'mentor_reply' | 'course_update' | 'announcement' | 'system';
+
+export interface NotificationItem {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title_en: string;
+  title_ar: string;
+  message_en: string;
+  message_ar: string;
+  lecture_id: string | null;
+  question_id: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface StudentQuestionItem extends CommunityQuestion {
+  course_id?: string | null;
+  course_title_en?: string | null;
+  course_title_ar?: string | null;
+  lecture_title_en?: string | null;
+  lecture_title_ar?: string | null;
+}
+
 
 // ─── University & Faculty Directory Types ────────────────────────────────────
 

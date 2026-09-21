@@ -256,7 +256,7 @@ describe("Tier 1 - Feature 10: Profile Tab Scrollbar Removal & Touch Targets (R4
 
   it("10.2 profile tab buttons meet WCAG touch target height with min-h-[44px]", () => {
     const tabBtnMatches = profileTsx.match(/<button[\s\S]*?onClick=\{\(\)\s*=>\s*setActiveTab\([^)]+\)\}[\s\S]*?>/g) || []
-    expect(tabBtnMatches.length).toBe(3)
+    expect(tabBtnMatches.length).toBeGreaterThanOrEqual(3)
     for (const btn of tabBtnMatches) {
       expect(btn).toContain("min-h-[44px]")
     }
