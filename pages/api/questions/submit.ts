@@ -32,25 +32,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { lectureId, authorName, authorEmail, text, isAnonymous, turnstileToken } = parsed.data;
 
-  // Cloudflare Turnstile Spam & Bot Verification
-  const clientIp = extractClientIp(req);
-  const turnstileResult = await verifyTurnstileToken({
-    token: turnstileToken,
-    remoteIp: clientIp,
-    expectedAction: 'question_submit',
-  });
-
-  if (!turnstileResult.success) {
-    return res.status(403).json({
-      error: 'Bot verification failed. Please try submitting again.',
-      error_ar: 'فشل التحقق الأمني من النشاط التلقائي. يرجى المحاولة مرة أخرى.',
-    });
-  }
-
-  if (!supabaseAdmin) {
-    return res.status(503).json({ error: 'Database service is not configured' });
-  }
-
   // Resolve authenticated user from Bearer token if provided
   let authenticatedUserId: string | null = null;
   let resolvedName = authorName ? authorName.trim() : '';
@@ -59,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-  if (token) {
+  if (token && supabaseAdmin) {
     try {
       const {
         data: { user },
@@ -80,6 +61,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch {
       // Continue with provided form fields if token validation fails
     }
+  }
+
+  // Cloudflare Turnstile Spam & Bot Verification
+  const clientIp = extractClientIp(req);
+  const turnstileResult = await verifyTurnstileToken({
+    token: turnstileToken,
+    remoteIp: clientIp,
+    expectedAction: 'question_submit',
+  });
+
+  // Unauthenticated guest submissions strictly require successful Turnstile verification
+  if (!authenticatedUserId && !turnstileResult.success) {
+    return res.status(403).json({
+      error: 'Bot verification failed. Please try submitting again.',
+      error_ar: 'فشل التحقق الأمني من النشاط التلقائي. يرجى المحاولة مرة أخرى.',
+    });
+  }
+
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: 'Database service is not configured' });
   }
 
   // Handle anonymous guest vs non-anonymous guest validations

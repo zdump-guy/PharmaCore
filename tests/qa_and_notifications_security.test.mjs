@@ -130,4 +130,18 @@ test('🔒 Community Q&A, Notifications & Resend Security Test Suite', async (t)
     assert.match(communityUi, /handleSendBroadcast/, 'CommunityManager must provide broadcast submission handler');
     assert.match(communityUi, /\/api\/admin\/announcements\/broadcast/, 'CommunityManager must call broadcast API');
   });
+
+  // ── 11. Question Submission Auth Precedence & Turnstile Integration ────
+  await t.test('11. Question Submission Auth Precedence & Turnstile Integration', () => {
+    const questionsSubmitApi = loadFile('pages/api/questions/submit.ts');
+    const turnstileLib = loadFile('lib/turnstile.ts');
+
+    // Questions Submit API resolves bearer auth and only blocks unauthenticated bot attempts
+    assert.match(questionsSubmitApi, /supabaseAdmin\.auth\.getUser\(token\)/, 'Must resolve authenticated user token');
+    assert.match(questionsSubmitApi, /!authenticatedUserId\s*&&\s*!turnstileResult\.success/, 'Must enforce Turnstile blocking for unauthenticated requests');
+    assert.match(questionsSubmitApi, /verifyTurnstileToken/, 'Must invoke verifyTurnstileToken');
+
+    // Turnstile library provides dev/test fallback
+    assert.match(turnstileLib, /process\.env\.NODE_ENV\s*!==\s*["']production["']/, 'Turnstile lib must handle non-production gracefully');
+  });
 });

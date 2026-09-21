@@ -124,22 +124,32 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
     const widgetIdRef = useRef<string | null>(null)
     const [isMounted, setIsMounted] = useState(false)
 
-    const isLocalhost =
-      typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1" ||
-        window.location.hostname === "[::1]")
+    const isDevEnv =
+      process.env.NODE_ENV !== "production" ||
+      (typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1" ||
+          window.location.hostname === "0.0.0.0" ||
+          window.location.hostname === "[::1]" ||
+          window.location.hostname === "::1" ||
+          window.location.hostname.endsWith(".local") ||
+          window.location.hostname.endsWith(".internal") ||
+          window.location.hostname.endsWith(".lvh.me") ||
+          window.location.hostname.endsWith(".nip.io") ||
+          /^192\.168\./.test(window.location.hostname) ||
+          /^10\./.test(window.location.hostname) ||
+          /^172\.(1[6-9]|2\d|3[01])\./.test(window.location.hostname)))
 
     const rawSiteKey =
       siteKey ||
       process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY ||
       TURNSTILE_TEST_SITE_KEY
 
-    // If running on localhost and the key is a production domain key (starts with 0x),
+    // If running on local/dev host and the key is a production domain key (starts with 0x),
     // use Cloudflare's official testing site key (1x00000000000000000000AA)
     // to prevent Cloudflare 400 Bad Request / 110200 Domain Not Allowed errors in dev
     const resolvedSiteKey =
-      isLocalhost && !rawSiteKey.startsWith("1x") && !rawSiteKey.startsWith("2x") && !rawSiteKey.startsWith("3x")
+      isDevEnv && !rawSiteKey.startsWith("1x") && !rawSiteKey.startsWith("2x") && !rawSiteKey.startsWith("3x")
         ? TURNSTILE_TEST_SITE_KEY
         : rawSiteKey
 
@@ -171,7 +181,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
       if (!containerRef.current) return
 
       // In local development, bypass remote Cloudflare script to eliminate 400 Bad Request & reportAllChanges exceptions
-      if (isLocalhost) {
+      if (isDevEnv) {
         onVerifyRef.current?.(devTokenRef.current)
         return
       }
@@ -192,6 +202,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
             onVerifyRef.current?.(token)
           },
           "error-callback": (err: unknown) => {
+            console.warn("[Turnstile] Challenge adapter/error warning:", err)
             onErrorRef.current?.(err)
           },
           "expired-callback": () => {
@@ -199,14 +210,14 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
           },
         })
         widgetIdRef.current = id
-      } catch {
-        // Safe catch
+      } catch (err) {
+        console.warn("[Turnstile] Render exception handled safely:", err)
       }
-    }, [isLocalhost, resolvedSiteKey, action, cData, theme, resolvedSize, resolvedAppearance])
+    }, [isDevEnv, resolvedSiteKey, action, cData, theme, resolvedSize, resolvedAppearance])
 
     useImperativeHandle(ref, () => ({
       reset: () => {
-        if (isLocalhost) {
+        if (isDevEnv) {
           onVerifyRef.current?.(devTokenRef.current)
           return
         }
@@ -217,7 +228,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
         }
       },
       execute: () => {
-        if (isLocalhost) {
+        if (isDevEnv) {
           onVerifyRef.current?.(devTokenRef.current)
           return
         }
@@ -228,7 +239,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
         }
       },
       getResponse: () => {
-        if (isLocalhost) {
+        if (isDevEnv) {
           return devTokenRef.current
         }
         if (widgetIdRef.current && window.turnstile) {
@@ -242,7 +253,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
 
     useEffect(() => {
       setIsMounted(true)
-      if (isLocalhost) {
+      if (isDevEnv) {
         // Immediate local verification
         onVerifyRef.current?.(devTokenRef.current)
       } else {
@@ -261,7 +272,7 @@ export const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
           widgetIdRef.current = null
         }
       }
-    }, [isLocalhost, renderWidget])
+    }, [isDevEnv, renderWidget])
 
     if (!isMounted) {
       return null

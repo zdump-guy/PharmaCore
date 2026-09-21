@@ -3,12 +3,14 @@ const { i18n } = require('./next-i18next.config');
 
 const cspHeader = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com https://va.vercel-scripts.com https://www.youtube.com https://s.ytimg.com",
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com https://va.vercel-scripts.com https://www.youtube.com https://s.ytimg.com blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.uploadthing.com https://uploadthing.com https://utfs.io https://ufs.sh https://api.uploadthing.com",
   "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://challenges.cloudflare.com",
+  "worker-src 'self' blob: https://challenges.cloudflare.com",
+  "child-src 'self' blob: https://challenges.cloudflare.com",
   "media-src 'self' https://utfs.io https://ufs.sh blob: data:",
   "object-src 'none'",
   "base-uri 'self'",
@@ -43,7 +45,7 @@ const securityHeaders = [
   },
   {
     key: 'Cross-Origin-Opener-Policy',
-    value: 'same-origin',
+    value: 'same-origin-allow-popups',
   },
   {
     key: 'Cross-Origin-Resource-Policy',
