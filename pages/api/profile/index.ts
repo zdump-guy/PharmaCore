@@ -114,28 +114,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       payload.full_name = [payload.first_name, payload.last_name].filter(Boolean).join(" ").trim()
     }
 
+    // Build strict database update payload excluding computed/virtual fields like current_year
+    const dbUpdatePayload: Record<string, any> = {}
+    if (payload.first_name !== undefined) dbUpdatePayload.first_name = payload.first_name
+    if (payload.last_name !== undefined) dbUpdatePayload.last_name = payload.last_name
+    if (payload.full_name !== undefined) dbUpdatePayload.full_name = payload.full_name
+    if (payload.phone_number !== undefined) dbUpdatePayload.phone_number = payload.phone_number
+    if (payload.university !== undefined) dbUpdatePayload.university = payload.university
+    if (payload.faculty !== undefined) dbUpdatePayload.faculty = payload.faculty
+    if (payload.start_year !== undefined) dbUpdatePayload.start_year = payload.start_year
+    if (payload.predicted_end_year !== undefined) dbUpdatePayload.predicted_end_year = payload.predicted_end_year
+    if (payload.email_notifications_enabled !== undefined) {
+      dbUpdatePayload.email_notifications_enabled = payload.email_notifications_enabled
+    }
+
     try {
-      const { data: updated, error } = await supabaseAdmin
+      let { data: updated, error } = await supabaseAdmin
         .from("users")
-        .update(payload)
+        .update(dbUpdatePayload)
         .eq("id", userId)
         .select()
         .single()
 
+      // Graceful fallback if email_notifications_enabled column has not been migrated yet on remote DB
+      if (
+        error &&
+        (error.message?.includes("email_notifications_enabled") ||
+          error.code === "42703" ||
+          error.code === "PGRST204" ||
+          error.message?.includes("schema cache"))
+      ) {
+        const fallbackPayload = { ...dbUpdatePayload }
+        delete fallbackPayload.email_notifications_enabled
+        const fallbackRes = await supabaseAdmin
+          .from("users")
+          .update(fallbackPayload)
+          .eq("id", userId)
+          .select()
+          .single()
+        updated = fallbackRes.data
+        error = fallbackRes.error
+      }
+
       if (error) {
+        console.error("Profile update DB error:", error)
         return res.status(500).json({ error: error.message })
       }
 
       // Also update auth user_metadata full_name
-      if (payload.full_name) {
-        await supabaseAdmin.auth.admin.updateUserById(userId, {
-          user_metadata: { full_name: payload.full_name },
-        })
+      if (dbUpdatePayload.full_name) {
+        try {
+          await supabaseAdmin.auth.admin.updateUserById(userId, {
+            user_metadata: { full_name: dbUpdatePayload.full_name },
+          })
+        } catch (metaErr) {
+          console.warn("User metadata sync warning:", metaErr)
+        }
       }
 
       return res.status(200).json({ profile: updated })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to update profile"
+      console.error("Exception in profile update:", err)
       return res.status(500).json({ error: message })
     }
   }

@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS public.users (
   start_year          INTEGER,
   predicted_end_year  INTEGER,
   status              TEXT DEFAULT 'active',
-  must_change_password BOOLEAN DEFAULT false
+  must_change_password BOOLEAN DEFAULT false,
+  email_notifications_enabled BOOLEAN DEFAULT true
 );
 
 -- Ensure all users columns exist for existing database upgrades
@@ -104,6 +105,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS start_year INTEGER;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS predicted_end_year INTEGER;
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS email_notifications_enabled BOOLEAN DEFAULT true;
 ALTER TABLE public.users ALTER COLUMN role SET DEFAULT 'student';
 
 -- Ensure Auth trigger exists on auth.users

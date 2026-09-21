@@ -312,9 +312,8 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
           phone_number: phoneNumber.trim() || null,
           university: university || null,
           faculty: faculty || null,
-          start_year: Number(startYear),
-          predicted_end_year: Number(predictedEndYear),
-          current_year: calculatedYear,
+          start_year: Number(startYear) > 1900 ? Number(startYear) : null,
+          predicted_end_year: Number(predictedEndYear) > 1900 ? Number(predictedEndYear) : null,
           email_notifications_enabled: Boolean(emailNotificationsEnabled),
         }),
       })
