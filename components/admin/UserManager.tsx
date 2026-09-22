@@ -265,6 +265,7 @@ export default function UserManager({
                   onClick={onLoadUsers}
                   disabled={loadingUsers}
                   title={tr("Refresh users list", "تحديث قائمة المستخدمين")}
+                  aria-label={tr("Refresh users list", "تحديث قائمة المستخدمين")}
                 >
                   <RefreshCw className={`size-3.5 ${loadingUsers ? "animate-spin" : ""}`} />
                 </Button>
@@ -350,6 +351,7 @@ export default function UserManager({
                           className="btn-nowrap h-8 text-xs font-semibold gap-1 px-2.5 shrink-0"
                           onClick={() => onOpenEditUser(user)}
                           disabled={isBusy}
+                          aria-label={tr(`Edit ${user.full_name || user.email}`, `تعديل ${user.full_name || user.email}`)}
                         >
                           <Pencil className="size-3 shrink-0" />
                           <span>{tr("Edit", "تعديل")}</span>
@@ -363,6 +365,11 @@ export default function UserManager({
                           }`}
                           onClick={() => onToggleSuspendUser(user)}
                           disabled={isBusy || isCurrent}
+                          aria-label={
+                            suspended
+                              ? tr(`Restore access for ${user.full_name || user.email}`, `تفعيل حساب ${user.full_name || user.email}`)
+                              : tr(`Suspend access for ${user.full_name || user.email}`, `إيقاف حساب ${user.full_name || user.email}`)
+                          }
                         >
                           {suspended ? <ActivateIcon className="size-3 shrink-0" /> : <SuspendIcon className="size-3 shrink-0" />}
                           <span>{suspended ? tr("Restore Access", "تفعيل") : tr("Suspend Access", "إيقاف")}</span>
@@ -374,6 +381,7 @@ export default function UserManager({
                           className="btn-nowrap h-8 text-xs font-semibold gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive ms-auto px-2.5 shrink-0"
                           onClick={() => onOpenDeleteUser(user)}
                           disabled={isBusy || isCurrent}
+                          aria-label={tr(`Delete ${user.full_name || user.email}`, `حذف حساب ${user.full_name || user.email}`)}
                         >
                           <Trash2 className="size-3 shrink-0" />
                           <span>{tr("Delete", "حذف")}</span>

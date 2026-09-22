@@ -15,6 +15,7 @@
 ├── design-system/                # Design tokens and visual specifications
 │   └── pharmacore/MASTER.md      # Master design token rules (colors, fonts, layout)
 ├── docs/                         # Authoritative Comprehensive Documentation System
+│   ├── UI_AUDIT/                 # UI & Design System Integrity Audit Suite (30 dimensions)
 │   └── archive/                  # Archived legacy root documentation files
 ├── lib/                          # Core backend utilities, helpers, clients, and engines
 ├── logos_favicon/                # Brand vectors, SVG marks, and master icon assets

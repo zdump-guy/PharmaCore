@@ -2,7 +2,7 @@
 
 ## 1. Design System Philosophy
 
-The PharmaCore Design System embodies a **clinical, trustworthy, and modern academic aesthetic**. The visual language pairs vibrant pharmacy emerald greens (`#15803D`) with deep trust blues (`#0369A1`), grounded in clean neutral backgrounds and bilingual typography.
+The PharmaCore Design System embodies a **clinical, trustworthy, and modern academic aesthetic**. The visual language pairs clinical cyan/teal primary tones (`hsl(194 49% 31%)` / `#286576`) and bright accents (`#8BCDE1`) with deep charcoal ink (`#262626`), grounded in clean neutral backgrounds and bilingual typography (`Inter` + `Tajawal`).
 
 ---
 

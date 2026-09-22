@@ -17,20 +17,27 @@
 
 ### Color Palette
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#15803D` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#22C55E` | `--color-secondary` |
-| Accent/CTA | `#0369A1` | `--color-accent` |
-| Background | `#F0FDF4` | `--color-background` |
-| Foreground | `#14532D` | `--color-foreground` |
-| Muted | `#E8F0F1` | `--color-muted` |
-| Border | `#BBF7D0` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#15803D` | `--color-ring` |
+| Role | Hex / HSL | CSS Variable | Semantic Usage |
+|------|-----------|--------------|----------------|
+| Primary | `hsl(194 49% 31%)` (`#286576`) | `--primary` | Main brand clinical cyan/teal; CTAs, primary buttons, active tabs |
+| On Primary | `hsl(0 0% 100%)` (`#FFFFFF`) | `--primary-foreground` | High-contrast white text on primary buttons and badges |
+| Secondary | `hsl(194 31% 92%)` (`#E6F4F8`) | `--secondary` | Soft clinical cyan fill for secondary cards and pills |
+| Secondary Foreground | `hsl(194 49% 24%)` (`#1F4E5B`) | `--secondary-foreground` | High-contrast dark teal text on secondary elements |
+| Accent | `hsl(194 56% 71%)` (`#8BCDE1`) | `--accent` | Light cyan accent; interactive highlights and focus rings |
+| Accent Foreground | `hsl(194 55% 18%)` (`#143B47`) | `--accent-foreground` | Deep slate contrast text on accent backgrounds |
+| Brand Ink | `#262626` | `--brand-ink` | Deep charcoal neutral for high-contrast headings & dark surfaces |
+| Brand Mid | `#6AA6B8` | `--brand-mid` | Mid-tone clinical cyan for graphic accents & active badges |
+| Brand Light | `#8BCDE1` | `--brand-light` | Light cyan for highlights, skeletons, and badges |
+| Background | `hsl(195 33% 98%)` (`#F8FBFC`) | `--background` | Clean clinical off-white canvas |
+| Foreground | `hsl(0 0% 15%)` (`#262626`) | `--foreground` | Charcoal dark text for maximum legibility (14.2:1 contrast) |
+| Muted | `hsl(195 25% 94%)` (`#EEF5F7`) | `--muted` | Subdued surface backgrounds and table headers |
+| Muted Foreground | `hsl(195 13% 39%)` (`#566A70`) | `--muted-foreground` | Secondary subtext and timestamps (4.8:1 contrast) |
+| Border | `hsl(195 22% 84%)` (`#D3E3E8`) | `--border` | Clean boundary lines for cards and input containers |
+| Input | `hsl(195 22% 78%)` (`#C2D7DE`) | `--input` | Form input border baseline |
+| Destructive | `hsl(0 72% 46%)` (`#CE2323`) | `--destructive` | Warning / error red; deletion buttons, form errors |
+| Ring | `hsl(194 49% 31%)` (`#286576`) | `--ring` | Accessibility focus outline ring |
 
-**Color Notes:** Pharmacy green + trust blue
+**Color Notes:** Clinical cyan/teal (`#286576`, `#6AA6B8`, `#8BCDE1`) + Charcoal ink (`#262626`)
 
 ### Typography
 
@@ -69,6 +76,17 @@
 
 ---
 
+### Corner Radius Scale
+
+| Token | Class / Value | Calculated Size | Usage |
+|-------|---------------|-----------------|-------|
+| Base / Large | `rounded-2xl` / `var(--radius)` | `0.9rem` (14.4px) | Cards, modals, feature callouts |
+| Medium | `rounded-xl` / `calc(var(--radius) - 2px)` | `12.4px` | Sub-panels, dropdowns, media cards |
+| Small | `rounded-lg` / `calc(var(--radius) - 4px)` | `10.4px` | Buttons, inputs, tab items |
+| Full / Pill | `rounded-full` | `9999px` | Badges, avatars, status tags |
+
+---
+
 ## Component Specs
 
 ### Buttons
@@ -76,27 +94,27 @@
 ```css
 /* Primary Button */
 .btn-primary {
-  background: #0369A1;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 10px 20px;
+  border-radius: calc(var(--radius) - 4px);
   font-weight: 600;
   transition: all 200ms ease;
   cursor: pointer;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  opacity: 0.92;
   transform: translateY(-1px);
 }
 
 /* Secondary Button */
 .btn-secondary {
-  background: transparent;
-  color: #15803D;
-  border: 2px solid #15803D;
-  padding: 12px 24px;
-  border-radius: 8px;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+  padding: 10px 20px;
+  border-radius: calc(var(--radius) - 4px);
   font-weight: 600;
   transition: all 200ms ease;
   cursor: pointer;
@@ -107,16 +125,17 @@
 
 ```css
 .card {
-  background: #F0FDF4;
-  border-radius: 12px;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
   padding: 24px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   transition: all 200ms ease;
-  cursor: pointer;
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
+  border-color: hsl(var(--primary) / 0.4);
   transform: translateY(-2px);
 }
 ```
@@ -125,17 +144,19 @@
 
 ```css
 .input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
+  padding: 10px 14px;
+  border: 1px solid hsl(var(--input));
+  border-radius: calc(var(--radius) - 4px);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
 .input:focus {
-  border-color: #15803D;
+  border-color: hsl(var(--ring));
   outline: none;
-  box-shadow: 0 0 0 3px #15803D20;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
 }
 ```
 

@@ -5,13 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [Unreleased] - 2026-09-22
+## [Unreleased] - 2026-09-23
 
 ### Added
-- Comprehensive continuous documentation system (`docs/`) spanning 26 technical domains and 60+ modular documentation files adhering strictly to `AI_AGENT_DOCUMENTATION_SYSTEM.md`.
+- Comprehensive 30-dimension UI & Design System Integrity Audit suite (`docs/UI_AUDIT/`) covering component matrices, design tokens, viewport benchmarks, WCAG 2.1 AA accessibility, and remediation roadmap.
+- Comprehensive continuous documentation system (`docs/`) spanning 26 technical domains and 90+ modular documentation files adhering strictly to `AI_AGENT_DOCUMENTATION_SYSTEM.md`.
 - Architecture Decision Records (ADRs 0001 through 0007).
 - Full 21 API routes specification and 13 PostgreSQL tables schema reference.
 - End-to-end data flow sequence diagrams for enrollment, Q&A, feedback, and authoring.
+
+### Changed
+- Synchronized master design token specifications (`design-system/pharmacore/MASTER.md` and `docs/DESIGN_SYSTEM/TOKENS.md`) to accurately document active clinical cyan/teal runtime tokens (`hsl(194 49% 31%)`, `#262626`, `#6AA6B8`, `#8BCDE1`).
+- Standardized corner radius token documentation around base `--radius: 0.9rem` (14.4px).
+
+### Fixed
+- Added localized bilingual `aria-label` screen reader tags to all icon-only action buttons across `components/admin/UserManager.tsx` and `components/admin/CurriculumManager.tsx`.
+- Standardized badge primitives in `components/admin/AnalyticsDashboard.tsx`.
 
 ---
 

@@ -19,6 +19,7 @@
 | [**Integrations**](./INTEGRATIONS/README.md) | External Services | Supabase, Cloudflare Turnstile, Resend, UploadThing, and Vercel. |
 | [**UI & UX Reference**](./UI/README.md) | Frontend Architecture | 14 routes/pages, 33+ UI & Admin components, responsive & a11y standards. |
 | [**Design System**](./DESIGN_SYSTEM/README.md) | Visual System | Design tokens, clinical green & trust blue palettes, Tajawal/Inter typography. |
+| [**UI & Design System Audit**](./UI_AUDIT/README.md) | Design Integrity & QA | 30-dimension audit, token parity, WCAG 2.1 AA a11y, responsive benchmarks & remediation plan. |
 | [**Modules & Utilities**](./MODULES/README.md) | Core Libraries | Helper modules: `lib/rateLimit.ts`, `lib/siteContent.ts`, `lib/turnstile.ts`, etc. |
 | [**Data Flows**](./DATA_FLOWS/README.md) | Pipeline Sequences | End-to-end sequence diagrams for enrollment, Q&A, feedback, and authoring. |
 | [**Security Architecture**](./SECURITY/README.md) | Threat Model & Hardening | STRIDE threat model, 5-tier RBAC, input sanitization, and 22-domain audit. |

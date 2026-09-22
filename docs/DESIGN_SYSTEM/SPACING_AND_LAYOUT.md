@@ -19,10 +19,15 @@ PharmaCore adheres to an **8pt spatial increment grid**:
 
 ## 2. Corner Radii & Elevation Shadows
 
-- **Card Radius**: `rounded-xl` (12px) for educational content cards.
-- **Button Radius**: `rounded-lg` (8px) for buttons and inputs.
-- **Badge Radius**: `rounded-full` (9999px) for status pills.
+PharmaCore standardizes corner radii on a base `--radius: 0.9rem` (14.4px) scale:
+
+- **Card & Container Radius**: `rounded-2xl` (`var(--radius)` = 14.4px) for educational cards, modals, and callouts.
+- **Medium Surface Radius**: `rounded-xl` (`calc(var(--radius) - 2px)` = 12.4px) for sub-panels and dropdown menus.
+- **Button & Input Radius**: `rounded-lg` (`calc(var(--radius) - 4px)` = 10.4px) for interactive controls and form inputs.
+- **Badge & Avatar Radius**: `rounded-full` (9999px) for status pills and user avatars.
+
 - **Elevation Shadows**:
-  - `shadow-sm`: Interactive cards and table rows.
-  - `shadow-md`: Hovered course cards and dropdown menus.
-  - `shadow-xl`: Modal dialogs and preview lightboxes.
+  - `shadow-xs`: Subtle card outline enhancement on dark/light surfaces.
+  - `shadow-sm`: Interactive cards, tables, and tab groups.
+  - `shadow-md`: Hovered course cards and contextual dropdowns.
+  - `shadow-xl`: Accessible modal dialogs and fullscreen PDF/image preview lightboxes.

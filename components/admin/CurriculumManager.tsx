@@ -204,6 +204,7 @@ export default function CurriculumManager({
                   <button
                     onClick={() => setLocalSearch("")}
                     className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    aria-label={tr("Clear search", "مسح البحث")}
                   >
                     <X className="size-3.5" />
                   </button>
@@ -317,6 +318,7 @@ export default function CurriculumManager({
                       className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0"
                       onClick={() => onDeleteEntity("courses", course.id, title)}
                       title={tr("Delete course", "حذف المقرر")}
+                      aria-label={tr(`Delete course: ${title}`, `حذف مقرر: ${title}`)}
                     >
                       <Trash2 className="size-3.5 shrink-0" />
                     </Button>
@@ -402,6 +404,7 @@ export default function CurriculumManager({
                   <button
                     onClick={() => setLocalSearch("")}
                     className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    aria-label={tr("Clear search", "مسح البحث")}
                   >
                     <X className="size-3.5" />
                   </button>
@@ -512,6 +515,7 @@ export default function CurriculumManager({
                         className="size-8"
                         onClick={() => onOpenLectureEditor(lecture)}
                         title={tr("Edit lecture", "تعديل المحاضرة")}
+                        aria-label={tr(`Edit lecture: ${title}`, `تعديل محاضرة: ${title}`)}
                       >
                         <Pencil className="size-3.5" />
                       </Button>
@@ -521,6 +525,7 @@ export default function CurriculumManager({
                         className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => onDeleteEntity("lectures", lecture.id, title)}
                         title={tr("Delete lecture", "حذف المحاضرة")}
+                        aria-label={tr(`Delete lecture: ${title}`, `حذف محاضرة: ${title}`)}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -597,6 +602,7 @@ export default function CurriculumManager({
                   <button
                     onClick={() => setLocalSearch("")}
                     className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    aria-label={tr("Clear search", "مسح البحث")}
                   >
                     <X className="size-3.5" />
                   </button>
@@ -662,6 +668,7 @@ export default function CurriculumManager({
                         className="size-8"
                         onClick={() => onOpenVoiceRecordEditor?.(record)}
                         title={tr("Edit record", "تعديل التسجيل")}
+                        aria-label={tr(`Edit record: ${title}`, `تعديل تسجيل: ${title}`)}
                       >
                         <Pencil className="size-3.5" />
                       </Button>
@@ -671,6 +678,7 @@ export default function CurriculumManager({
                         className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => onDeleteEntity("audio_records", record.id, title)}
                         title={tr("Delete record", "حذف التسجيل")}
+                        aria-label={tr(`Delete record: ${title}`, `حذف تسجيل: ${title}`)}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -745,6 +753,7 @@ export default function CurriculumManager({
                   <button
                     onClick={() => setLocalSearch("")}
                     className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    aria-label={tr("Clear search", "مسح البحث")}
                   >
                     <X className="size-3.5" />
                   </button>
@@ -809,6 +818,7 @@ export default function CurriculumManager({
                             onOpenQuizEditor(quiz)
                           }}
                           title={tr("Edit quiz", "تعديل الاختبار")}
+                          aria-label={tr(`Edit quiz: ${title}`, `تعديل اختبار: ${title}`)}
                         >
                           <Pencil className="size-3.5" />
                         </Button>
@@ -821,6 +831,7 @@ export default function CurriculumManager({
                             onDeleteEntity("quizzes", quiz.id, title)
                           }}
                           title={tr("Delete quiz", "حذف الاختبار")}
+                          aria-label={tr(`Delete quiz: ${title}`, `حذف اختبار: ${title}`)}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -924,6 +935,7 @@ export default function CurriculumManager({
                               className="size-8"
                               onClick={() => onOpenQuestionEditor(question)}
                               title={tr("Edit question", "تعديل السؤال")}
+                              aria-label={tr(`Edit question: ${qTitle}`, `تعديل سؤال: ${qTitle}`)}
                             >
                               <Pencil className="size-3.5" />
                             </Button>
@@ -933,6 +945,7 @@ export default function CurriculumManager({
                               className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => onDeleteEntity("questions", question.id, qTitle)}
                               title={tr("Delete question", "حذف السؤال")}
+                              aria-label={tr(`Delete question: ${qTitle}`, `حذف سؤال: ${qTitle}`)}
                             >
                               <Trash2 className="size-3.5" />
                             </Button>
@@ -1048,6 +1061,7 @@ export default function CurriculumManager({
                   <button
                     onClick={() => setLocalSearch("")}
                     className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    aria-label={tr("Clear search", "مسح البحث")}
                   >
                     <X className="size-3.5" />
                   </button>
@@ -1119,6 +1133,7 @@ export default function CurriculumManager({
                         className="size-8"
                         onClick={() => onOpenResourceEditor(resource)}
                         title={tr("Edit resource", "تعديل المادة")}
+                        aria-label={tr(`Edit resource: ${title}`, `تعديل مادة: ${title}`)}
                       >
                         <Pencil className="size-3.5" />
                       </Button>
@@ -1128,6 +1143,7 @@ export default function CurriculumManager({
                         className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => onDeleteEntity("resources", resource.id, title)}
                         title={tr("Delete resource", "حذف المادة")}
+                        aria-label={tr(`Delete resource: ${title}`, `حذف مادة: ${title}`)}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
