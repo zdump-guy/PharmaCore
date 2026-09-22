@@ -18,6 +18,7 @@ export interface UserProfile {
   status?: StudentStatus;
   must_change_password?: boolean;
   email_notifications_enabled?: boolean;
+  email_marketing_enabled?: boolean;
   role: UserRole;
   created_at: string;
 }
@@ -284,5 +285,61 @@ export interface FeedbackSubmission {
   course?: Course;
   lecture?: Lecture;
   resolver?: UserProfile;
+}
+
+// ─── Email Management & Campaign Types ──────────────────────────────────────
+
+export type EmailTemplateCategory = 'system' | 'announcement' | 'marketing' | 'custom';
+
+export interface EmailTemplateVariable {
+  key: string;
+  label_en: string;
+  label_ar: string;
+  default_value?: string;
+  required?: boolean;
+}
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  title_en: string;
+  title_ar: string;
+  description_en?: string | null;
+  description_ar?: string | null;
+  category: EmailTemplateCategory;
+  subject_template: string;
+  html_content: string;
+  variables_schema?: EmailTemplateVariable[];
+  is_default?: boolean;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EmailTargetAudience =
+  | 'all'
+  | 'staff'
+  | 'students'
+  | 'marketing'
+  | 'custom_set'
+  | 'single_user'
+  | 'course_enrolled';
+
+export type EmailDeliveryStatus = 'completed' | 'partial' | 'failed' | 'simulated';
+
+export interface EmailLog {
+  id: string;
+  sender_id?: string | null;
+  sender?: Partial<UserProfile>;
+  campaign_type: 'announcement' | 'marketing' | 'direct_message' | 'system';
+  target_audience: EmailTargetAudience;
+  subject: string;
+  template_id?: string | null;
+  template_name?: string | null;
+  recipient_count: number;
+  delivery_status: EmailDeliveryStatus;
+  sample_recipients: string[];
+  metadata?: Record<string, unknown>;
+  created_at: string;
 }
 

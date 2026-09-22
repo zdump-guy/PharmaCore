@@ -51,6 +51,10 @@ const FeedbackManager = dynamic(() => import("@/components/admin/FeedbackManager
   ssr: false,
   loading: () => <AdminLoadingSkeleton title="Feedback & Bug Reports" />,
 })
+const EmailManager = dynamic(() => import("@/components/admin/EmailManager"), {
+  ssr: false,
+  loading: () => <AdminLoadingSkeleton title="Email Communications" />,
+})
 const AdminModals = dynamic(() => import("@/components/admin/AdminModals"), {
   ssr: false,
 })
@@ -1247,6 +1251,16 @@ export default function AdminPage() {
                 sessionToken={sessionToken || ""}
                 profile={profile}
                 onCountChange={(cnt) => setOpenFeedbackCount(cnt)}
+              />
+            )}
+
+            {/* 3c. Email Campaigns & Communications Hub */}
+            {activePage === "emails" && canManageUsers && (
+              <EmailManager
+                isAr={isAr}
+                sessionToken={sessionToken || ""}
+                profile={profile}
+                courses={courses}
               />
             )}
 

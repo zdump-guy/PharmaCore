@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased] - 2026-09-23
 
 ### Added
+- Enhanced Email System & Campaign Engine featuring in-browser template authoring, HTML file upload, dynamic placeholder interpolation (`{{user_name}}`, `{{action_url}}`, `{{current_year}}`), live iframe preview, and instant test email dispatching.
+- Multi-audience campaign dispatcher supporting broadcasts to *All Users*, *Staff Only*, *Student Cohorts* (all/active/course-enrolled), *Marketing Campaigns* (with promo code pills, banners, and compliant opt-out filtering), and dedicated direct emails (*Specific Users* search chips or *Single User* autocomplete).
+- 7 new Next.js Serverless API endpoints under `pages/api/admin/emails/` and `pages/api/admin/users/search.ts` with strict Zod validation, rate limiting, and staff RBAC checks.
+- Database migration `supabase/04_enhanced_email_system.sql` introducing `public.email_templates`, `public.email_logs`, `email_marketing_enabled` user preferences, and performance indexes.
+- 3-tab Administrative Email Communications Center (`components/admin/EmailManager.tsx`) integrated into `components/admin/AdminSidebar.tsx`, `components/admin/AdminTopNav.tsx`, and `pages/admin/index.tsx`.
+- Automated test suite `tests/enhanced_email_system.test.mjs` verifying schema DDL, RLS, mailer chunking, endpoint validation, and UI tab contracts.
 - Dev-exclusive discussion moderation endpoints: `DELETE /api/questions/[id]` (deletes question with cascading deletion of answers and in-app notifications) and `DELETE /api/questions/answers/[id]` (deletes individual reply).
 - Dev role deletion action controls with confirmation dialogs in `components/admin/CommunityManager.tsx` and `pages/admin/index.tsx`.
 - Inline dev role deletion controls for student questions and mentor answers in `pages/lecture/[id].tsx`.

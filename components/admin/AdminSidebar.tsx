@@ -12,6 +12,7 @@ import {
   FiInbox as Inbox,
   FiLock as LockKeyhole,
   FiLogOut as LogOut,
+  FiMail as Mail,
   FiServer as Server,
   FiShield as ShieldCheck,
   FiTerminal as Terminal,
@@ -237,6 +238,18 @@ export default function AdminSidebar({
           badge: openFeedbackCount > 0 ? openFeedbackCount : null,
           badgeColor: "bg-amber-500 text-white",
         },
+        ...(canManageUsers
+          ? [
+              {
+                id: "emails",
+                page: "emails",
+                label_en: "Email Campaigns",
+                label_ar: "حملات البريد والرسائل",
+                icon: Mail,
+                roleRequired: "super_admin" as const,
+              },
+            ]
+          : []),
       ],
     },
     {

@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-PharmaCore exposes **23 internal Next.js Serverless API endpoints** under `pages/api/` and integrates with 5 external cloud APIs.
+PharmaCore exposes **30 internal Next.js Serverless API endpoints** under `pages/api/` and integrates with 5 external cloud APIs.
 
 ---
 
@@ -10,7 +10,7 @@ PharmaCore exposes **23 internal Next.js Serverless API endpoints** under `pages
 
 | Category | Endpoint Count | Focus Area |
 |---|:---:|---|
-| [**Internal APIs**](./INTERNAL_APIS.md) | 23 | Student registration, enrollment, notifications, Q&A, feedback, curriculum authoring, dev moderation, and analytics. |
+| [**Internal APIs**](./INTERNAL_APIS.md) | 30 | Student registration, enrollment, notifications, Q&A, feedback, curriculum authoring, dev moderation, email campaigns & broadcasts, and analytics. |
 | [**External APIs**](./EXTERNAL_APIS.md) | 5 | Supabase PostgREST & Auth, Resend, UploadThing, Cloudflare Turnstile, and YouTube. |
 
 ---

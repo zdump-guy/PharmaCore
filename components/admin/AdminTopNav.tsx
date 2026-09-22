@@ -87,6 +87,12 @@ export default function AdminTopNav({
       category_en: "Interaction",
       category_ar: "التفاعل",
     },
+    emails: {
+      en: "Email Campaigns & Broadcasts",
+      ar: "حملات البريد والمراسلات",
+      category_en: "Communications",
+      category_ar: "المراسلات",
+    },
     users: {
       en: "Staff & Faculty Access",
       ar: "الكادر الإداري والتدريسي",

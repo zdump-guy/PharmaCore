@@ -4,6 +4,41 @@ This document acts as an append-only, chronological engineering log recording me
 
 ---
 
+## 2026-09-23 — Enhanced Email System & Campaign Engine (Task TASK-004)
+
+### Objective
+Architect and deliver an enterprise-grade Enhanced Email System featuring custom template management (HTML file upload & in-browser editor), dynamic placeholder validation (`{{user_name}}`, `{{action_url}}`, `{{current_year}}`), multi-audience broadcast targeting (*All Users*, *Staff Only*, *Student Cohorts*, *Marketing Campaigns*, *Specific Users*, and *Single User*), real-time live preview, test email dispatching, and execution audit logging.
+
+### Observations & Discoveries
+- **Template Security & Escaping**: Dynamic placeholder interpolation requires strict HTML sanitization on `{{key}}` tokens to protect against stored XSS while permitting `{{{raw_key}}}` or `raw_` variables for authenticated administrative layout containers.
+- **Batching & Payload Limits**: Dispatching campaigns to large student cohorts via Resend requires chunking in groups of 50 to prevent payload overflow and serverless execution timeouts.
+- **Marketing Compliance**: Marketing broadcasts must strictly filter out users who have opted out (`email_marketing_enabled === false` or `email_notifications_enabled === false`), while system announcements still respect general notification preferences.
+- **Protected Defaults**: System built-in templates (`DEFAULT_ANNOUNCEMENT_TEMPLATE`, `DEFAULT_MARKETING_TEMPLATE`, `DEFAULT_DIRECT_MESSAGE_TEMPLATE`, `DEFAULT_CONTAINER_TEMPLATE`) must be protected from accidental deletion.
+
+### Actions Taken
+- Authored PostgreSQL migration `supabase/04_enhanced_email_system.sql` defining `public.email_templates`, `public.email_logs`, `email_marketing_enabled` column, and RLS policies.
+- Updated `types/index.ts` with `EmailTemplate`, `EmailTemplateVariable`, `EmailTargetAudience`, `EmailDeliveryStatus`, `EmailLog`, and updated `UserProfile`.
+- Extended `lib/email.ts` with `renderEmailTemplate()`, default built-in templates, `sendCustomEmail()`, and `sendBatchCustomEmails()`.
+- Implemented 7 new serverless API endpoints:
+  - `pages/api/admin/emails/templates/index.ts` (List & Create custom templates)
+  - `pages/api/admin/emails/templates/[id].ts` (Get, Update, and Delete custom templates)
+  - `pages/api/admin/emails/send.ts` (Unified multi-audience campaign dispatcher with in-app notification mirroring and logging)
+  - `pages/api/admin/emails/preview.ts` (Server-side iframe preview with sample interpolations)
+  - `pages/api/admin/emails/test.ts` (Instant test email to current admin)
+  - `pages/api/admin/emails/logs.ts` (Paginated delivery logs)
+  - `pages/api/admin/users/search.ts` (Autocomplete search for recipient targeting)
+- Built interactive 3-tab `components/admin/EmailManager.tsx` UI and connected it into `components/admin/AdminSidebar.tsx`, `components/admin/AdminTopNav.tsx`, and `pages/admin/index.tsx`.
+- Created automated test suite `tests/enhanced_email_system.test.mjs` (9/9 tests passing).
+- Synchronized documentation in `docs/APIS/README.md`, `docs/APIS/INTERNAL_APIS.md`, `docs/TASKS/TASK-004-enhanced-email-and-campaign-system.md`, and `docs/CHANGELOG/CHANGELOG.md`.
+
+### Verification
+- `node --test tests/enhanced_email_system.test.mjs`: 9/9 PASS.
+- `npm test`: 100% PASS (96/96 tests across all 8 tiers).
+- `npx tsc --noEmit`: 0 TypeScript errors.
+- `npm run lint`: 0 ESLint errors or warnings.
+
+---
+
 ## 2026-09-23 — Dev-Exclusive Discussion Q&A Deletion (Task TASK-003)
 
 ### Objective
