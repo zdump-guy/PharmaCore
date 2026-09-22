@@ -18,6 +18,8 @@ import {
   FiPlayCircle as PlayCircle,
   FiSend as Send,
   FiShield as ShieldCheck,
+  FiTrash2 as Trash2,
+  FiLoader as Loader2,
   FiUser as UserIcon,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
@@ -350,7 +352,8 @@ export default function LecturePage({
   const isLastLecture = !nextLecture || (totalLectures > 0 && currentIndex === totalLectures - 1)
   const [isMounted, setIsMounted] = useState(false)
   const [questions, setQuestions] = useState(initialQuestions)
-  const { user, token: sessionToken, fullName, isAuthenticated, isStaff } = useAuth()
+  const { user, token: sessionToken, fullName, isAuthenticated, isStaff, role } = useAuth()
+  const isDev = role === "dev"
   const currentUser = user
     ? {
         name: fullName || user.email?.split("@")[0] || "Student",
@@ -360,6 +363,8 @@ export default function LecturePage({
 
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({})
   const [replyingId, setReplyingId] = useState<string | null>(null)
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null)
+  const [deletingAnswerId, setDeletingAnswerId] = useState<string | null>(null)
 
   const handleInstructorReply = async (questionId: string) => {
     const text = replyDraft[questionId]?.trim()
@@ -391,6 +396,72 @@ export default function LecturePage({
       // Non-blocking catch
     } finally {
       setReplyingId(null)
+    }
+  }
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!sessionToken || !isDev) return
+    if (
+      !window.confirm(
+        isAr
+          ? "هل أنت متأكد من رغبتك في حذف هذا السؤال وجميع إجاباته؟ لا يمكن التراجع عن هذا الإجراء."
+          : "Are you sure you want to delete this question and all its replies? This action cannot be undone."
+      )
+    ) {
+      return
+    }
+
+    setDeletingQuestionId(questionId)
+    try {
+      const res = await fetch(`/api/questions/${questionId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      })
+      if (res.ok) {
+        setQuestions((prev) => prev.filter((q) => q.id !== questionId))
+      }
+    } catch {
+      // Non-blocking catch
+    } finally {
+      setDeletingQuestionId(null)
+    }
+  }
+
+  const handleDeleteAnswer = async (answerId: string, questionId: string) => {
+    if (!sessionToken || !isDev) return
+    if (
+      !window.confirm(
+        isAr
+          ? "هل أنت متأكد من رغبتك في حذف إجابة المرشد هذه؟"
+          : "Are you sure you want to delete this educator reply?"
+      )
+    ) {
+      return
+    }
+
+    setDeletingAnswerId(answerId)
+    try {
+      const res = await fetch(`/api/questions/answers/${answerId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${sessionToken}`,
+        },
+      })
+      if (res.ok) {
+        setQuestions((prev) =>
+          prev.map((q) =>
+            q.id === questionId
+              ? { ...q, answers: (q.answers || []).filter((a) => a.id !== answerId) }
+              : q
+          )
+        )
+      }
+    } catch {
+      // Non-blocking catch
+    } finally {
+      setDeletingAnswerId(null)
     }
   }
 
@@ -1119,38 +1190,79 @@ export default function LecturePage({
               return (
                 <Card key={question.id} className="shadow-none">
                   <CardContent className="p-5">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`grid size-10 shrink-0 place-items-center rounded-full font-bold text-sm ${
-                          isAnon
-                            ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                            : "bg-secondary text-primary"
-                        }`}
-                        aria-hidden="true"
-                      >
-                        {isAnon ? <EyeOff className="size-4" /> : initialLetter}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="truncate font-bold text-sm">{displayName}</p>
-                          {isAnon && (
-                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/5">
-                              {isAr ? "مجهول" : "Anonymous"}
-                            </Badge>
-                          )}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`grid size-10 shrink-0 place-items-center rounded-full font-bold text-sm ${
+                            isAnon
+                              ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                              : "bg-secondary text-primary"
+                          }`}
+                          aria-hidden="true"
+                        >
+                          {isAnon ? <EyeOff className="size-4" /> : initialLetter}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="truncate font-bold text-sm">{displayName}</p>
+                            {isAnon && (
+                              <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/5">
+                                {isAr ? "مجهول" : "Anonymous"}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+                            {isMounted ? new Date(question.created_at).toLocaleDateString(locale) : ""}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-                          {isMounted ? new Date(question.created_at).toLocaleDateString(locale) : ""}
-                        </p>
                       </div>
+
+                      {isDev && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletingQuestionId === question.id}
+                          onClick={() => handleDeleteQuestion(question.id)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                          title={isAr ? "حذف السؤال (خاص بالمطور)" : "Delete Question (Dev Only)"}
+                          aria-label={isAr ? "حذف السؤال" : "Delete Question"}
+                        >
+                          {deletingQuestionId === question.id ? (
+                            <Loader2 className="size-3.5 animate-spin text-destructive" />
+                          ) : (
+                            <Trash2 className="size-3.5" />
+                          )}
+                        </Button>
+                      )}
                     </div>
                     <p className="mt-4 break-words text-pretty text-sm leading-6">{question.text}</p>
                     {question.answers?.map((answer) => (
                       <div key={answer.id} className="mt-4 border-s-2 border-primary bg-secondary/45 p-4 rounded-e-xl">
-                        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-                          <ShieldCheck className="size-3.5 shrink-0" />
-                          {copy.mentor}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                            <ShieldCheck className="size-3.5 shrink-0" />
+                            {copy.mentor}
+                          </p>
+                          {isDev && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={deletingAnswerId === answer.id}
+                              onClick={() => handleDeleteAnswer(answer.id, question.id)}
+                              className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                              title={isAr ? "حذف الإجابة (خاص بالمطور)" : "Delete Answer (Dev Only)"}
+                              aria-label={isAr ? "حذف الإجابة" : "Delete Answer"}
+                            >
+                              {deletingAnswerId === answer.id ? (
+                                <Loader2 className="size-3 animate-spin text-destructive" />
+                              ) : (
+                                <Trash2 className="size-3" />
+                              )}
+                            </Button>
+                          )}
+                        </div>
                         <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">
                           {answer.text}
                         </p>

@@ -4,6 +4,32 @@ This document acts as an append-only, chronological engineering log recording me
 
 ---
 
+## 2026-09-23 — Dev-Exclusive Discussion Q&A Deletion (Task TASK-003)
+
+### Objective
+Review the discussion subsystem and implement secure backend deletion endpoints and frontend moderation controls strictly restricted to the `dev` user role for both community questions and answers.
+
+### Observations & Discoveries
+- `public.community_questions` has foreign key references from `public.community_answers` and `public.notifications` configured with `ON DELETE CASCADE`. Deleting a parent question automatically purges all replies and notifications at the database engine level.
+- Next.js Pages router had `pages/api/questions/answer.ts` (handling `POST`). To prevent file/directory name collisions in Next.js, the answer deletion route was placed at `pages/api/questions/answers/[id].ts`.
+- The user profile role check strictly requires `profile.role === 'dev'`, rejecting all other roles (`mentor`, `super_admin`, `student`) with `403 Forbidden`.
+
+### Actions Taken
+- Created `pages/api/questions/[id].ts` supporting `DELETE` for questions with rate limiting, UUID validation, and strict `dev` RBAC check.
+- Created `pages/api/questions/answers/[id].ts` supporting `DELETE` for answers with rate limiting, UUID validation, and strict `dev` RBAC check.
+- Extended `components/admin/CommunityManager.tsx` to render destructive trash icon buttons for questions and answers when `profile?.role === 'dev'` with bilingual confirmation alerts.
+- Updated `pages/admin/index.tsx` to pass deletion callbacks and maintain local state synchronization and audit logging.
+- Updated `pages/lecture/[id].tsx` to display inline deletion buttons next to questions and mentor replies for `dev` users.
+- Added automated test section 12 to `tests/qa_and_notifications_security.test.mjs`.
+- Synchronized documentation in `docs/APIS/README.md`, `docs/APIS/INTERNAL_APIS.md`, `docs/TASKS/TASK-003-dev-discussion-deletion.md`, and `docs/CHANGELOG/CHANGELOG.md`.
+
+### Verification
+- `npm test`: 100% PASS (13 QA security tests, all 9 suites passing).
+- `npx tsc --noEmit`: 0 TypeScript compilation errors.
+- `npm run lint`: 0 ESLint warnings or errors.
+
+---
+
 ## 2026-09-23 — UI & Design System Integrity Audit & Remediation (Task TASK-002)
 
 ### Objective

@@ -684,6 +684,88 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteCommunityQuestion(questionId: string) {
+    if (!supabase || profile?.role !== "dev") return
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        result(new Error("Session expired"), tr("Session expired. Please log in again.", "انتهت الجلسة. يرجى تسجيل الدخول مجددًا."))
+        return
+      }
+
+      const res = await fetch(`/api/questions/${questionId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        result(new Error(data.error || "Failed to delete question"), data.error || tr("Failed to delete question.", "تعذر حذف السؤال."))
+        return
+      }
+
+      setCommunity((rows) => rows.filter((q) => q.id !== questionId))
+      trackAdminAction({
+        action: "deleted",
+        entityType: "question",
+        entityId: questionId,
+      })
+      result(null, tr("Question deleted successfully.", "تم حذف السؤال بنجاح."))
+    } catch (err: unknown) {
+      result(err as Error, tr("Failed to delete question.", "تعذر حذف السؤال."))
+    }
+  }
+
+  async function deleteCommunityAnswer(answerId: string, questionId: string) {
+    if (!supabase || profile?.role !== "dev") return
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        result(new Error("Session expired"), tr("Session expired. Please log in again.", "انتهت الجلسة. يرجى تسجيل الدخول مجددًا."))
+        return
+      }
+
+      const res = await fetch(`/api/questions/answers/${answerId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        result(new Error(data.error || "Failed to delete answer"), data.error || tr("Failed to delete answer.", "تعذر حذف الإجابة."))
+        return
+      }
+
+      setCommunity((rows) =>
+        rows.map((q) =>
+          q.id === questionId
+            ? { ...q, answers: (q.answers || []).filter((a) => a.id !== answerId) }
+            : q
+        )
+      )
+      trackAdminAction({
+        action: "deleted",
+        entityType: "qa_reply",
+        entityId: answerId,
+      })
+      result(null, tr("Answer deleted successfully.", "تم حذف الإجابة بنجاح."))
+    } catch (err: unknown) {
+      result(err as Error, tr("Failed to delete answer.", "تعذر حذف الإجابة."))
+    }
+  }
+
   async function saveSiteContent(overrideContent?: SiteContent | unknown) {
     if (!supabase || profile?.role !== "dev") return
     setSaving(true)
@@ -1153,6 +1235,8 @@ export default function AdminPage() {
                 reply={reply}
                 setReply={setReply}
                 onSendReply={sendReply}
+                onDeleteQuestion={deleteCommunityQuestion}
+                onDeleteAnswer={deleteCommunityAnswer}
               />
             )}
 

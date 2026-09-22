@@ -1,6 +1,6 @@
-# Internal API Routes Reference (All 21 Endpoints)
+# Internal API Routes Reference (All 23 Endpoints)
 
-This document provides an exhaustive, authoritative contract reference for all **21 internal Next.js Serverless API endpoints** located in `pages/api/`.
+This document provides an exhaustive, authoritative contract reference for all **23 internal Next.js Serverless API endpoints** located in `pages/api/`.
 
 ---
 
@@ -126,7 +126,7 @@ This document provides an exhaustive, authoritative contract reference for all *
 
 ---
 
-## 2. Staff & Administrative Endpoints (11 Endpoints)
+## 2. Staff & Developer Endpoints (13 Endpoints)
 
 ### 2.1 `POST /api/questions/answer`
 - **File**: `pages/api/questions/answer.ts`
@@ -221,3 +221,26 @@ This document provides an exhaustive, authoritative contract reference for all *
 - **Access**: Handled via UploadThing server router (`server/uploadthing.ts`)
 - **Behavior**: Authenticates upload requests and receives post-upload webhook notifications.
 - **Response (200)**: Handled by `@uploadthing/react` router.
+
+---
+
+### 2.12 `DELETE /api/questions/[id]`
+- **File**: `pages/api/questions/[id].ts`
+- **Access**: Developer only (`dev`)
+- **Rate Limit**: 20 requests / 60 seconds
+- **Zod Schema**: `id: UUID` (query parameter)
+- **Behavior**: Validates bearer token, verifies caller has `dev` role in `public.users`, checks question existence, and permanently deletes target question from `public.community_questions`. PostgreSQL cascades deletion to associated answers in `public.community_answers` and in-app notifications in `public.notifications`.
+- **Response (200)**: `{ "success": true, "message": "Question and associated replies deleted successfully", "questionId": "..." }`
+- **Error Codes**: `400` (invalid UUID), `401` (unauthorized), `403` (forbidden, non-dev role), `404` (not found), `405` (non-DELETE method), `429` (rate limited), `500` (database error).
+
+---
+
+### 2.13 `DELETE /api/questions/answers/[id]`
+- **File**: `pages/api/questions/answers/[id].ts`
+- **Access**: Developer only (`dev`)
+- **Rate Limit**: 30 requests / 60 seconds
+- **Zod Schema**: `id: UUID` (query parameter)
+- **Behavior**: Validates bearer token, verifies caller has `dev` role in `public.users`, checks answer existence, and permanently deletes target reply from `public.community_answers`.
+- **Response (200)**: `{ "success": true, "message": "Answer deleted successfully", "answerId": "...", "questionId": "..." }`
+- **Error Codes**: `400` (invalid UUID), `401` (unauthorized), `403` (forbidden, non-dev role), `404` (not found), `405` (non-DELETE method), `429` (rate limited), `500` (database error).
+

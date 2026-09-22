@@ -11,6 +11,7 @@ import {
   FiSearch as Search,
   FiSend as Send,
   FiShield as ShieldCheck,
+  FiTrash2 as Trash2,
   FiVolume2 as Volume2,
 } from "react-icons/fi"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +34,8 @@ interface CommunityManagerProps {
   reply: Record<string, string>
   setReply: React.Dispatch<React.SetStateAction<Record<string, string>>>
   onSendReply: (questionId: string) => void
+  onDeleteQuestion?: (questionId: string) => Promise<void> | void
+  onDeleteAnswer?: (answerId: string, questionId: string) => Promise<void> | void
 }
 
 export default function CommunityManager({
@@ -44,9 +47,13 @@ export default function CommunityManager({
   reply,
   setReply,
   onSendReply,
+  onDeleteQuestion,
+  onDeleteAnswer,
 }: CommunityManagerProps) {
   const [activeTab, setActiveTab] = useState<"unanswered" | "answered" | "broadcast">("unanswered")
   const [localSearch, setLocalSearch] = useState("")
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null)
+  const [deletingAnswerId, setDeletingAnswerId] = useState<string | null>(null)
 
   // Broadcast state
   const [annTitleEn, setAnnTitleEn] = useState("")
@@ -62,6 +69,27 @@ export default function CommunityManager({
   const tr = (en: string, ar: string) => (isAr ? ar : en)
   const effectiveSearch = (searchQuery || localSearch).trim().toLowerCase()
   const canBroadcast = profile && ["dev", "super_admin"].includes(profile.role)
+  const isDev = profile?.role === "dev"
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!onDeleteQuestion) return
+    setDeletingQuestionId(questionId)
+    try {
+      await onDeleteQuestion(questionId)
+    } finally {
+      setDeletingQuestionId(null)
+    }
+  }
+
+  const handleDeleteAnswer = async (answerId: string, questionId: string) => {
+    if (!onDeleteAnswer) return
+    setDeletingAnswerId(answerId)
+    try {
+      await onDeleteAnswer(answerId, questionId)
+    } finally {
+      setDeletingAnswerId(null)
+    }
+  }
 
   const getLectureName = (lectureId: string | null) => {
     const lecture = lectures.find((l) => l.id === lectureId)
@@ -230,24 +258,56 @@ export default function CommunityManager({
               </div>
             </div>
 
-            <Badge
-              variant={isUnanswered ? "outline" : "secondary"}
-              className={`badge-nowrap self-start text-xs font-semibold gap-1 shrink-0 ${
-                isUnanswered ? "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10" : ""
-              }`}
-            >
-              {isUnanswered ? (
-                <>
-                  <HelpCircle className="size-3 shrink-0" />
-                  <span>{tr("Awaiting Answer", "بانتظار الإجابة")}</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>{tr("Answered", "تمت الإجابة")}</span>
-                </>
+            <div className="flex items-center gap-1.5 self-start shrink-0">
+              <Badge
+                variant={isUnanswered ? "outline" : "secondary"}
+                className={`badge-nowrap text-xs font-semibold gap-1 ${
+                  isUnanswered ? "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10" : ""
+                }`}
+              >
+                {isUnanswered ? (
+                  <>
+                    <HelpCircle className="size-3 shrink-0" />
+                    <span>{tr("Awaiting Answer", "بانتظار الإجابة")}</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>{tr("Answered", "تمت الإجابة")}</span>
+                  </>
+                )}
+              </Badge>
+
+              {isDev && onDeleteQuestion && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={deletingQuestionId === question.id}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        tr(
+                          "Are you sure you want to delete this question and all its answers? This action cannot be undone.",
+                          "هل أنت متأكد من رغبتك في حذف هذا السؤال وجميع إجاباته؟ لا يمكن التراجع عن هذا الإجراء."
+                        )
+                      )
+                    ) {
+                      handleDeleteQuestion(question.id)
+                    }
+                  }}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title={tr("Delete Question (Dev Only)", "حذف السؤال (خاص بالمطور)")}
+                  aria-label={tr("Delete Question", "حذف السؤال")}
+                >
+                  {deletingQuestionId === question.id ? (
+                    <Loader2 className="size-3.5 animate-spin text-destructive" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}
+                </Button>
               )}
-            </Badge>
+            </div>
           </div>
 
           {/* Question Text */}
@@ -265,12 +325,43 @@ export default function CommunityManager({
                       <ShieldCheck className="size-3.5" />
                       {tr("Staff Educator Answer", "إجابة المرشد / المشرف")}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {new Date(ans.created_at).toLocaleTimeString(isAr ? "ar-EG" : "en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(ans.created_at).toLocaleTimeString(isAr ? "ar-EG" : "en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      {isDev && onDeleteAnswer && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={deletingAnswerId === ans.id}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                tr(
+                                  "Are you sure you want to delete this educator response?",
+                                  "هل أنت متأكد من رغبتك في حذف إجابة المرشد هذه؟"
+                                )
+                              )
+                            ) {
+                              handleDeleteAnswer(ans.id, question.id)
+                            }
+                          }}
+                          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title={tr("Delete Answer (Dev Only)", "حذف الإجابة (خاص بالمطور)")}
+                          aria-label={tr("Delete Answer", "حذف الإجابة")}
+                        >
+                          {deletingAnswerId === ans.id ? (
+                            <Loader2 className="size-3 animate-spin text-destructive" />
+                          ) : (
+                            <Trash2 className="size-3" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap">{ans.text}</p>
                 </div>

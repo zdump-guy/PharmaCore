@@ -144,4 +144,46 @@ test('🔒 Community Q&A, Notifications & Resend Security Test Suite', async (t)
     // Turnstile library provides dev/test fallback
     assert.match(turnstileLib, /process\.env\.NODE_ENV\s*!==\s*["']production["']/, 'Turnstile lib must handle non-production gracefully');
   });
+
+  // ── 12. Dev Role Discussion Deletion Security & RBAC Guardrails ────────
+  await t.test('12. Dev Role Discussion Deletion Security & RBAC Guardrails', () => {
+    const questionDeleteApi = loadFile('pages/api/questions/[id].ts');
+    const answerDeleteApi = loadFile('pages/api/questions/answers/[id].ts');
+    const adminCommunityUi = loadFile('components/admin/CommunityManager.tsx');
+    const adminIndexPage = loadFile('pages/admin/index.tsx');
+    const lecturePage = loadFile('pages/lecture/[id].tsx');
+
+    // Question Deletion API
+    assert.match(questionDeleteApi, /req\.method\s*!==\s*['"]DELETE['"]/, 'Question deletion endpoint must only accept DELETE method');
+    assert.match(questionDeleteApi, /supabaseAdmin\.auth\.getUser\(token\)/, 'Question deletion must authenticate bearer token');
+    assert.match(questionDeleteApi, /profile\.role\s*!==\s*['"]dev['"]/, 'Question deletion must strictly require dev role');
+    assert.match(questionDeleteApi, /z\.string\(\)\.uuid\(\)/, 'Question deletion must validate question ID as UUID');
+    assert.match(questionDeleteApi, /checkRateLimit\(req,\s*res/, 'Question deletion must enforce rate limiting');
+    assert.match(questionDeleteApi, /\.from\(['"]community_questions['"]\)\s*\.delete\(\)/, 'Question deletion must delete target question');
+
+    // Answer Deletion API
+    assert.match(answerDeleteApi, /req\.method\s*!==\s*['"]DELETE['"]/, 'Answer deletion endpoint must only accept DELETE method');
+    assert.match(answerDeleteApi, /supabaseAdmin\.auth\.getUser\(token\)/, 'Answer deletion must authenticate bearer token');
+    assert.match(answerDeleteApi, /profile\.role\s*!==\s*['"]dev['"]/, 'Answer deletion must strictly require dev role');
+    assert.match(answerDeleteApi, /z\.string\(\)\.uuid\(\)/, 'Answer deletion must validate answer ID as UUID');
+    assert.match(answerDeleteApi, /checkRateLimit\(req,\s*res/, 'Answer deletion must enforce rate limiting');
+    assert.match(answerDeleteApi, /\.from\(['"]community_answers['"]\)\s*\.delete\(\)/, 'Answer deletion must delete target answer');
+
+    // Administrative UI Dev Guardrails & Handlers
+    assert.match(adminCommunityUi, /onDeleteQuestion\?:/, 'CommunityManager must accept optional onDeleteQuestion prop');
+    assert.match(adminCommunityUi, /onDeleteAnswer\?:/, 'CommunityManager must accept optional onDeleteAnswer prop');
+    assert.match(adminCommunityUi, /profile\?\.role\s*===\s*["']dev["']/, 'CommunityManager must check for dev role before rendering delete buttons');
+    assert.match(adminIndexPage, /deleteCommunityQuestion/, 'Admin index must implement deleteCommunityQuestion handler');
+    assert.match(adminIndexPage, /deleteCommunityAnswer/, 'Admin index must implement deleteCommunityAnswer handler');
+    assert.match(adminIndexPage, /\/api\/questions\/\$\{questionId\}/, 'Admin index must invoke /api/questions/[id] DELETE route');
+    assert.match(adminIndexPage, /\/api\/questions\/answers\/\$\{answerId\}/, 'Admin index must invoke /api/questions/answers/[id] DELETE route');
+
+    // Lecture Room UI Dev Guardrails & Handlers
+    assert.match(lecturePage, /role\s*===\s*["']dev["']/, 'LecturePage must check if active user has dev role');
+    assert.match(lecturePage, /handleDeleteQuestion/, 'LecturePage must implement handleDeleteQuestion');
+    assert.match(lecturePage, /handleDeleteAnswer/, 'LecturePage must implement handleDeleteAnswer');
+    assert.match(lecturePage, /\/api\/questions\/\$\{questionId\}/, 'LecturePage must call question deletion API');
+    assert.match(lecturePage, /\/api\/questions\/answers\/\$\{answerId\}/, 'LecturePage must call answer deletion API');
+  });
 });
+
