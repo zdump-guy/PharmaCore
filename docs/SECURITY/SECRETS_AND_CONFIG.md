@@ -7,8 +7,6 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Yes | Supabase project API gateway endpoint. | — |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Yes | Public Supabase anonymous key. | — |
 | `SUPABASE_SERVICE_ROLE_KEY` | **No (Server Only)** | Yes | Privileged service key for serverless admin client. | — |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`| Yes | Yes | Cloudflare Turnstile public widget key. | Dummy test key in dev |
-| `TURNSTILE_SECRET_KEY` | **No (Server Only)** | Yes | Secret key to verify Turnstile challenges. | Dummy test key in dev |
 | `RESEND_API_KEY` | **No (Server Only)** | Yes | Resend transactional email API token. | Logs to console in dev |
 | `RESEND_FROM_EMAIL` | **No (Server Only)** | Yes | Sender email address for notifications. | `notifications@pharmacore.edu` |
 | `UPLOADTHING_TOKEN` | **No (Server Only)** | Yes | Unified UploadThing authentication token. | — |

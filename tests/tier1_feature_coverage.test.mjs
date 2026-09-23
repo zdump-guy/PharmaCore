@@ -223,11 +223,12 @@ describe("Tier 1 - Feature 8: Lecture Tab Touch Targets (R4)", () => {
   })
 })
 
-describe("Tier 1 - Feature 9: Course Turnstile Widget Containment (R4)", () => {
+describe("Tier 1 - Feature 9: Course Enrollment Flow & Action Button Containment (R4)", () => {
   const courseTsx = loadProjectFile("pages/course/[id].tsx")
 
-  it("9.1 Turnstile widget in course page is wrapped in overflow-hidden container", () => {
-    expect(courseTsx).toMatch(/<div[^>]*className="[^"]*w-full[^"]*max-w-full[^"]*overflow-hidden[^"]*"[^>]*>\s*<Turnstile/m)
+  it("9.1 course enrollment action CTA operates cleanly without Turnstile widget dependencies", () => {
+    expect(courseTsx.includes("<Turnstile")).toBe(false)
+    expect(courseTsx).toContain("handleEnroll")
   })
 
   it("9.2 course enrollment action button spans full width on mobile (w-full)", () => {

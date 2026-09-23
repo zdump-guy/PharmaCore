@@ -415,13 +415,18 @@ describe("Suite 4: Environment Documentation Hardening (R1, F4)", "m1", () => {
     assert(content.includes("UPLOADTHING_TOKEN="), "Must document UPLOADTHING_TOKEN")
   })
 
-  it("4.4 Documents Cloudflare Turnstile bot protection keys", () => {
+  it("4.4 Documents Resend transactional email credentials and excludes deprecated Turnstile keys", () => {
     const content = fs.readFileSync(envExamplePath, "utf-8")
+    assert(content.includes("RESEND_API_KEY="), "Must document RESEND_API_KEY")
+    assert(content.includes("RESEND_FROM_EMAIL="), "Must document RESEND_FROM_EMAIL")
     assert(
-      content.includes("NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY="),
-      "Must document NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY"
+      !content.includes("NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY="),
+      "Must not include NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY"
     )
-    assert(content.includes("CLOUDFLARE_TURNSTILE_SECRET_KEY="), "Must document CLOUDFLARE_TURNSTILE_SECRET_KEY")
+    assert(
+      !content.includes("CLOUDFLARE_TURNSTILE_SECRET_KEY="),
+      "Must not include CLOUDFLARE_TURNSTILE_SECRET_KEY"
+    )
   })
 })
 

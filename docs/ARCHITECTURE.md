@@ -12,8 +12,7 @@ graph TB
     end
 
     subgraph Edge & Security Tier ["Edge & Security Tier"]
-        VercelEdge["Vercel Edge Network (CDN, Headers, SSL)"]
-        Turnstile["Cloudflare Turnstile (Anti-Bot Challenge)"]
+        VercelEdge["Vercel Edge Network (CDN, Headers, SSL, CSP)"]
     end
 
     subgraph Application Tier ["Application Tier (Next.js 15 / Node.js)"]
@@ -35,9 +34,8 @@ graph TB
 
     Browser --> VercelEdge
     PWA --> VercelEdge
-    VercelEdge --> Turnstile
-    Turnstile --> PagesRouter
-    Turnstile --> APIHandlers
+    VercelEdge --> PagesRouter
+    VercelEdge --> APIHandlers
 
     APIHandlers --> RateLimiter
     RateLimiter --> ZodValidator
@@ -74,7 +72,6 @@ graph TB
       actor Client as Web Browser
       participant Edge as Security Middleware / Headers
       participant RL as Rate Limiter (lib/rateLimit.ts)
-      participant Turnstile as Turnstile Verifier (lib/turnstile.ts)
       participant Zod as Zod Schema Validator
       participant Auth as Supabase Auth & Role Check
       participant DB as PostgreSQL (RLS / Admin Client)
@@ -84,11 +81,7 @@ graph TB
       alt Rate Limit Exceeded
           RL-->>Client: 429 Too Many Requests (Retry-After)
       end
-      RL->>Turnstile: Verify Token (if protected route)
-      alt Token Invalid / Bot Detected
-          Turnstile-->>Client: 400 Bad Request / 403 Forbidden
-      end
-      Turnstile->>Zod: Sanitize & Validate Payload
+      RL->>Zod: Sanitize & Validate Payload
       alt Schema Validation Failed
           Zod-->>Client: 400 Bad Request (Formatted Errors)
       end
@@ -176,7 +169,6 @@ GRANT SELECT (id, lecture_id, user_id, author_name, text, created_at, is_anonymo
 |---|---|---|---|
 | **Supabase** | HTTPS / WSS / PostgREST | PostgreSQL, Auth, Realtime event bus | Internal Data Tier (Protected by Service Role & RLS) |
 | **UploadThing** | HTTPS / SDK | Presigned asset storage (Audio & PDF) | Semi-Trusted (Staff RBAC verified before presign) |
-| **Cloudflare Turnstile** | HTTPS REST | Anti-automation challenge verification | External Security Gate (Secret Key strictly isolated) |
 | **Resend** | HTTPS REST | Transactional email delivery | External Messaging (Strictly isolated in serverless handler) |
 | **YouTube** | IFrame API | Embed video lecture streaming | Client-Side Embedded (Sandboxed player) |
 | **Vercel** | Edge Network | CDN, SSL, DNS, Serverless execution | Hosting Infrastructure |
@@ -186,6 +178,5 @@ GRANT SELECT (id, lecture_id, user_id, author_name, text, created_at, is_anonymo
 ## 5. Failure Boundaries & Resilience
 
 1. **Database Degradation**: When Supabase API experiences high latency, read-only content falls back to cached statically rendered shells.
-2. **Turnstile Failure**: If Cloudflare Turnstile times out or environment variable keys are omitted during local development, `lib/turnstile.ts` fails safely in development mode while strictly blocking unverified production requests.
-3. **Email Outage**: Resend API dispatches are wrapped in `try/catch` non-blocking blocks so that answering a question or submitting an announcement still succeeds in the database even if email delivery fails.
-4. **Rate Limiting Degradation**: If in-memory rate limiter capacity is exhausted, it aggressively purges expired sliding-window buckets to reclaim heap space without crashing the Node.js process.
+2. **Email Outage**: Resend API dispatches are wrapped in `try/catch` non-blocking blocks so that answering a question or submitting an announcement still succeeds in the database even if email delivery fails.
+3. **Rate Limiting Degradation**: If in-memory rate limiter capacity is exhausted, it aggressively purges expired sliding-window buckets to reclaim heap space without crashing the Node.js process.

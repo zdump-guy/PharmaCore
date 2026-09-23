@@ -1,5 +1,5 @@
 import type { GetServerSideProps } from "next"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import Link from "next/link"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
@@ -26,7 +26,6 @@ import {
   FiZap as Zap,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
-import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -89,8 +88,6 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
   const [submittedId, setSubmittedId] = useState<string | null>(null)
-  const [turnstileToken, setTurnstileToken] = useState("")
-  const turnstileRef = useRef<TurnstileRef>(null)
 
   // Auto-capture client telemetry on mount
   useEffect(() => {
@@ -188,7 +185,6 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
             : null,
         contact_email: contactEmail.trim() || null,
         contact_name: contactName.trim() || null,
-        turnstileToken: turnstileToken || null,
       }
 
       let authToken = ""
@@ -213,7 +209,6 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
       const data = await res.json()
 
       if (!res.ok) {
-        turnstileRef.current?.reset()
         throw new Error(data.error || "Failed to submit feedback")
       }
 
@@ -843,13 +838,6 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                     <AlertDescription>{submitError}</AlertDescription>
                   </Alert>
                 )}
-
-                {/* Bot Protection */}
-                <Turnstile
-                  ref={turnstileRef}
-                  onVerify={(tok) => setTurnstileToken(tok)}
-                  className="my-2"
-                />
 
                 {/* Submit Action */}
                 <Button

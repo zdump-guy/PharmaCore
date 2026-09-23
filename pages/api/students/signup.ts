@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { loadSiteContent } from "@/lib/siteContent"
-import { verifyTurnstileToken, extractClientIp } from "@/lib/turnstile"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 const signupSchema = z.object({
@@ -14,7 +13,6 @@ const signupSchema = z.object({
   university: z.string().trim().max(100).optional().nullable(),
   faculty: z.string().trim().max(100).optional().nullable(),
   start_year: z.union([z.number(), z.string()]).optional(),
-  turnstileToken: z.string().optional().nullable(),
 })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -62,23 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       university,
       faculty,
       start_year,
-      turnstileToken,
     } = parsed.data
-
-    // 1. Cloudflare Turnstile Bot & Spam Verification
-    const clientIp = extractClientIp(req)
-    const turnstileResult = await verifyTurnstileToken({
-      token: turnstileToken,
-      remoteIp: clientIp,
-      expectedAction: "student_signup",
-    })
-
-    if (!turnstileResult.success) {
-      return res.status(403).json({
-        error: "Security verification failed. Please refresh and try again.",
-        error_ar: "فشل التحقق الأمني من النشاط التلقائي. يرجى إعادة المحاولة.",
-      })
-    }
 
     const cleanEmail = String(email).trim().toLowerCase()
     const cleanPhone = String(phone_number || "").trim()

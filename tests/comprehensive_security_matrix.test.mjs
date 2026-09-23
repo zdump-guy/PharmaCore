@@ -155,10 +155,7 @@ test('🛡️ PharmaCore Full 22-Domain Security & Hardening Matrix Test Suite',
   // ── 13. SSRF Safeguards ─────────────────────────────────────────────────
   await t.test('Domain 13: SSRF Immunity & Hardcoded Remote Endpoints', () => {
     const emailCode = readFile('lib/email.ts');
-    const turnstileCode = readFile('lib/turnstile.ts');
-
     assert.match(emailCode, /https:\/\/api\.resend\.com\/emails/, 'Resend dispatcher must target hardcoded trusted URL');
-    assert.match(turnstileCode, /https:\/\/challenges\.cloudflare\.com\/turnstile\/v0\/siteverify/, 'Turnstile must target hardcoded trusted URL');
   });
 
   // ── 14. Open Redirects ──────────────────────────────────────────────────

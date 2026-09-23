@@ -44,7 +44,7 @@ This document details the functionality, state management, data dependencies, an
 ### 1.5 Unified Login & Student Signup (`pages/login.tsx`)
 - **Route**: `/login`
 - **Purpose**: Centralized authentication portal with tabbed views for Student Login, Staff Login, and Student Registration.
-- **Security**: Protected by Cloudflare Turnstile bot challenges.
+- **Security**: Protected by IP rate limiting, password complexity validation, and Zod input parsing.
 
 ---
 
@@ -63,7 +63,7 @@ This document details the functionality, state management, data dependencies, an
 ### 1.7 Feedback & Bug Reporting (`pages/feedback.tsx`)
 - **Route**: `/feedback`
 - **Purpose**: Public bug report and academic feedback submission portal.
-- **Features**: Automatic device telemetry capture (OS, browser, viewport), severity selector, Turnstile token verification.
+- **Features**: Automatic device telemetry capture (OS, browser, viewport), severity selector, category filter, and sliding-window rate limiting.
 
 ---
 

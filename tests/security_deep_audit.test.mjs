@@ -98,18 +98,18 @@ test('🔒 PharmaCore Comprehensive Security & Resilience Deep Audit', async (t)
     assert.match(rateLimitCode, /export async function applySlowDown/, 'applySlowDown progressive delay function must be exported');
   });
 
-  await t.test('8. Captcha & Cloudflare Turnstile Verification', async () => {
-    const turnstileCode = readFile('lib/turnstile.ts');
-    assert.match(turnstileCode, /verifyTurnstileToken/, 'verifyTurnstileToken must be implemented');
-
+  await t.test('8. Defense-in-Depth Endpoint Protection & Rate Limiting Verification', async () => {
     const feedbackSubmitCode = readFile('pages/api/feedback/submit.ts');
-    assert.match(feedbackSubmitCode, /verifyTurnstileToken/, 'feedback/submit.ts must call verifyTurnstileToken');
+    assert.match(feedbackSubmitCode, /checkRateLimit/, 'feedback/submit.ts must enforce rate limiting');
+    assert.strictEqual(feedbackSubmitCode.includes('verifyTurnstileToken'), false, 'feedback/submit.ts must not reference Turnstile');
 
     const signupCode = readFile('pages/api/students/signup.ts');
-    assert.match(signupCode, /verifyTurnstileToken/, 'students/signup.ts must call verifyTurnstileToken');
+    assert.match(signupCode, /checkRateLimit/, 'students/signup.ts must enforce rate limiting');
+    assert.strictEqual(signupCode.includes('verifyTurnstileToken'), false, 'students/signup.ts must not reference Turnstile');
 
     const questionsCode = readFile('pages/api/questions/submit.ts');
-    assert.match(questionsCode, /verifyTurnstileToken/, 'questions/submit.ts must call verifyTurnstileToken');
+    assert.match(questionsCode, /checkRateLimit/, 'questions/submit.ts must enforce rate limiting');
+    assert.strictEqual(questionsCode.includes('verifyTurnstileToken'), false, 'questions/submit.ts must not reference Turnstile');
   });
 
   await t.test('9. Helmet & Comprehensive Security Headers (CSP, HSTS, COOP, CORP)', async () => {
@@ -122,7 +122,6 @@ test('🔒 PharmaCore Comprehensive Security & Resilience Deep Audit', async (t)
     assert.match(nextConfigCode, /Cross-Origin-Opener-Policy/, 'Must include Cross-Origin-Opener-Policy');
     assert.match(nextConfigCode, /Cross-Origin-Resource-Policy/, 'Must include Cross-Origin-Resource-Policy');
     assert.match(nextConfigCode, /Content-Security-Policy/, 'Must include Content-Security-Policy');
-    assert.match(nextConfigCode, /challenges\.cloudflare\.com/, 'CSP must allow Cloudflare Turnstile');
     assert.match(nextConfigCode, /youtube\.com/, 'CSP must allow YouTube embeds');
   });
 

@@ -15,4 +15,4 @@ This directory records foundational architectural decisions, context, trade-offs
 | [**ADR-0004**](./ADR-0004-bilingual-i18n-next-i18next-architecture.md) | Bilingual Arabic/English Architecture with RTL Support | Accepted | 2026-08-22 |
 | [**ADR-0005**](./ADR-0005-in-memory-sliding-window-rate-limiting.md) | In-Memory Sliding Window Rate Limiting Engine | Accepted | 2026-09-01 |
 | [**ADR-0006**](./ADR-0006-uploadthing-file-upload-pipeline.md) | UploadThing for Authenticated Staff File Ingress | Accepted | 2026-09-07 |
-| [**ADR-0007**](./ADR-0007-cloudflare-turnstile-bot-defense.md) | Cloudflare Turnstile for Bot Protection | Accepted | 2026-09-15 |
+| [**ADR-0007**](./ADR-0007-cloudflare-turnstile-bot-defense.md) | Cloudflare Turnstile for Bot Protection | Superseded | 2026-09-15 |

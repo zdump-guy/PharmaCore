@@ -14,7 +14,7 @@ sequenceDiagram
     participant DBUsers as public.users
     participant Context as AuthProvider (React Context)
 
-    User->>UI: Enter Email & Password (+ Turnstile Token)
+    User->>UI: Enter Email & Password
     UI->>AuthSDK: signInWithPassword({ email, password })
     AuthSDK->>DBAuth: Validate Credentials & Issue JWT
     DBAuth-->>AuthSDK: Return Session { access_token, refresh_token, user }

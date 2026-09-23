@@ -1,5 +1,5 @@
 import type { GetServerSideProps } from "next"
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { useRouter } from "next/router"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import {
@@ -19,7 +19,6 @@ import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
 import BrandMark from "@/components/BrandMark"
 import StudentSetupModal from "@/components/StudentSetupModal"
-import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -63,8 +62,6 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
   const [signUpStatus, setSignUpStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
   const [signUpMessage, setSignUpMessage] = useState("")
   const [isPendingReview, setIsPendingReview] = useState(false)
-  const [turnstileToken, setTurnstileToken] = useState("")
-  const turnstileRef = useRef<TurnstileRef>(null)
 
   // ─── Setup Modal State (for Generic Provisioned Accounts) ──────────────────
   const [setupModalOpen, setSetupModalOpen] = useState(false)
@@ -276,14 +273,12 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
           university,
           faculty,
           start_year: startYear,
-          turnstileToken,
         }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        turnstileRef.current?.reset()
         throw new Error((isAr && data.error_ar) ? data.error_ar : (data.error || "Failed to register"))
       }
 
@@ -302,7 +297,6 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
         router.replace(returnUrl || "/#courses")
       }
     } catch (err: unknown) {
-      turnstileRef.current?.reset()
       setSignUpStatus("error")
       setSignUpMessage(err instanceof Error ? err.message : "Failed to sign up")
     }
@@ -650,16 +644,6 @@ export default function LoginPage({ siteContent }: LoginPageProps) {
                         <AlertDescription>{signUpMessage}</AlertDescription>
                       </Alert>
                     )}
-
-                    {/* Background Cloudflare Turnstile bot verification */}
-                    <Turnstile
-                      ref={turnstileRef}
-                      action="student_signup"
-                      size="flexible"
-                      appearance="interaction-only"
-                      onVerify={(token) => setTurnstileToken(token)}
-                      onExpire={() => setTurnstileToken("")}
-                    />
 
                     <Button type="submit" size="lg" className="w-full mt-3" disabled={signUpStatus === "submitting"}>
                       {signUpStatus === "submitting" ? <Loader2 className="animate-spin" /> : <UserPlus />}

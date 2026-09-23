@@ -1,15 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
-import { verifyTurnstileToken, extractClientIp } from "@/lib/turnstile"
 import { checkRateLimit } from "@/lib/rateLimit"
 
 const querySchema = z.object({
   id: z.string().uuid(),
-})
-
-const postBodySchema = z.object({
-  turnstileToken: z.string().optional().nullable(),
 })
 
 async function authorizeUser(req: NextApiRequest) {
@@ -91,31 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // ─── POST: Enroll or Request Enrollment in Course ───────────────────────────
   if (req.method === "POST") {
-    const parsedBody = postBodySchema.safeParse(req.body || {})
-    if (!parsedBody.success) {
-      return res.status(400).json({
-        error: "Invalid request payload",
-        details: parsedBody.error.flatten(),
-      })
-    }
-
     try {
-      // 0. Verify Cloudflare Turnstile Token
-      const { turnstileToken } = parsedBody.data
-      const clientIp = extractClientIp(req)
-      const turnstileResult = await verifyTurnstileToken({
-        token: turnstileToken,
-        remoteIp: clientIp,
-        expectedAction: "course_enroll",
-      })
-
-      if (!turnstileResult.success) {
-        return res.status(403).json({
-          error: "Bot protection verification failed. Please try again.",
-          error_ar: "فشل التحقق الأمني من النشاط التلقائي. يرجى المحاولة مرة أخرى.",
-        })
-      }
-
       // 1. Verify course exists and get its policy
       const { data: course, error: courseErr } = await supabaseAdmin
         .from("courses")

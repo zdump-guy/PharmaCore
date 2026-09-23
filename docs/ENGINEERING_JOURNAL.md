@@ -4,6 +4,32 @@ This document acts as an append-only, chronological engineering log recording me
 
 ---
 
+## 2026-09-23 — Complete Removal of Cloudflare Turnstile Bot Verification (Task TASK-005)
+
+### Objective
+Completely remove Cloudflare Turnstile bot verification across the entire PharmaCore codebase (components, pages, backend APIs, environment variables, CSP headers, test suites, and documentation) to eliminate onboarding friction, layout shifts, and third-party latency while preserving defense-in-depth security.
+
+### Observations & Discoveries
+- **Network Latency & False Positives**: Cloudflare Turnstile added external network calls (~150-300ms) to every submission and occasionally threw hostname/token challenge mismatches in local/preview environments.
+- **Client IP & Multi-Tier Protections**: Client IP extraction in `lib/rateLimit.ts` (`getClientIp(req)`) provides spoof-proof resolution (`x-vercel-forwarded-for` -> `cf-connecting-ip` -> `x-real-ip` -> `x-forwarded-for` -> `socket.remoteAddress`) for sliding-window rate limiting. When combined with strict Zod validation, text sanitization, and Supabase RLS, external CAPTCHA challenges are redundant.
+- **CSP Tightening**: Removing `challenges.cloudflare.com` from `script-src`, `connect-src`, `frame-src`, `worker-src`, and `child-src` in `next.config.js` significantly reduces the attack surface.
+
+### Actions Taken
+- Deleted `components/Turnstile.tsx`, `lib/turnstile.ts`, `docs/INTEGRATIONS/CLOUDFLARE_TURNSTILE.md`, and `docs/MODULES/TURNSTILE_VERIFIER.md`.
+- Cleaned all 4 backend API endpoints: `pages/api/students/signup.ts`, `pages/api/courses/[id]/enroll.ts`, `pages/api/feedback/submit.ts`, and `pages/api/questions/submit.ts` (removed Turnstile tokens and verification blocks; preserved rate limiting, Zod validation, and sanitization).
+- Cleaned frontend pages: `pages/login.tsx`, `pages/feedback.tsx`, `pages/course/[id].tsx`, `pages/lecture/[id].tsx`, and `pages/_app.tsx` (removed widget imports, state, resets, and JSX).
+- Updated configuration and environment files: `next.config.js`, `.env.local`, `.env.example`, `.env.local.example`.
+- Updated all 8 test files (`security_deep_audit.test.mjs`, `comprehensive_security_matrix.test.mjs`, `qa_and_notifications_security.test.mjs`, `feedback_and_visual_fixes.test.mjs`, `e2e_requirements_audit.test.mjs`, `tier1_feature_coverage.test.mjs`, `tier4_user_scenarios.test.mjs`, `integrity_check.test.mjs`).
+- Created task record `docs/TASKS/TASK-005-complete-removal-of-cloudflare-turnstile.md` and updated ADR-0007, documentation index files, and root README.
+
+### Verification
+- `npm test`: 100% PASS across all 8 test tiers.
+- `npx tsc --noEmit`: 0 TypeScript errors.
+- `npm run lint`: 0 ESLint warnings or errors.
+- `grep -rnwi "turnstile" components/ pages/ lib/ server/`: 0 residual matches.
+
+---
+
 ## 2026-09-23 — Enhanced Email System & Campaign Engine (Task TASK-004)
 
 ### Objective

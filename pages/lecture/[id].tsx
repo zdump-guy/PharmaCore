@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import {
   FiArrowLeft as ArrowLeft,
@@ -25,7 +25,6 @@ import {
 import Layout from "@/components/Layout"
 import Breadcrumb from "@/components/Breadcrumb"
 import YouTubePlayer from "@/components/YouTubePlayer"
-import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import MediaActionCard from "@/components/ui/media-action-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -78,8 +77,6 @@ function QuestionForm({
   const [question, setQuestion] = useState("")
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [turnstileToken, setTurnstileToken] = useState("")
-  const turnstileRef = useRef<TurnstileRef>(null)
 
   useEffect(() => {
     if (currentUser) {
@@ -120,13 +117,11 @@ function QuestionForm({
           authorEmail: willPostAnonymous && !isAuthenticated ? "" : email.trim(),
           text: question.trim(),
           isAnonymous: willPostAnonymous,
-          turnstileToken,
         }),
       })
 
       const data = await response.json()
       if (!response.ok) {
-        turnstileRef.current?.reset()
         setErrorMsg(data.error_ar && isAr ? data.error_ar : data.error || (isAr ? "تعذر الإرسال" : "Submission failed"))
         setStatus("error")
         return
@@ -145,9 +140,7 @@ function QuestionForm({
       }
       setQuestion("")
       setStatus("success")
-      turnstileRef.current?.reset()
     } catch {
-      turnstileRef.current?.reset()
       setStatus("error")
       setErrorMsg(isAr ? "حدث خطأ في الشبكة أثناء إرسال السؤال" : "Network error while submitting question")
     }
@@ -285,18 +278,6 @@ function QuestionForm({
           placeholder={isAr ? "اكتب سؤالك بوضوح عن موضوع المحاضرة أو النقاط الصعبة..." : "Ask a specific question about the pharmacology concepts in this lecture..."}
           className="text-xs leading-relaxed"
           required
-        />
-      </div>
-
-      {/* Turnstile Bot Protection */}
-      <div className="w-full overflow-hidden flex justify-center my-0.5">
-        <Turnstile
-          ref={turnstileRef}
-          action="question_submit"
-          size="flexible"
-          appearance="interaction-only"
-          onVerify={(token) => setTurnstileToken(token)}
-          onExpire={() => setTurnstileToken("")}
         />
       </div>
 
@@ -469,8 +450,6 @@ export default function LecturePage({
   const [enrollmentStatus, setEnrollmentStatus] = useState<"active" | "pending" | "rejected" | null>(null)
   const [enrolling, setEnrolling] = useState(false)
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null)
-  const [enrollTurnstileToken, setEnrollTurnstileToken] = useState("")
-  const enrollTurnstileRef = useRef<TurnstileRef>(null)
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
   useEffect(() => {
@@ -516,9 +495,6 @@ export default function LecturePage({
           "Content-Type": "application/json",
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({
-          turnstileToken: enrollTurnstileToken,
-        }),
       })
       const data = await res.json()
       if (res.ok && data.success) {
@@ -535,13 +511,10 @@ export default function LecturePage({
               : "Enrollment request submitted! It is now pending admin review."
           )
         }
-        enrollTurnstileRef.current?.reset()
       } else {
-        enrollTurnstileRef.current?.reset()
         setEnrollMsg(data.error || (isAr ? "تعذر إتمام التسجيل" : "Failed to enroll"))
       }
     } catch {
-      enrollTurnstileRef.current?.reset()
       setEnrollMsg(isAr ? "حدث خطأ أثناء الاشتراك" : "Error during enrollment")
     } finally {
       setEnrolling(false)
@@ -798,16 +771,6 @@ export default function LecturePage({
                       </div>
                     ) : isGatedEnrollment ? (
                       <div className="space-y-3">
-                        <div className="w-full max-w-full overflow-hidden flex justify-center my-1">
-                          <Turnstile
-                            ref={enrollTurnstileRef}
-                            action="course_enroll"
-                            size="flexible"
-                            appearance="interaction-only"
-                            onVerify={(token) => setEnrollTurnstileToken(token)}
-                            onExpire={() => setEnrollTurnstileToken("")}
-                          />
-                        </div>
                         <Button
                           onClick={handleQuickEnroll}
                           disabled={enrolling}

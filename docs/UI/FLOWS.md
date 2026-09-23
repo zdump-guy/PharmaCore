@@ -47,7 +47,7 @@ sequenceDiagram
     Lecture->>Lecture: Stream YouTube Video & Load Resources
     Student->>Audio: Play Audio Voice Notes (CustomAudioPlayer)
     Student->>Form: Submit Question (Optional: Mask Name as Anonymous)
-    Form->>API: POST Question Payload (+ Turnstile Token)
+    Form->>API: POST Question Payload (Rate limited)
     API-->>Lecture: Prepend New Question to Community Thread
     Mentor->>Lecture: View Unanswered Question (Inline Reply Box)
     Mentor->>AnswerAPI: Submit Mentor Reply
@@ -69,7 +69,7 @@ sequenceDiagram
     User->>Portal: Select Tab (Technical Bug vs Academic Feedback)
     Portal->>Portal: Capture Device Telemetry (OS, Browser, Viewport)
     User->>Portal: Fill Title, Description, Severity & Attachments
-    User->>API: Submit Feedback (+ Turnstile Token)
+    User->>API: Submit Feedback (Rate limited)
     API-->>User: Show Confirmation Toast & Reference ID
     Admin->>Admin: Filter by Status 'open' & Triage Submissions
     Admin->>Admin: Update Status to 'in_progress' or 'resolved'

@@ -216,7 +216,7 @@ describe("Feedback System, Visual Fixes, SEO Images & CMS Integrity Suite", () =
       assert.match(feedbackPage, /value="academic"/)
       assert.match(feedbackPage, /function detectBrowser\(\)/)
       assert.match(feedbackPage, /function detectOS\(\)/)
-      assert.match(feedbackPage, /Turnstile/)
+      assert.strictEqual(feedbackPage.includes("Turnstile"), false)
     })
 
     it("6.2 components/admin/FeedbackManager.tsx provides stats cards, filtering, and detail modal", () => {

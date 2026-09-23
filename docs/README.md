@@ -16,11 +16,11 @@
 | [**Runtime Engines**](./ENGINES/README.md) | Core Subsystems | Auth, rate limiting, file upload pipelines, email, and analytics engines. |
 | [**API Reference**](./APIS/README.md) | Route Contracts | Exhaustive reference for all 21 internal endpoints & external service APIs. |
 | [**Database Reference**](./DATABASE/README.md) | Data Layer & Storage | 13 PostgreSQL tables, ER diagrams, migrations (00–03), and 20 indexes. |
-| [**Integrations**](./INTEGRATIONS/README.md) | External Services | Supabase, Cloudflare Turnstile, Resend, UploadThing, and Vercel. |
+| [**Integrations**](./INTEGRATIONS/README.md) | External Services | Supabase, Resend, UploadThing, and Vercel. |
 | [**UI & UX Reference**](./UI/README.md) | Frontend Architecture | 14 routes/pages, 33+ UI & Admin components, responsive & a11y standards. |
 | [**Design System**](./DESIGN_SYSTEM/README.md) | Visual System | Design tokens, clinical green & trust blue palettes, Tajawal/Inter typography. |
 | [**UI & Design System Audit**](./UI_AUDIT/README.md) | Design Integrity & QA | 30-dimension audit, token parity, WCAG 2.1 AA a11y, responsive benchmarks & remediation plan. |
-| [**Modules & Utilities**](./MODULES/README.md) | Core Libraries | Helper modules: `lib/rateLimit.ts`, `lib/siteContent.ts`, `lib/turnstile.ts`, etc. |
+| [**Modules & Utilities**](./MODULES/README.md) | Core Libraries | Helper modules: `lib/rateLimit.ts`, `lib/siteContent.ts`, `lib/analytics.ts`, etc. |
 | [**Data Flows**](./DATA_FLOWS/README.md) | Pipeline Sequences | End-to-end sequence diagrams for enrollment, Q&A, feedback, and authoring. |
 | [**Security Architecture**](./SECURITY/README.md) | Threat Model & Hardening | STRIDE threat model, 5-tier RBAC, input sanitization, and 22-domain audit. |
 | [**Performance Strategy**](./PERFORMANCE/README.md) | Speed & Optimization | Code splitting, image formats, edge caching headers, and bundle budget. |
@@ -61,8 +61,8 @@ npm run dev
 1. **Continuous Documentation Synchronization**: Any technical change (feature, API, database column, component, route) must immediately be accompanied by an update to its corresponding document in `docs/`.
 2. **Zero Fabrication**: Never claim a feature, endpoint, or test passes without verifying against source code and executing automated tests.
 3. **Strict Type Safety**: All additions must pass strict TypeScript compilation (`npx tsc --noEmit`) with zero errors.
-4. **Security Defense-in-Depth**: All mutations must enforce authentication, role checks (`get_user_role()`), Zod validation, rate limiting, and Turnstile challenge verification where applicable.
+4. **Security Defense-in-Depth**: All mutations must enforce authentication, role checks (`get_user_role()`), Zod validation, text sanitization, and sliding-window rate limiting.
 
 ---
 
-*Last Documentation Audit: 2026-09-22 | Status: Production Ready | Verification: 100% Pass*
+*Last Documentation Audit: 2026-09-23 | Status: Production Ready | Verification: 100% Pass*

@@ -58,9 +58,9 @@ PharmaCore is built on a resilient, high-performance web architecture combining 
 ┌───────────────────────────────────────┐  ┌─────────────────────────────────┐
 │     Supabase Client (Anon Key)        │  │     Next.js API Routes          │
 │   Direct PostgreSQL queries over RLS  │  │   pages/api/** (Node.js)        │
-│   • courses, lectures, resources      │  │   • Token-Bucket Rate Limiter   │
+│   • courses, lectures, resources      │  │   • In-Memory Rate Limiter      │
 │   • public quizzes, site content      │  │   • Strict Zod Input Validation │
-│   • analytics event streams           │  │   • Cloudflare Turnstile Bot Guard│
+│   • analytics event streams           │  │   • Email Campaign Dispatcher   │
 └───────────────────┬───────────────────┘  └────────────────┬────────────────┘
                     │                                       │
                     │         ┌─────────────────────────────┘
@@ -70,7 +70,7 @@ PharmaCore is built on a resilient, high-performance web architecture combining 
 │                   Supabase Managed Cloud Backend                         │
 │  PostgreSQL 15+ Database • Row Level Security (RLS) Policies             │
 │  Security Definer Functions • Auth Trigger Engine • Realtime Replication │
-│  UploadThing File CDN • Cloudflare Turnstile Verification API            │
+│  UploadThing File CDN • Resend Transactional Email Engine                │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -87,7 +87,7 @@ PharmaCore is built on a resilient, high-performance web architecture combining 
 | **Database & Auth** | Supabase (PostgreSQL) | `^2.112.3` | Relational storage, Auth triggers, non-recursive RLS, Realtime |
 | **Validation** | Zod | `^4.4.3` | Strict runtime schema validation for API request bodies and queries |
 | **Asset Storage** | UploadThing | `^7.7.4` | Role-gated cloud media uploads (thumbnails, PDFs, lecture attachments) |
-| **Bot Mitigation** | Cloudflare Turnstile | v0 API | Invisible/managed cryptographic challenge on sensitive forms |
+| **Transactional Email** | Resend | REST API | Transactional notifications, custom HTML templates, and campaign broadcasts |
 | **PWA Engine** | Service Worker + Manifest | Web Standard | Offline caching, app-like standalone display, window controls overlay |
 
 ---
@@ -150,13 +150,13 @@ PharmaCore implements defense-in-depth security principles across transport, aut
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 2. Application & API Gateway Protection                                 │
-│    • In-Memory Sliding-Window Token Bucket Rate Limiter (lib/rateLimit) │
+│    • In-Memory Sliding-Window Rate Limiter & Throttler (lib/rateLimit)  │
 │      - 5 req/min on /api/students/signup                                │
 │      - 10 req/min on /api/courses/[id]/enroll & /api/questions/submit   │
 │      - 15 req/min on /api/admin/users/create                            │
 │      - Standard RFC headers: X-RateLimit-Limit, Remaining, Retry-After  │
-│    • Cloudflare Turnstile bot verification on signup, enroll, Q&A       │
-│    • Strict Zod runtime validation schema on all incoming payloads      │
+│    • Real-IP spoof-proof resolution order across reverse proxies        │
+│    • Strict Zod runtime validation schema & sanitization on all payloads│
 └────────────────────────────────────┬────────────────────────────────────┘
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -416,13 +416,13 @@ The platform exposes 14 specialized API endpoints implemented in `pages/api/**`.
 | 4 | `/api/admin/students` | `GET`, `POST`, `DELETE` | Bearer: `dev`, `super_admin`, `mentor` | Standard | Student directory management: search, filter by university, suspend accounts, and bulk-provision. |
 | 5 | `/api/admin/users/create` | `POST` | Bearer: `dev`, `super_admin` | **15 req / 60s** (`admin_users`) | Provisions staff accounts (`dev`, `super_admin`, `mentor`) with temporary credentials. |
 | 6 | `/api/admin/users` | `GET`, `PATCH`, `DELETE` | Bearer: `dev`, `super_admin` | Standard | User administration: updates names, emails, roles, ban states, or deletes user accounts. |
-| 7 | `/api/courses/[id]/enroll` | `GET`, `POST`, `DELETE` | Bearer: Authenticated Student | **10 req / 60s** (`enroll`) | Checks enrollment status (`GET`), submits enrollment request with Turnstile token (`POST`), or cancels (`DELETE`). |
+| 7 | `/api/courses/[id]/enroll` | `GET`, `POST`, `DELETE` | Bearer: Authenticated Student | **10 req / 60s** (`enroll`) | Checks enrollment status (`GET`), submits enrollment request (`POST`), or cancels (`DELETE`). |
 | 8 | `/api/profile` | `GET`, `PUT` | Bearer: Authenticated User | Standard | Retrieves user profile and stats (`GET`) or updates bio, university, faculty, and year (`PUT`). |
 | 9 | `/api/questions/answer` | `POST` | Bearer: `dev`, `super_admin`, `mentor` | Standard | Submits official faculty mentor answer to a community question. |
-| 10 | `/api/questions/submit` | `POST` | Public / Student | **10 req / 60s** (`questions`) | Posts student clinical question with Turnstile bot verification. Shields email via CLS. |
+| 10 | `/api/questions/submit` | `POST` | Public / Student | **10 req / 60s** (`questions`) | Posts student clinical question with rate limiting and text sanitization. Shields email via CLS. |
 | 11 | `/api/students/enrollments` | `GET` | Bearer: Authenticated Student | Standard | Fetches active enrolled courses with lecture completion ratios and progress metrics. |
 | 12 | `/api/students/profile` | `GET`, `PUT` | Bearer: Authenticated Student | Standard | Reads student profile (`GET`) or updates academic fields and password credentials (`PUT`). |
-| 13 | `/api/students/signup` | `POST` | Public (New Students) | **5 req / 60s** (`signup`) | Student registration endpoint with Turnstile token validation and approval queuing. |
+| 13 | `/api/students/signup` | `POST` | Public (New Students) | **5 req / 60s** (`signup`) | Student registration endpoint with password complexity validation and approval queuing. |
 | 14 | `/api/uploadthing` | `GET`, `POST` | Bearer: `dev`, `super_admin`, `mentor` | Standard | UploadThing file router handler for course images (max 4MB) and lecture resources (max 32MB). |
 
 ---
@@ -439,8 +439,8 @@ PharmaCore requires 8 environment variables defined in `.env.local` (mirroring `
 | `NEXT_PUBLIC_SITE_URL` | Client & Server | **Yes** | `https://pharma-core-edu.vercel.app` | Canonical site origin used for canonical `<link>`, hreflang alternates, OpenGraph metadata, and sitemaps. |
 | `UPLOADTHING_TOKEN` | Server Only | **Yes** | `eyJhcGlLZXki...` | Primary UploadThing API token for authenticated media CDN asset storage. |
 | `UPLOADTHING_SECRET` | Server Only | Optional | `sk_live_...` | Legacy fallback secret key for UploadThing server integration. |
-| `NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY` | Client Only | **Yes** | `0x4AAAAAA...` | Cloudflare Turnstile public site key for rendering bot-challenge widgets. |
-| `CLOUDFLARE_TURNSTILE_SECRET_KEY` | Server Only | **Yes** | `0x4AAAAAA...` | Cloudflare Turnstile secret key for server-side token outcome verification. |
+| `RESEND_API_KEY` | Server Only | **Yes** | `re_123456789_...` | Resend API key for transactional mentor alerts, Q&A notifications, and email campaigns. |
+| `RESEND_FROM_EMAIL` | Server Only | **Yes** | `PharmaCore <notifications@mail.domain.com>` | Verified sender address for transactional notifications and email broadcasts. |
 
 ---
 
@@ -469,7 +469,7 @@ PharmaCore requires 8 environment variables defined in `.env.local` (mirroring `
    ```bash
    cp .env.local.example .env.local
    ```
-   Open `.env.local` in your editor and provide valid Supabase, UploadThing, and Cloudflare Turnstile keys.
+   Open `.env.local` in your editor and provide valid Supabase, UploadThing, and Resend credentials.
 
 4. **Initialize the Database**:
    - Open your Supabase Project Dashboard -> **SQL Editor**.
@@ -570,8 +570,8 @@ npm run build
    - `NEXT_PUBLIC_SITE_URL` (set to your custom domain, e.g., `https://pharma-core-edu.vercel.app`)
    - `UPLOADTHING_TOKEN`
    - `UPLOADTHING_SECRET`
-   - `NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY`
-   - `CLOUDFLARE_TURNSTILE_SECRET_KEY`
+   - `RESEND_API_KEY`
+   - `RESEND_FROM_EMAIL`
 4. **Deploy**:
    - Click **Deploy**. Vercel compiles the optimized standalone Next.js bundles.
 5. **Attach Custom Domain**:

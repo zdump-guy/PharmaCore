@@ -28,6 +28,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Synchronized master design token specifications (`design-system/pharmacore/MASTER.md` and `docs/DESIGN_SYSTEM/TOKENS.md`) to accurately document active clinical cyan/teal runtime tokens (`hsl(194 49% 31%)`, `#262626`, `#6AA6B8`, `#8BCDE1`).
 - Standardized corner radius token documentation around base `--radius: 0.9rem` (14.4px).
 
+### Removed
+- **Cloudflare Turnstile Bot Verification**: Completely removed Turnstile client widgets, server-side verification helpers (`lib/turnstile.ts`), CSP header allowances (`challenges.cloudflare.com`), and environment variables (`NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY`, `CLOUDFLARE_TURNSTILE_SECRET_KEY`) across all registration, enrollment, Q&A, and feedback endpoints in favor of zero-friction, multi-tier defense-in-depth security (in-memory sliding-window IP rate limiting, strict Zod validation, text sanitization, and Supabase RLS). Superseded [ADR-0007](../DECISIONS/ADR-0007-cloudflare-turnstile-bot-defense.md) and recorded in [TASK-005](../TASKS/TASK-005-complete-removal-of-cloudflare-turnstile.md).
+
 ### Fixed
 - Added localized bilingual `aria-label` screen reader tags to all icon-only action buttons across `components/admin/UserManager.tsx` and `components/admin/CurriculumManager.tsx`.
 - Standardized badge primitives in `components/admin/AnalyticsDashboard.tsx`.

@@ -97,10 +97,9 @@ graph TD
 |---|---|
 | **Architecture** | Hybrid SSR / CSR with Next.js 15 Pages Router |
 | **Language** | TypeScript 5 (Strict Mode enabled, 0 compiler warnings) |
-| **Primary Database** | PostgreSQL via Supabase with 13 custom tables, RLS & CLS |
 | **Authentication** | Supabase Auth (JWT session tokens + HTTP-only cookies) |
 | **File Storage** | UploadThing (Staff-gated presigned upload router) |
-| **Bot Protection** | Cloudflare Turnstile with local dev fallback |
+| **Rate Limiting & Defense** | In-memory sliding-window limiter (`lib/rateLimit.ts`) & Zod sanitization |
 | **Email Delivery** | Resend API with CRLF injection defense & branded HTML templates |
 | **Internationalization** | `next-i18next` with `ar` (default/RTL) and `en` (LTR) |
 | **Styling** | Tailwind CSS 3.4 + Radix UI accessible primitives |

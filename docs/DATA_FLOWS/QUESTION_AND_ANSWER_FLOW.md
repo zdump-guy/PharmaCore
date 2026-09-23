@@ -6,7 +6,6 @@ sequenceDiagram
     actor Student as Student / Public User
     participant LectureView as Lecture Page (pages/lecture/[id].tsx)
     participant QSubmitAPI as POST /api/questions/submit
-    participant Turnstile as Cloudflare Turnstile
     participant QDB as PostgreSQL (public.community_questions)
     actor Mentor as Course Mentor
     participant QAnswerAPI as POST /api/questions/answer
@@ -16,9 +15,8 @@ sequenceDiagram
     actor StudentInbox as Student Email & Notification Center
 
     Student->>LectureView: Type Question & Choose "Post Anonymously" Toggle
-    Student->>Turnstile: Solve Challenge Token
-    Student->>QSubmitAPI: POST /api/questions/submit { lectureId, text, authorName, isAnonymous, turnstileToken }
-    QSubmitAPI->>Turnstile: Verify Token
+    Student->>QSubmitAPI: POST /api/questions/submit { lectureId, text, authorName, isAnonymous }
+    QSubmitAPI->>QSubmitAPI: Validate with Zod & Apply Rate Limit (10 req/min)
     QSubmitAPI->>QDB: INSERT INTO community_questions
     QDB-->>LectureView: Prepend New Question to Discussion Thread
 

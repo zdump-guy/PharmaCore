@@ -56,7 +56,6 @@
 - `AuthProvider.tsx`: Supabase session lifecycle manager and user state provider.
 - `ThemeProvider.tsx`: Light/Dark mode provider syncing HTML class and local storage.
 - `SiteContentProvider.tsx`: Context provider supplying dynamic CMS copy across the application.
-- `Turnstile.tsx`: Cloudflare Turnstile CAPTCHA widget wrapper.
 - `YouTubePlayer.tsx`: Responsive embedded video player for lecture streaming.
 - `StudentSetupModal.tsx`: Mandatory onboarding modal prompting new students for university details.
 - `InstallAppModal.tsx`: Modal prompt guiding users to install PharmaCore as a PWA.

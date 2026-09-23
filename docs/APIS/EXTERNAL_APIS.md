@@ -18,31 +18,7 @@ This document outlines the contracts, protocols, and integration points for all 
 
 ---
 
-## 2. Cloudflare Turnstile Verification API
-
-- **Endpoint**: `https://challenges.cloudflare.com/turnstile/v0/siteverify`
-- **Method**: `POST`
-- **Payload**:
-  ```json
-  {
-    "secret": "TURNSTILE_SECRET_KEY",
-    "response": "<client_turnstile_token>",
-    "remoteip": "<client_ip>"
-  }
-  ```
-- **Response Format**:
-  ```json
-  {
-    "success": true,
-    "challenge_ts": "2026-09-22T20:00:00.000Z",
-    "hostname": "pharmacore.edu"
-  }
-  ```
-- **Implementation**: `lib/turnstile.ts` with local development bypass fallback.
-
----
-
-## 3. Resend Transactional Email API
+## 2. Resend Transactional Email API
 
 - **Endpoint**: `https://api.resend.com/emails`
 - **Method**: `POST`
@@ -60,7 +36,7 @@ This document outlines the contracts, protocols, and integration points for all 
 
 ---
 
-## 4. UploadThing File Ingress API
+## 3. UploadThing File Ingress API
 
 - **Protocol**: HTTPS Upload Router
 - **SDK**: `uploadthing/server` & `@uploadthing/react`
@@ -68,7 +44,7 @@ This document outlines the contracts, protocols, and integration points for all 
 
 ---
 
-## 5. YouTube Embedded IFrame Player
+## 4. YouTube Embedded IFrame Player
 
 - **Protocol**: Sandboxed IFrame Player (`https://www.youtube.com/embed/<video_id>`)
 - **Implementation**: `components/YouTubePlayer.tsx`

@@ -8,8 +8,8 @@ This document provides an exhaustive, authoritative contract reference for all *
 
 ### 1.1 `POST /api/students/signup`
 - **File**: `pages/api/students/signup.ts`
-- **Access**: Public (Gated by Turnstile Token + Rate Limit)
-- **Rate Limit**: 3 requests / 60 seconds
+- **Access**: Public (Gated by Rate Limit: 5 req / 60s)
+- **Rate Limit**: 5 requests / 60 seconds
 - **Zod Schema**:
   - `email`: Valid email format
   - `password`: String (min 8 chars, at least 1 uppercase, 1 lowercase, 1 number)
@@ -18,8 +18,7 @@ This document provides an exhaustive, authoritative contract reference for all *
   - `faculty`: String (optional)
   - `startYear`: Number (optional)
   - `predictedEndYear`: Number (optional)
-  - `turnstileToken`: String (required in production)
-- **Behavior**: Verifies Turnstile, creates user via `supabaseAdmin.auth.admin.createUser`, initializes `public.users` record with role `student`.
+- **Behavior**: Validates inputs with Zod, creates user via `supabaseAdmin.auth.admin.createUser`, initializes `public.users` record with role `student`.
 - **Response (201)**: `{ "success": true, "user": { "id": "...", "email": "..." } }`
 
 ---
@@ -88,24 +87,23 @@ This document provides an exhaustive, authoritative contract reference for all *
 
 ### 1.9 `POST /api/questions/submit`
 - **File**: `pages/api/questions/submit.ts`
-- **Access**: Public / Authenticated Student (Rate limited + Turnstile)
-- **Rate Limit**: 5 requests / 60 seconds
+- **Access**: Public / Authenticated Student (Rate limited: 10 req / 60s)
+- **Rate Limit**: 10 requests / 60 seconds
 - **Zod Schema**:
   - `lectureId`: UUID
-  - `text`: String (min 5, max 2000 chars)
-  - `authorName`: String (min 2, max 100 chars)
-  - `authorEmail`: String (valid email, optional for anon)
+  - `text`: String (min 3, max 2000 chars)
+  - `authorName`: String (optional, max 100 chars)
+  - `authorEmail`: String (optional email)
   - `isAnonymous`: Boolean
-  - `turnstileToken`: String
-- **Behavior**: Sanitizes text, strips Unicode control characters, inserts into `public.community_questions`.
+- **Behavior**: Sanitizes text, strips Unicode control characters, resolves optional bearer auth token, inserts into `public.community_questions`.
 - **Response (201)**: `{ "success": true, "question": { "id": "...", "text": "..." } }`
 
 ---
 
 ### 1.10 `POST /api/feedback/submit`
 - **File**: `pages/api/feedback/submit.ts`
-- **Access**: Public / Authenticated (Rate limited + Turnstile)
-- **Rate Limit**: 3 requests / 60 seconds
+- **Access**: Public / Authenticated (Rate limited: 8 req / 60s)
+- **Rate Limit**: 8 requests / 60 seconds
 - **Zod Schema**:
   - `feedbackType`: `'technical' | 'academic'`
   - `category`: String
@@ -120,7 +118,6 @@ This document provides an exhaustive, authoritative contract reference for all *
   - `contactEmail`: String (optional)
   - `contactName`: String (optional)
   - `deviceInfo`: JSON object (browser, OS, viewport)
-  - `turnstileToken`: String
 - **Behavior**: Inserts into `public.feedback_submissions` with status `'open'`.
 - **Response (201)**: `{ "success": true, "id": "..." }`
 

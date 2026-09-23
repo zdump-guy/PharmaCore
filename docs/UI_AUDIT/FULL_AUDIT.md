@@ -78,7 +78,7 @@ This report provides the exhaustive, evidence-based audit covering all **30 dime
 ---
 
 ## Dimension 11: Form System & Validation
-- **Scope**: Form inputs, textareas, labels, select dropdowns, error banners, and Turnstile widgets.
+- **Scope**: Form inputs, textareas, labels, select dropdowns, and error banners.
 - **Observations**: Form fields are paired with `<Label>` elements and render real-time error messages via Zod validation.
 - **Evaluation**: **PASS**. Consistent form UX across Login, Signup, Q&A, and Feedback.
 

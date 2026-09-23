@@ -104,10 +104,10 @@ describe("Tier 1 - Feature 1: Console & Hydration Safety (R1)", () => {
     expect(appTsx).toMatch(/<ErrorBoundary>[\s\S]*<AppContent[\s\S]*<\/ErrorBoundary>/)
   })
 
-  it("1.5 verifies lecture quick enroll incorporates Turnstile bot token and catch handlers", () => {
-    // API endpoint /api/courses/[id]/enroll requires Turnstile bot verification
+  it("1.5 verifies lecture quick enroll incorporates clean bearer auth and catch handlers", () => {
+    // Quick enroll handles enrollment API calls, state updates, and catch handlers cleanly
     expect(lectureTsx).toContain("handleQuickEnroll")
-    expect(lectureTsx).toMatch(/turnstileToken|turnstileRef/)
+    expect(lectureTsx).toMatch(/fetch\(`\/api\/courses\/\$\{courseId\}\/enroll`/)
   })
 })
 

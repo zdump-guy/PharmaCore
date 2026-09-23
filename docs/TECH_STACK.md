@@ -20,7 +20,6 @@
 | **UploadThing** | `^7.7.4` | File Upload Server SDK | Provides type-safe file ingress with staff-only role authentication middleware. |
 | **`@uploadthing/react`** | `^7.3.3` | File Upload UI Components | React dropzone and button components with built-in upload progress tracking. |
 | **Resend** | Custom REST Client | Transactional Email API | Lightweight HTTP API dispatcher in `lib/email.ts` for student notification emails without heavy SDK overhead. |
-| **Cloudflare Turnstile** | Custom REST Verifier | Bot Defense & Captcha | Privacy-first CAPTCHA alternative protecting login, signup, questions, and feedback endpoints. |
 
 ---
 

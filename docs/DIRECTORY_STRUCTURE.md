@@ -105,7 +105,6 @@
   - `SiteContentProvider.tsx`: React context supplying dynamic CMS copy across the app.
   - `StudentSetupModal.tsx`: Mandatory onboarding modal prompting new students for university details.
   - `ThemeProvider.tsx`: Light/Dark mode provider syncing HTML class and local storage.
-  - `Turnstile.tsx`: Cloudflare Turnstile widget wrapper with challenge callbacks.
   - `YouTubePlayer.tsx`: Responsive iframe video player for lecture streaming.
 
 ---
@@ -118,7 +117,6 @@
 - `siteContent.ts`: Default content dictionary and Supabase CMS synchronization helper.
 - `supabaseAdmin.ts`: Privileged Supabase client initialized with `SUPABASE_SERVICE_ROLE_KEY`.
 - `supabaseClient.ts`: Public anonymous Supabase client initialized with `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- `turnstile.ts`: Server-side Cloudflare Turnstile token verification helper.
 - `uploadthing.ts`: Client-side UploadThing hook helpers (`generateUploadButton`, `generateUploadDropzone`).
 - `usePwaInstall.ts`: Custom React hook capturing `beforeinstallprompt` event for PWA installation.
 - `utils.ts`: Utility helpers (`cn` class merge, input sanitizers, Unicode control character scrubbers).

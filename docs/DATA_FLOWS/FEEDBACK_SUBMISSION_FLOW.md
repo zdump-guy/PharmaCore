@@ -14,8 +14,8 @@ sequenceDiagram
 
     User->>Portal: Navigate to Feedback Portal
     Portal->>Telemetry: Extract OS, Browser, Viewport & URL
-    User->>Portal: Select Category (Technical vs Academic), Severity & Details
-    User->>SubmitAPI: POST Payload (+ Turnstile Token)
+    User->>SubmitAPI: POST Payload { feedback_type, category, title, description, severity, device_info }
+    SubmitAPI->>SubmitAPI: Apply Rate Limit (8 req/min) & Validate Zod Schema
     SubmitAPI->>DB: INSERT INTO feedback_submissions (status = 'open')
     DB-->>Portal: Return 201 Created & Feedback ID
     Portal-->>User: Display Success Screen with Tracking Reference

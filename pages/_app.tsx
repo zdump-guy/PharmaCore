@@ -88,10 +88,8 @@ function App({ Component, pageProps }: AppProps) {
 
     const handleGlobalError = (event: ErrorEvent) => {
       if (
-        event.filename?.includes("cloudflare") ||
-        event.filename?.includes("turnstile") ||
-        (typeof event.message === "string" &&
-          (event.message.includes("startTime") || event.message.includes("reportAllChanges")))
+        typeof event.message === "string" &&
+        (event.message.includes("startTime") || event.message.includes("reportAllChanges"))
       ) {
         event.preventDefault()
         event.stopImmediatePropagation?.()

@@ -1,10 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { verifyTurnstileToken, extractClientIp } from '@/lib/turnstile';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { sanitizeInputText } from '@/lib/utils';
 import { z } from 'zod';
-
 
 const schema = z.object({
   lectureId: z.string().uuid(),
@@ -12,7 +10,6 @@ const schema = z.object({
   authorEmail: z.string().email().optional().nullable().or(z.literal('')),
   text: z.string().min(3, 'Question must be at least 3 characters').max(2000),
   isAnonymous: z.boolean().optional().default(false),
-  turnstileToken: z.string().optional().nullable(),
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -30,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() });
   }
 
-  const { lectureId, authorName, authorEmail, text, isAnonymous, turnstileToken } = parsed.data;
+  const { lectureId, authorName, authorEmail, text, isAnonymous } = parsed.data;
 
   // Resolve authenticated user from Bearer token if provided
   let authenticatedUserId: string | null = null;
@@ -61,22 +58,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch {
       // Continue with provided form fields if token validation fails
     }
-  }
-
-  // Cloudflare Turnstile Spam & Bot Verification
-  const clientIp = extractClientIp(req);
-  const turnstileResult = await verifyTurnstileToken({
-    token: turnstileToken,
-    remoteIp: clientIp,
-    expectedAction: 'question_submit',
-  });
-
-  // Unauthenticated guest submissions strictly require successful Turnstile verification
-  if (!authenticatedUserId && !turnstileResult.success) {
-    return res.status(403).json({
-      error: 'Bot verification failed. Please try submitting again.',
-      error_ar: 'فشل التحقق الأمني من النشاط التلقائي. يرجى المحاولة مرة أخرى.',
-    });
   }
 
   if (!supabaseAdmin) {

@@ -3,7 +3,6 @@ import { z } from "zod"
 import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { supabase } from "@/lib/supabaseClient"
 import { checkRateLimit } from "@/lib/rateLimit"
-import { verifyTurnstileToken, extractClientIp } from "@/lib/turnstile"
 import { sanitizeInputText, isSafeUrl } from "@/lib/utils"
 
 const feedbackSubmitSchema = z.object({
@@ -31,7 +30,6 @@ const feedbackSubmitSchema = z.object({
   academic_reference: z.string().max(2000).optional().nullable(),
   contact_email: z.string().email().max(255).optional().nullable().or(z.literal("")),
   contact_name: z.string().max(120).optional().nullable(),
-  turnstileToken: z.string().optional().nullable(),
 })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -82,21 +80,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch {
       // Allow guest submissions if auth fails
     }
-  }
-
-  // Bot protection verification (Cloudflare Turnstile)
-  const clientIp = extractClientIp(req)
-  const turnstileResult = await verifyTurnstileToken({
-    token: payload.turnstileToken,
-    remoteIp: clientIp,
-    expectedAction: "feedback_submit",
-  })
-
-  if (!authenticatedUserId && !turnstileResult.success) {
-    return res.status(403).json({
-      error: "Security verification failed. Please try again.",
-      error_ar: "فشل التحقق الأمني من النشاط التلقائي. يرجى المحاولة مرة أخرى.",
-    })
   }
 
   const cleanTitle = sanitizeInputText(payload.title)

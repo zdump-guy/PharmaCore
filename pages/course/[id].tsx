@@ -1,7 +1,7 @@
 import type { GetServerSideProps } from "next"
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { serverSideTranslations } from "next-i18next/pages/serverSideTranslations"
 import {
   FiArrowLeft as ArrowLeft,
@@ -17,7 +17,6 @@ import {
 import { FaGraduationCap as GraduationCap } from "react-icons/fa6"
 import Layout from "@/components/Layout"
 import Breadcrumb from "@/components/Breadcrumb"
-import Turnstile, { type TurnstileRef } from "@/components/Turnstile"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -46,8 +45,6 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
   const [enrolling, setEnrolling] = useState(false)
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null)
   const [completedLecturesCount, setCompletedLecturesCount] = useState(0)
-  const [turnstileToken, setTurnstileToken] = useState("")
-  const turnstileRef = useRef<TurnstileRef>(null)
 
   // Track session status and check enrollment
   useEffect(() => {
@@ -108,9 +105,6 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
           "Content-Type": "application/json",
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({
-          turnstileToken,
-        }),
       })
       const data = await res.json()
       if (res.ok && data.success) {
@@ -122,13 +116,10 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
           setEnrollmentStatus("pending")
         }
         setEnrollMessage(isAr ? data.message_ar || data.message : data.message)
-        turnstileRef.current?.reset()
       } else {
-        turnstileRef.current?.reset()
         setEnrollMessage(data.error || (isAr ? "تعذر إتمام التسجيل" : "Failed to enroll"))
       }
     } catch {
-      turnstileRef.current?.reset()
       setEnrollMessage(isAr ? "حدث خطأ أثناء الاشتراك" : "An error occurred during enrollment")
     } finally {
       setEnrolling(false)
@@ -383,27 +374,15 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
 
                 {/* Enrollment Action CTA */}
                 {isAuthenticated && !isEnrolled && !isPendingApproval && (
-                  <>
-                    <div className="w-full max-w-full overflow-hidden flex justify-center my-1">
-                      <Turnstile
-                        ref={turnstileRef}
-                        action="course_enroll"
-                        size="flexible"
-                        appearance="interaction-only"
-                        onVerify={(token) => setTurnstileToken(token)}
-                        onExpire={() => setTurnstileToken("")}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleEnroll}
-                      disabled={enrolling}
-                      size="lg"
-                      className="btn-nowrap w-full font-bold shadow-xs gap-2"
-                    >
-                      <ClipboardCheck className="size-4 shrink-0" />
-                      <span>{enrolling ? (isAr ? "جارٍ إرسال الطلب..." : "Submitting...") : copy.enrollBtn}</span>
-                    </Button>
-                  </>
+                  <Button
+                    onClick={handleEnroll}
+                    disabled={enrolling}
+                    size="lg"
+                    className="btn-nowrap w-full font-bold shadow-xs gap-2"
+                  >
+                    <ClipboardCheck className="size-4 shrink-0" />
+                    <span>{enrolling ? (isAr ? "جارٍ إرسال الطلب..." : "Submitting...") : copy.enrollBtn}</span>
+                  </Button>
                 )}
 
                 {isPendingApproval && (

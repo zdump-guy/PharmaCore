@@ -7,7 +7,7 @@ PharmaCore has completed its core foundational milestones:
 - ✅ **M2: Database Schema Consolidation & RLS Hardening** (13 PostgreSQL Tables, non-recursive role resolver, zero 42P17 recursion).
 - ✅ **M3: Student Access & Community Q&A Layer** (Student signup, profile, cohort enrollment requests, lecture Q&A forum, anonymous questions, CLS privacy).
 - ✅ **M4: Audio Lecture Records & Interactive Quizzes** (Multi-track custom audio player, in-browser voice recording, quiz PDF/solution viewers).
-- ✅ **M5: Notifications, Email Dispatcher & Security Hardening** (In-app notification center, Resend transactional emails, Feedback portal, Cloudflare Turnstile, 22-domain security matrix, 100% automated test pass).
+- ✅ **M5: Notifications, Email Dispatcher & Security Hardening** (In-app notification center, Resend transactional emails, Feedback portal, in-memory sliding-window rate limiting, 22-domain security matrix, 100% automated test pass).
 
 ---
 
