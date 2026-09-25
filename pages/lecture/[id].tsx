@@ -24,7 +24,7 @@ import {
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import Breadcrumb from "@/components/Breadcrumb"
-import YouTubePlayer from "@/components/YouTubePlayer"
+import YouTubePlayer, { parseYouTubeVideoId } from "@/components/YouTubePlayer"
 import MediaActionCard from "@/components/ui/media-action-card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -547,7 +547,7 @@ export default function LecturePage({
     )
   }
 
-  const videoId = lecture.youtube_url.match(/(?:v=|youtu\.be\/|embed\/)([^&?/\s]{11})/)?.[1]
+  const videoId = parseYouTubeVideoId(lecture.youtube_url)
   const isEnrolledOnly = course?.access_policy === "enrolled_only"
   const isGatedAuth = isLocked && !isAuthenticated
   const isGatedEnrollment = isEnrolledOnly && isAuthenticated && !isEnrolled
@@ -728,17 +728,19 @@ export default function LecturePage({
               ) : null}
             </div>
 
-            <h1 className="mt-4 sm:mt-5 text-balance text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl break-words">{title}</h1>
-            <p className="body-lead mt-3 sm:mt-5 break-words">{details}</p>
+            <h1 className="mt-3 sm:mt-4 text-balance text-2xl min-[420px]:text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight break-words">
+              {title}
+            </h1>
+            <p className="body-lead mt-3 sm:mt-4 break-words text-sm sm:text-base leading-relaxed">{details}</p>
           </div>
         </div>
       </section>
 
-      <div className="page-shell py-6 sm:py-8 lg:py-12">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+      <div className="page-shell max-w-[1560px] py-6 sm:py-8 lg:py-12">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,420px)] xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,440px)]">
           <div className="min-w-0">
             {/* Video Player or Gated Banner */}
-            <div className="aspect-video overflow-hidden rounded-2xl border bg-[#101819] shadow-sm relative">
+            <div className="aspect-video overflow-hidden rounded-2xl sm:rounded-3xl border bg-[#101819] shadow-lg relative">
               {isGated ? (
                 <div className="grid h-full place-items-center text-center p-6 text-white bg-radial from-slate-900 via-[#101819] to-black">
                   <div className="max-w-md space-y-4">
@@ -795,7 +797,7 @@ export default function LecturePage({
                   </div>
                 </div>
               ) : videoId ? (
-                <YouTubePlayer videoId={videoId} title={title} lectureId={lecture.id} lectureTitle={title} />
+                <YouTubePlayer videoId={videoId} title={title} lectureId={lecture.id} lectureTitle={title} isAr={isAr} />
               ) : (
                 <div className="grid h-full place-items-center text-center p-6 text-muted-foreground">
                   <div>
@@ -809,12 +811,12 @@ export default function LecturePage({
             </div>
 
             {/* Tabs for Summary, Voice Records, Resources, Quiz PDFs, Discussion */}
-            <Tabs defaultValue="summary" className="mt-8">
-              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 bg-muted p-1 gap-1">
-                <TabsTrigger value="summary" className="min-h-[44px] text-xs sm:text-sm font-semibold">
+            <Tabs defaultValue="summary" className="mt-6 sm:mt-8">
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 bg-muted/80 p-1.5 gap-1.5 rounded-2xl">
+                <TabsTrigger value="summary" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm">
                   {copy.summary}
                 </TabsTrigger>
-                <TabsTrigger value="records" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5">
+                <TabsTrigger value="records" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
                   <Headphones className="size-3.5 shrink-0" />
                   <span>{copy.records}</span>
                   {audioRecords.length > 0 && (
@@ -823,7 +825,7 @@ export default function LecturePage({
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="resources" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5">
+                <TabsTrigger value="resources" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
                   <FileText className="size-3.5 shrink-0" />
                   <span>{copy.resources}</span>
                   {resources.length > 0 && (
@@ -832,7 +834,7 @@ export default function LecturePage({
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="quizzes" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5">
+                <TabsTrigger value="quizzes" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
                   <HelpCircle className="size-3.5 shrink-0" />
                   <span>{copy.quizzes}</span>
                   {quizzes.length > 0 && (
@@ -841,7 +843,7 @@ export default function LecturePage({
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="discussion" className="min-h-[44px] text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1">
+                <TabsTrigger value="discussion" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1">
                   <MessageCircle className="size-3.5 shrink-0" />
                   <span>{copy.discussion}</span>
                 </TabsTrigger>
@@ -1074,47 +1076,47 @@ export default function LecturePage({
             </Tabs>
 
             {/* Sequential Lecture Navigation Controls */}
-            <nav className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-6" aria-label={isAr ? "التنقل بين المحاضرات" : "Lecture navigation"}>
+            <nav className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border-t pt-6" aria-label={isAr ? "التنقل بين المحاضرات" : "Lecture navigation"}>
               {prevLecture ? (
-                <Button variant="outline" className="w-full sm:w-auto gap-2 text-start" asChild>
+                <Button variant="outline" className="w-full sm:w-auto min-h-[48px] py-2 px-3.5 gap-2.5 text-start justify-start shadow-xs rounded-xl" asChild>
                   <Link href={`/lecture/${prevLecture.id}`} aria-label={`${isAr ? "المحاضرة السابقة" : "Previous lecture"}: ${isAr ? prevLecture.title_ar : prevLecture.title_en}`}>
-                    <DirectionArrow className="size-4 shrink-0" aria-hidden="true" />
-                    <div className="truncate text-start">
-                      <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">{isAr ? "المحاضرة السابقة" : "Previous Lecture"}</span>
-                      <span className="block font-semibold text-xs truncate max-w-[200px]">{isAr ? prevLecture.title_ar : prevLecture.title_en}</span>
+                    <DirectionArrow className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                    <div className="min-w-0 text-start">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{isAr ? "المحاضرة السابقة" : "Previous Lecture"}</span>
+                      <span className="block font-semibold text-xs truncate max-w-[260px]">{isAr ? prevLecture.title_ar : prevLecture.title_en}</span>
                     </div>
                   </Link>
                 </Button>
               ) : (
-                <Button variant="outline" disabled={!hasPrev} className="w-full sm:w-auto gap-2 opacity-50 cursor-not-allowed" aria-hidden="true">
+                <Button variant="outline" disabled={!hasPrev} className="w-full sm:w-auto min-h-[48px] py-2 px-3.5 gap-2 opacity-50 cursor-not-allowed justify-start rounded-xl" aria-hidden="true">
                   <DirectionArrow className="size-4 shrink-0" aria-hidden="true" />
-                  <span>{isAr ? "بداية المقرر (لا توجد محاضرة سابقة)" : "Course Start (No Previous Lecture)"}</span>
+                  <span className="text-xs">{isAr ? "بداية المقرر (لا توجد محاضرة سابقة)" : "Course Start (No Previous Lecture)"}</span>
                 </Button>
               )}
 
               {nextLecture ? (
-                <Button variant="default" className="w-full sm:w-auto gap-2 text-end ms-auto" asChild>
+                <Button variant="default" className="w-full sm:w-auto min-h-[48px] py-2 px-3.5 gap-2.5 text-end justify-end ms-auto bg-primary text-primary-foreground font-bold shadow-xs rounded-xl" asChild>
                   <Link href={`/lecture/${nextLecture.id}`} aria-label={`${isAr ? "المحاضرة التالية" : "Next lecture"}: ${isAr ? nextLecture.title_ar : nextLecture.title_en}`}>
-                    <div className="truncate text-end">
-                      <span className="block text-[10px] uppercase tracking-wider opacity-80">{isAr ? "المحاضرة التالية" : "Next Lecture"}</span>
-                      <span className="block font-semibold text-xs truncate max-w-[200px]">{isAr ? nextLecture.title_ar : nextLecture.title_en}</span>
+                    <div className="min-w-0 text-end">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider opacity-85">{isAr ? "المحاضرة التالية" : "Next Lecture"}</span>
+                      <span className="block font-semibold text-xs truncate max-w-[260px]">{isAr ? nextLecture.title_ar : nextLecture.title_en}</span>
                     </div>
                     {isAr ? <ArrowLeft className="size-4 shrink-0" aria-hidden="true" /> : <ArrowRight className="size-4 shrink-0" aria-hidden="true" />}
                   </Link>
                 </Button>
               ) : isLastLecture ? (
                 quizzes && quizzes.length > 0 ? (
-                  <Button variant="default" className="w-full sm:w-auto gap-2 ms-auto bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
+                  <Button variant="default" className="w-full sm:w-auto min-h-[48px] py-2 px-4 gap-2 ms-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs rounded-xl" asChild>
                     <Link href={`/quiz/${quizzes[0].id}`} aria-label={isAr ? "بدء اختبار التقييم النهائي" : "Start final assessment quiz"}>
                       <span>{isAr ? "إتمام المقرر: بدء الاختبار" : "Course Completion: Take Quiz"}</span>
                       <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
                     </Link>
                   </Button>
                 ) : courseId ? (
-                  <Button variant="outline" className="w-full sm:w-auto gap-2 ms-auto" asChild>
+                  <Button variant="outline" className="w-full sm:w-auto min-h-[48px] py-2 px-4 gap-2 ms-auto rounded-xl" asChild>
                     <Link href={`/course/${courseId}`} aria-label={isAr ? "إتمام المقرر والعودة للفهرس" : "Course completion, return to overview"}>
                       <span>{isAr ? "إتمام المقرر: العودة للمقرر" : "Course Completed: Return to Course"}</span>
-                      <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+                      <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden="true" />
                     </Link>
                   </Button>
                 ) : null

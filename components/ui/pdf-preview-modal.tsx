@@ -50,12 +50,12 @@ export default function PdfPreviewModal({
         dir={isAr ? "rtl" : "ltr"}
       >
         {/* Header toolbar */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-card/80 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="grid size-8 place-items-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 shrink-0">
-              <FileText className="size-4" />
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 border-b bg-card/90 backdrop-blur-md shrink-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="grid size-7 sm:size-8 place-items-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 shrink-0">
+              <FileText className="size-3.5 sm:size-4" />
             </span>
-            <DialogTitle className="text-sm sm:text-base font-bold truncate max-w-[200px] sm:max-w-md">
+            <DialogTitle className="text-xs sm:text-base font-bold truncate max-w-[150px] min-[400px]:max-w-[200px] sm:max-w-md">
               {title}
             </DialogTitle>
           </div>
@@ -65,7 +65,7 @@ export default function PdfPreviewModal({
               variant="outline"
               size="sm"
               onClick={handleDownload}
-              className="h-8 text-xs font-semibold gap-1.5 shadow-xs"
+              className="h-7 sm:h-8 px-2 sm:px-3 text-xs font-semibold gap-1.5 shadow-xs"
               title={tr("Download PDF", "تحميل الملف")}
             >
               <Download className="size-3.5" />
@@ -75,7 +75,7 @@ export default function PdfPreviewModal({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7 sm:size-8"
               onClick={() => window.open(url, "_blank")}
               title={tr("Open in new tab", "فتح في تبويب جديد")}
             >
@@ -85,7 +85,7 @@ export default function PdfPreviewModal({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7 sm:size-8"
               onClick={() => setIsFullscreen(!isFullscreen)}
               title={isFullscreen ? tr("Exit fullscreen", "تصغير") : tr("Fullscreen", "ملء الشاشة")}
             >
@@ -95,7 +95,7 @@ export default function PdfPreviewModal({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7 sm:size-8"
               onClick={() => onOpenChange(false)}
               title={tr("Close", "إغلاق")}
             >

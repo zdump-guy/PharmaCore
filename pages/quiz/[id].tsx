@@ -284,10 +284,10 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
       <section className="border-b bg-muted/45">
         <div className="page-shell max-w-4xl py-9 lg:py-12">
           <Breadcrumb items={breadcrumbItems} className="mb-4" />
-          <Button variant="ghost" className="-ms-4 mb-6" asChild>
+          <Button variant="ghost" className="mb-4 sm:mb-6 px-3" asChild>
             <Link href={backHref}>
               <DirectionArrow />
-              {copy.back}
+              <span>{copy.back}</span>
             </Link>
           </Button>
           <Badge variant="outline" className="badge-nowrap gap-2 bg-card">
@@ -394,18 +394,18 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
           })}
         </div>
 
-        <div className="sticky bottom-4 z-20 mt-8 flex flex-col gap-3 rounded-2xl border bg-background/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground whitespace-nowrap">
+        <div className="sticky bottom-4 z-20 mt-8 flex flex-col gap-3 rounded-2xl border bg-background/95 p-3.5 sm:p-4 shadow-xl backdrop-blur-md sm:flex-row sm:items-center sm:justify-between safe-area-bottom">
+          <p className="text-xs sm:text-sm font-semibold text-muted-foreground whitespace-nowrap">
             {answeredCount < questions.length ? copy.complete : `${questions.length} / ${questions.length}`}
           </p>
           {submitted ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <Button size="lg" variant="outline" className="btn-nowrap" onClick={reset}>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <Button size="default" variant="outline" className="flex-1 sm:flex-none min-h-[44px] btn-nowrap rounded-xl" onClick={reset}>
                 <RotateCcw className="size-4 shrink-0" />
                 <span>{copy.retry}</span>
               </Button>
               {quiz.course_id && (
-                <Button size="lg" className="btn-nowrap bg-primary text-primary-foreground font-bold" asChild>
+                <Button size="default" className="flex-1 sm:flex-none min-h-[44px] btn-nowrap bg-primary text-primary-foreground font-bold rounded-xl" asChild>
                   <Link href={`/course/${quiz.course_id}`}>
                     <CheckCircle2 className="size-4 shrink-0" />
                     <span>{isAr ? "العودة إلى المقرر" : "Return to Course"}</span>
@@ -413,7 +413,7 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
                 </Button>
               )}
               {quiz.lecture_id && (
-                <Button size="lg" variant="secondary" className="btn-nowrap font-bold" asChild>
+                <Button size="default" variant="secondary" className="flex-1 sm:flex-none min-h-[44px] btn-nowrap font-bold rounded-xl" asChild>
                   <Link href={`/lecture/${quiz.lecture_id}`}>
                     <DirectionArrow className="size-4 shrink-0" />
                     <span>{isAr ? "مراجعة المحاضرة" : "Review Lecture"}</span>
@@ -422,7 +422,7 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
               )}
             </div>
           ) : (
-            <Button size="lg" className="btn-nowrap" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}>
+            <Button size="lg" className="w-full sm:w-auto min-h-[44px] font-bold rounded-xl btn-nowrap" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}>
               <Send className="size-4 shrink-0" />
               <span>{copy.submit}</span>
             </Button>

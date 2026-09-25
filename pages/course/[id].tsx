@@ -283,14 +283,14 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
             className="mb-4"
           />
 
-          <Button variant="ghost" className="-ms-4 mb-6 sm:mb-8" asChild>
+          <Button variant="ghost" className="mb-4 sm:mb-6 px-3" asChild>
             <Link href="/#courses">
               <DirectionArrow className="size-4" />
               <span>{copy.back}</span>
             </Link>
           </Button>
 
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,420px)] lg:items-start">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="badge-nowrap gap-2 bg-card">

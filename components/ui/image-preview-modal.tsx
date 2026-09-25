@@ -56,58 +56,59 @@ export default function ImagePreviewModal({
         dir={isAr ? "rtl" : "ltr"}
       >
         {/* Header toolbar */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-card/80 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
-              <FileImage className="size-4" />
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 border-b bg-card/90 backdrop-blur-md shrink-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="grid size-7 sm:size-8 place-items-center rounded-lg bg-primary/10 text-primary shrink-0">
+              <FileImage className="size-3.5 sm:size-4" />
             </span>
-            <DialogTitle className="text-sm sm:text-base font-bold truncate max-w-[200px] sm:max-w-md">
+            <DialogTitle className="text-xs sm:text-base font-bold truncate max-w-[140px] min-[400px]:max-w-[180px] sm:max-w-md">
               {title}
             </DialogTitle>
           </div>
 
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
-              onClick={handleZoomOut}
-              disabled={zoom <= 0.5}
-              title={tr("Zoom out", "تصغير")}
-            >
-              <ZoomOut className="size-3.5" />
-            </Button>
-            <span className="text-xs font-mono font-bold w-12 text-center text-muted-foreground">
-              {Math.round(zoom * 100)}%
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
-              onClick={handleZoomIn}
-              disabled={zoom >= 3}
-              title={tr("Zoom in", "تكبير")}
-            >
-              <ZoomIn className="size-3.5" />
-            </Button>
-
-            <div className="h-4 w-px bg-border mx-1" />
+            <div className="hidden sm:flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={handleZoomOut}
+                disabled={zoom <= 0.5}
+                title={tr("Zoom out", "تصغير")}
+              >
+                <ZoomOut className="size-3.5" />
+              </Button>
+              <span className="text-[11px] sm:text-xs font-mono font-bold w-10 sm:w-12 text-center text-muted-foreground">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-7 sm:size-8"
+                onClick={handleZoomIn}
+                disabled={zoom >= 3}
+                title={tr("Zoom in", "تكبير")}
+              >
+                <ZoomIn className="size-3.5" />
+              </Button>
+              <div className="h-4 w-px bg-border mx-1" />
+            </div>
 
             <Button
               variant="outline"
               size="sm"
               onClick={handleDownload}
-              className="h-8 text-xs font-semibold gap-1.5 shadow-xs"
+              className="h-7 sm:h-8 px-2 sm:px-3 text-xs font-semibold gap-1.5 shadow-xs"
               title={tr("Download Image", "تحميل الصورة")}
             >
               <Download className="size-3.5" />
-              <span className="hidden sm:inline">{tr("Download", "تحميل")}</span>
+              <span className="hidden md:inline">{tr("Download", "تحميل")}</span>
             </Button>
 
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7 sm:size-8"
               onClick={() => window.open(url, "_blank")}
               title={tr("Open in new tab", "فتح في تبويب جديد")}
             >
@@ -117,7 +118,7 @@ export default function ImagePreviewModal({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7 sm:size-8"
               onClick={() => setIsFullscreen(!isFullscreen)}
               title={isFullscreen ? tr("Exit fullscreen", "تصغير") : tr("Fullscreen", "ملء الشاشة")}
             >
@@ -127,7 +128,7 @@ export default function ImagePreviewModal({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7 sm:size-8"
               onClick={() => onOpenChange(false)}
               title={tr("Close", "إغلاق")}
             >

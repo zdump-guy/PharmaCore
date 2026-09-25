@@ -139,13 +139,13 @@ export default function MediaActionCard({
           </div>
 
           {/* 2 Custom Action Buttons */}
-          <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0 justify-end">
+          <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0 justify-end pt-1 sm:pt-0">
             {/* Button 1: View / Listen */}
             <Button
               variant="default"
               size="sm"
               onClick={handleView}
-              className="flex-1 sm:flex-none h-9 px-3.5 text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+              className="flex-1 sm:flex-none min-h-[40px] h-10 sm:h-9 px-3.5 text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer"
             >
               <ViewIcon className="size-3.5 shrink-0" />
               <span>{viewLabel}</span>
@@ -156,7 +156,7 @@ export default function MediaActionCard({
               variant="outline"
               size="sm"
               onClick={handleDownload}
-              className="flex-1 sm:flex-none h-9 px-3.5 text-xs font-bold gap-1.5 border-border hover:border-primary/40 hover:bg-muted/80 shadow-xs"
+              className="flex-1 sm:flex-none min-h-[40px] h-10 sm:h-9 px-3.5 text-xs font-bold gap-1.5 border-border hover:border-primary/40 hover:bg-muted/80 shadow-xs cursor-pointer"
             >
               <Download className="size-3.5 text-muted-foreground shrink-0" />
               <span>{tr("Download", "تحميل")}</span>
