@@ -737,10 +737,10 @@ export default function LecturePage({
       </section>
 
       <div className="page-shell max-w-[1560px] py-6 sm:py-8 lg:py-12">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.45fr)_minmax(340px,420px)] xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,440px)]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <div className="min-w-0">
             {/* Video Player or Gated Banner */}
-            <div className="aspect-video overflow-hidden rounded-2xl sm:rounded-3xl border bg-[#101819] shadow-lg relative">
+            <div className="aspect-video overflow-hidden rounded-2xl border bg-[#101819] shadow-lg relative">
               {isGated ? (
                 <div className="grid h-full place-items-center text-center p-6 text-white bg-radial from-slate-900 via-[#101819] to-black">
                   <div className="max-w-md space-y-4">

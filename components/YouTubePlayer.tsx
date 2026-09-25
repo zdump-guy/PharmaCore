@@ -225,26 +225,24 @@ export default function YouTubePlayer({
       .then((YT) => {
         if (disposed || !host.current) return
 
-        const iframe = document.createElement("iframe")
-        const query = new URLSearchParams({
-          autoplay: "1",
-          enablejsapi: "1",
-          controls: "0",
-          disablekb: "1",
-          fs: "0",
-          iv_load_policy: "3",
-          playsinline: "1",
-          rel: "0",
-          origin: window.location.origin,
-        })
-        iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?${query.toString()}`
-        iframe.title = title
-        iframe.className = "h-full w-full border-0"
-        iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        iframe.allowFullscreen = true
-        host.current.replaceChildren(iframe)
+        const container = document.createElement("div")
+        container.className = "h-full w-full"
+        host.current.replaceChildren(container)
 
-        player.current = new YT.Player(iframe, {
+        player.current = new YT.Player(container, {
+          videoId,
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            iv_load_policy: 3,
+            playsinline: 1,
+            rel: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
+            origin: window.location.origin,
+          },
           events: {
             onReady: ({ target }) => {
               if (disposed) return
@@ -562,7 +560,7 @@ export default function YouTubePlayer({
         aria-label={`${title}. Video player`}
       >
         <iframe
-          src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
           title={title}
           className="h-full w-full border-0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

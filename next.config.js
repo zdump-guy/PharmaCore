@@ -3,15 +3,16 @@ const { i18n } = require('./next-i18next.config');
 
 const cspHeader = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://va.vercel-scripts.com https://www.youtube.com https://s.ytimg.com blob:",
-  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://va.vercel-scripts.com https://www.youtube.com https://s.ytimg.com https://*.youtube.com https://*.ytimg.com https://*.google.com https://*.gstatic.com https://*.googleapis.com https://*.doubleclick.net https://vercel.live https://*.vercel.live blob:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.uploadthing.com https://uploadthing.com https://utfs.io https://ufs.sh https://api.uploadthing.com",
-  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-  "worker-src 'self' blob:",
-  "child-src 'self' blob:",
-  "media-src 'self' https://utfs.io https://ufs.sh blob: data:",
+  "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://*.vercel.live",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.uploadthing.com https://uploadthing.com https://utfs.io https://ufs.sh https://api.uploadthing.com https://*.youtube.com https://*.youtube-nocookie.com https://*.googlevideo.com https://*.google.com https://*.googleapis.com https://*.ytimg.com https://*.doubleclick.net https://vercel.live https://*.vercel.live wss://*.vercel.live https://vercel.com https://*.vercel.com https://*.vercel.app",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://*.youtube-nocookie.com https://vercel.live https://*.vercel.live",
+  "worker-src 'self' blob: https://*.youtube.com",
+  "child-src 'self' blob: https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://*.youtube-nocookie.com https://vercel.live https://*.vercel.live",
+  "media-src 'self' https://utfs.io https://ufs.sh https://*.googlevideo.com https://*.youtube.com https://*.ytimg.com blob: data:",
+  "manifest-src 'self' https://*.vercel.app https://vercel.com https://*.vercel.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -49,7 +50,7 @@ const securityHeaders = [
   },
   {
     key: 'Cross-Origin-Resource-Policy',
-    value: 'same-origin',
+    value: 'cross-origin',
   },
   {
     key: 'Content-Security-Policy',
