@@ -21,6 +21,7 @@ import {
   FiVideo as FileVideo,
   FiX as X,
   FiYoutube as YoutubeIcon,
+  FiArchive as Archive,
 } from "react-icons/fi"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -1085,6 +1086,10 @@ export default function CurriculumManager({
               const title = isAr ? resource.title_ar : resource.title_en
               const isPdf = resource.type === "pdf"
               const isImg = resource.type === "image"
+              const isArchive =
+                resource.url.match(/\.(zip|rar|7z|tar|gz)(\?.*)?$/i) !== null ||
+                title.toLowerCase().includes(".zip") ||
+                resource.title_en.toLowerCase().includes("zip")
 
               return (
                 <Card key={resource.id} className="card-interactive shadow-none flex flex-col justify-between">
@@ -1097,11 +1102,21 @@ export default function CurriculumManager({
                             ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30"
                             : isImg
                             ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                            : isArchive
+                            ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >
-                        {isPdf ? <FileText className="size-3" /> : isImg ? <FileImage className="size-3" /> : <LinkIcon className="size-3" />}
-                        {resource.type}
+                        {isPdf ? (
+                          <FileText className="size-3" />
+                        ) : isImg ? (
+                          <FileImage className="size-3" />
+                        ) : isArchive ? (
+                          <Archive className="size-3" />
+                        ) : (
+                          <LinkIcon className="size-3" />
+                        )}
+                        {isArchive ? "zip" : resource.type}
                       </Badge>
 
                       <Badge variant="outline" className="text-[10px] truncate max-w-[160px]">

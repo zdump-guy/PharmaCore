@@ -551,7 +551,7 @@ export default function LecturePage({
   const isEnrolledOnly = course?.access_policy === "enrolled_only"
   const isGatedAuth = isLocked && !isAuthenticated
   const isGatedEnrollment = isEnrolledOnly && isAuthenticated && !isEnrolled
-  const isGated = isGatedAuth || isGatedEnrollment
+  const isGated = !isStaff && (isGatedAuth || isGatedEnrollment)
 
   const copy = isAr
     ? {
@@ -679,6 +679,55 @@ export default function LecturePage({
       ],
     },
   ]
+
+  const renderGatedTabCard = () => (
+    <Card className="shadow-none border-dashed border-amber-500/40 bg-amber-500/5">
+      <CardContent className="p-6 text-center">
+        <LockKeyhole className="mx-auto size-8 text-amber-600 mb-2" />
+        <p className="text-sm font-semibold">
+          {enrollmentStatus === "pending"
+            ? isAr
+              ? "طلب الانضمام قيد المراجعة والاعتماد"
+              : "Enrollment Request Pending Review"
+            : isGatedEnrollment
+            ? copy.enrollTitle
+            : copy.lockedTitle}
+        </p>
+        <p className="mt-1.5 text-xs text-muted-foreground max-w-md mx-auto">
+          {enrollmentStatus === "pending"
+            ? isAr
+              ? "تم إرسال طلب انضمامك إلى هذا المقرر بنجاح. سيتم فتح المحاضرة والمواد فور اعتماد الطلب من قبل الإدارة."
+              : "Your enrollment request has been submitted and is awaiting administrator approval."
+            : isGatedEnrollment
+            ? copy.enrollDesc
+            : copy.lockedDesc}
+        </p>
+
+        {enrollmentStatus === "pending" ? (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-amber-500/20 border border-amber-500/40 px-3.5 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-200">
+            <Clock className="size-3.5 animate-spin shrink-0" />
+            <span>{isAr ? "بانتظار موافقة الإدارة" : "Awaiting Admin Approval"}</span>
+          </div>
+        ) : isGatedEnrollment ? (
+          <Button
+            size="sm"
+            onClick={handleQuickEnroll}
+            disabled={enrolling}
+            className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold gap-1.5"
+          >
+            <ShieldCheck className="size-3.5 shrink-0" />
+            <span>{enrolling ? (isAr ? "جارٍ الإرسال..." : "Submitting...") : copy.enrollCta}</span>
+          </Button>
+        ) : (
+          <Button size="sm" className="mt-4" asChild>
+            <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
+              {copy.signInCta}
+            </Link>
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  )
 
   return (
     <Layout
@@ -862,17 +911,7 @@ export default function LecturePage({
               {/* 2. Voice Records Tab */}
               <TabsContent value="records" className="mt-5 space-y-3">
                 {isGated ? (
-                  <Card className="shadow-none border-dashed border-amber-500/40 bg-amber-500/5">
-                    <CardContent className="p-6 text-center">
-                      <LockKeyhole className="mx-auto size-8 text-amber-600 mb-2" />
-                      <p className="text-sm font-semibold">{copy.lockedTitle}</p>
-                      <Button size="sm" className="mt-4" asChild>
-                        <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
-                          {copy.signInCta}
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  renderGatedTabCard()
                 ) : audioRecords.length ? (
                   <div className="space-y-3">
                     {audioRecords.map((record) => (
@@ -908,37 +947,61 @@ export default function LecturePage({
               {/* 3. Resources Tab */}
               <TabsContent value="resources" className="mt-5 space-y-3">
                 {isGated ? (
-                  <Card className="shadow-none border-dashed border-amber-500/40 bg-amber-500/5">
-                    <CardContent className="p-6 text-center">
-                      <LockKeyhole className="mx-auto size-8 text-amber-600 mb-2" />
-                      <p className="text-sm font-semibold">{copy.lockedTitle}</p>
-                      <Button size="sm" className="mt-4" asChild>
-                        <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
-                          {copy.signInCta}
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  renderGatedTabCard()
                 ) : resources.length ? (
                   <div className="space-y-3">
-                    {resources.map((resource) => (
-                      <MediaActionCard
-                        key={resource.id}
-                        url={resource.url}
-                        title={isAr ? resource.title_ar : resource.title_en}
-                        kind={resource.type === "image" ? "image" : "pdf"}
-                        badgeLabel={resource.type.toUpperCase()}
-                        isAr={isAr}
-                        onTrackClick={() =>
-                          trackResourceClick({
-                            resourceId: resource.id,
-                            resourceTitle: isAr ? resource.title_ar : resource.title_en,
-                            resourceType: resource.type,
-                            lectureId: lecture.id,
-                          })
-                        }
-                      />
-                    ))}
+                    {resources.map((resource) => {
+                      const resTitle = isAr ? resource.title_ar : resource.title_en
+                      const isArchive =
+                        resource.type === "other" &&
+                        (resource.url.match(/\.(zip|rar|7z|tar|gz)(\?.*)?$/i) !== null ||
+                          resTitle.toLowerCase().includes(".zip") ||
+                          resource.title_en.toLowerCase().includes("zip") ||
+                          resource.title_ar.includes("zip"))
+                      const kind =
+                        resource.type === "image"
+                          ? "image"
+                          : resource.type === "pdf"
+                          ? "pdf"
+                          : isArchive
+                          ? "archive"
+                          : "other"
+                      const badgeLabel =
+                        kind === "archive"
+                          ? isAr
+                            ? "أرشيف ملفات ZIP"
+                            : "ZIP Archive"
+                          : kind === "image"
+                          ? isAr
+                            ? "صورة توضيحية"
+                            : "Diagram / Image"
+                          : kind === "pdf"
+                          ? isAr
+                            ? "مستند PDF"
+                            : "PDF Document"
+                          : isAr
+                          ? "مادة مرفقة"
+                          : "Attachment"
+
+                      return (
+                        <MediaActionCard
+                          key={resource.id}
+                          url={resource.url}
+                          title={resTitle}
+                          kind={kind}
+                          badgeLabel={badgeLabel}
+                          isAr={isAr}
+                          onTrackClick={() =>
+                            trackResourceClick({
+                              resourceId: resource.id,
+                              resourceTitle: resTitle,
+                              resourceType: resource.type,
+                              lectureId: lecture.id,
+                            })
+                          }
+                        />
+                      )
+                    })}
                   </div>
                 ) : (
                   <Card className="shadow-none">
@@ -953,17 +1016,7 @@ export default function LecturePage({
               {/* 4. Quiz PDFs Tab (Kept separate from general resources!) */}
               <TabsContent value="quizzes" className="mt-5 space-y-3">
                 {isGated ? (
-                  <Card className="shadow-none border-dashed border-amber-500/40 bg-amber-500/5">
-                    <CardContent className="p-6 text-center">
-                      <LockKeyhole className="mx-auto size-8 text-amber-600 mb-2" />
-                      <p className="text-sm font-semibold">{copy.lockedTitle}</p>
-                      <Button size="sm" className="mt-4" asChild>
-                        <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
-                          {copy.signInCta}
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  renderGatedTabCard()
                 ) : quizzes.length ? (
                   <div className="space-y-4">
                     {quizzes.map((quiz) => {

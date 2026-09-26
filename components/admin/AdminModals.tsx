@@ -485,11 +485,15 @@ export default function AdminModals({
                     <SelectValue placeholder={tr("Select lecture", "اختر المحاضرة")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {quizLectures.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {isAr ? l.title_ar : l.title_en}
-                      </SelectItem>
-                    ))}
+                    {quizLectures.map((l) => {
+                      const lecTitle = isAr ? l.title_ar : l.title_en
+                      const hasVideo = Boolean(l.youtube_url && l.youtube_url.includes("youtu"))
+                      return (
+                        <SelectItem key={l.id} value={l.id}>
+                          {`#${l.order} • ${lecTitle}${hasVideo ? " 🎬" : ""} (…${l.id.slice(-4)})`}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -614,11 +618,15 @@ export default function AdminModals({
                     <SelectValue placeholder={tr("Select lecture", "اختر المحاضرة")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {voiceLectures.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {isAr ? l.title_ar : l.title_en}
-                      </SelectItem>
-                    ))}
+                    {voiceLectures.map((l) => {
+                      const lecTitle = isAr ? l.title_ar : l.title_en
+                      const hasVideo = Boolean(l.youtube_url && l.youtube_url.includes("youtu"))
+                      return (
+                        <SelectItem key={l.id} value={l.id}>
+                          {`#${l.order} • ${lecTitle}${hasVideo ? " 🎬" : ""} (…${l.id.slice(-4)})`}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -746,11 +754,15 @@ export default function AdminModals({
                     <SelectValue placeholder={tr("Select lecture", "اختر المحاضرة")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {resourceLectures.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {isAr ? l.title_ar : l.title_en}
-                      </SelectItem>
-                    ))}
+                    {resourceLectures.map((l) => {
+                      const lecTitle = isAr ? l.title_ar : l.title_en
+                      const hasVideo = Boolean(l.youtube_url && l.youtube_url.includes("youtu"))
+                      return (
+                        <SelectItem key={l.id} value={l.id}>
+                          {`#${l.order} • ${lecTitle}${hasVideo ? " 🎬" : ""} (…${l.id.slice(-4)})`}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>

@@ -1,11 +1,11 @@
 import { useState } from "react"
 import {
   FiAlertTriangle as AlertTriangle,
+  FiArchive as Archive,
   FiCheck as Check,
   FiExternalLink as ExternalLink,
   FiFileText as FileText,
   FiHeadphones as Headphones,
-  FiImage as FileImage,
   FiLink as LinkIcon,
   FiLoader as Loader2,
   FiRefreshCw as RefreshCw,
@@ -213,6 +213,10 @@ export default function FileUploader({
     acceptAudioOnly ||
     value.match(/\.(mp3|wav|m4a|ogg|webm|aac)(\?.*)?$/i) !== null
 
+  const isArchiveValue =
+    value.match(/\.(zip|rar|7z|tar|gz)(\?.*)?$/i) !== null ||
+    fileName.match(/\.(zip|rar|7z|tar|gz)$/i) !== null
+
   const formatBytes = (bytes?: number | null) => {
     if (!bytes) return null
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -275,9 +279,13 @@ export default function FileUploader({
                 <span className="grid size-12 sm:size-14 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                   <Headphones className="size-6" />
                 </span>
+              ) : isArchiveValue ? (
+                <span className="grid size-12 sm:size-14 shrink-0 place-items-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                  <Archive className="size-6" />
+                </span>
               ) : (
                 <span className="grid size-12 sm:size-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                  <FileImage className="size-6" />
+                  <FileText className="size-6" />
                 </span>
               )}
 

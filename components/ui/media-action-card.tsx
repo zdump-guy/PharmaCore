@@ -1,6 +1,8 @@
 import { useState } from "react"
 import {
+  FiArchive as Archive,
   FiDownload as Download,
+  FiExternalLink as ExternalLink,
   FiEye as Eye,
   FiFileText as FileText,
   FiHeadphones as Headphones,
@@ -13,7 +15,7 @@ import PdfPreviewModal from "@/components/ui/pdf-preview-modal"
 import ImagePreviewModal from "@/components/ui/image-preview-modal"
 import CustomAudioPlayer from "@/components/ui/custom-audio-player"
 
-export type MediaKind = "pdf" | "image" | "audio" | "other"
+export type MediaKind = "pdf" | "image" | "audio" | "archive" | "other"
 
 interface MediaActionCardProps {
   url: string
@@ -42,25 +44,53 @@ export default function MediaActionCard({
 
   const tr = (en: string, ar: string) => (isAr ? ar : en)
 
-  // Auto-detect kind if not explicitly passed
+  // Auto-detect kind if not explicitly passed or if 'other'
+  const isArchive =
+    kind === "archive" ||
+    url.toLowerCase().match(/\.(zip|rar|7z|tar|gz)(\?.*)?$/i) !== null ||
+    title.toLowerCase().match(/\.(zip|rar|7z|tar|gz)(\b|$)/i) !== null
+
+  const isPdf =
+    !isArchive &&
+    (kind === "pdf" ||
+      url.toLowerCase().match(/\.(pdf)(\?.*)?$/i) !== null ||
+      title.toLowerCase().match(/\.(pdf)(\b|$)/i) !== null)
+
+  const isImage =
+    !isArchive &&
+    (kind === "image" ||
+      url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i) !== null ||
+      title.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)(\b|$)/i) !== null)
+
+  const isAudio =
+    !isArchive &&
+    (kind === "audio" ||
+      url.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)(\?.*)?$/i) !== null ||
+      title.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)(\b|$)/i) !== null)
+
   const resolvedKind: MediaKind =
-    kind ||
-    (url.toLowerCase().match(/\.(pdf)(\?.*)?$/i)
+    kind && kind !== "other"
+      ? kind
+      : isArchive
+      ? "archive"
+      : isPdf
       ? "pdf"
-      : url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i)
+      : isImage
       ? "image"
-      : url.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)(\?.*)?$/i)
+      : isAudio
       ? "audio"
-      : "pdf")
+      : "other"
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation()
     onTrackClick?.()
     const a = document.createElement("a")
     a.href = url
-    const ext = resolvedKind === "pdf" ? ".pdf" : resolvedKind === "audio" ? ".mp3" : ""
-    a.download = title.replace(/[\\/:*?"<>|]/g, "_") + ext
     a.target = "_blank"
+    a.rel = "noopener noreferrer"
+    const hasExt = title.match(/\.[a-zA-Z0-9]{2,5}$/)
+    const ext = (!hasExt && resolvedKind === "pdf") ? ".pdf" : (!hasExt && resolvedKind === "audio") ? ".mp3" : ""
+    a.download = title.replace(/[\\/:*?"<>|]/g, "_") + ext
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -75,7 +105,7 @@ export default function MediaActionCard({
     } else if (resolvedKind === "audio") {
       setShowAudioPlayer((prev) => !prev)
     } else {
-      window.open(url, "_blank")
+      window.open(url, "_blank", "noopener,noreferrer")
     }
   }
 
@@ -104,13 +134,21 @@ export default function MediaActionCard({
       viewLabel: showAudioPlayer ? tr("Hide Player", "إخفاء المشغل") : tr("Listen", "استماع"),
       ViewIcon: showAudioPlayer ? Eye : Play,
     },
+    archive: {
+      Icon: Archive,
+      tileClass: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+      badgeClass: "border-purple-500/30 text-purple-700 dark:text-purple-300 bg-purple-500/5",
+      defaultBadge: tr("ZIP Archive", "أرشيف ملفات ZIP"),
+      viewLabel: tr("Download Archive", "تحميل الملف"),
+      ViewIcon: Download,
+    },
     other: {
       Icon: FileText,
       tileClass: "bg-primary/10 text-primary border-primary/20",
       badgeClass: "border-primary/30 text-primary bg-primary/5",
       defaultBadge: tr("Attachment", "مرفق"),
       viewLabel: tr("Open", "فتح"),
-      ViewIcon: Eye,
+      ViewIcon: ExternalLink,
     },
   }[resolvedKind]
 
