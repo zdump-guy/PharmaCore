@@ -1,7 +1,6 @@
 import { useState } from "react"
 import {
   FiBookOpen as BookOpen,
-  FiCheck as Check,
   FiCheckCircle as CheckCircle2,
   FiClipboard as ClipboardCheck,
   FiEdit2 as Pencil,
@@ -9,7 +8,6 @@ import {
   FiFileText as FileText,
   FiGlobe as Globe,
   FiHeadphones as Headphones,
-  FiHelpCircle as HelpCircle,
   FiImage as FileImage,
   FiLink as LinkIcon,
   FiLock as Lock,
@@ -29,6 +27,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CourseEnrollmentManager from "@/components/admin/CourseEnrollmentManager"
+import { getLectureUrl } from "@/lib/slugs"
 import type { AudioRecord, Course, EnrollmentSettings, Lecture, Question, Quiz, Resource } from "@/types"
 
 interface CurriculumManagerProps {
@@ -40,7 +39,7 @@ interface CurriculumManagerProps {
   lectures: Lecture[]
   audioRecords?: AudioRecord[]
   quizzes: Quiz[]
-  questions: Question[]
+  questions?: Question[]
   resources: Resource[]
   selectedQuizId: string
   setSelectedQuizId: (id: string) => void
@@ -51,7 +50,6 @@ interface CurriculumManagerProps {
   onOpenVoiceRecordEditor?: (record?: AudioRecord) => void
   onOpenQuizEditor: (quiz?: Quiz) => void
   onOpenResourceEditor: (resource?: Resource) => void
-  onOpenQuestionEditor: (question?: Question) => void
   onDeleteEntity: (
     table: "courses" | "lectures" | "audio_records" | "quizzes" | "resources" | "questions",
     id: string,
@@ -72,7 +70,6 @@ export default function CurriculumManager({
   lectures,
   audioRecords = [],
   quizzes,
-  questions,
   resources,
   selectedQuizId,
   setSelectedQuizId,
@@ -83,7 +80,6 @@ export default function CurriculumManager({
   onOpenVoiceRecordEditor,
   onOpenQuizEditor,
   onOpenResourceEditor,
-  onOpenQuestionEditor,
   onDeleteEntity,
   onNavigateToEnrollments,
   onEnrollmentsUpdated,
@@ -156,7 +152,6 @@ export default function CurriculumManager({
   })
 
   const activeQuiz = quizzes.find((q) => q.id === selectedQuizId) || quizzes[0]
-  const currentQuizQuestions = questions.filter((q) => q.quiz_id === (activeQuiz?.id ?? selectedQuizId))
 
   const filteredResources = resources.filter((r) => {
     const lecture = lectures.find((l) => l.id === r.lecture_id)
@@ -489,7 +484,7 @@ export default function CurriculumManager({
                   <div className="border-t bg-muted/20 p-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <a
-                        href={`/lecture/${lecture.id}`}
+                        href={getLectureUrl(lecture, isAr, lectures)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline px-1.5 min-h-[32px]"
@@ -776,7 +771,6 @@ export default function CurriculumManager({
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
             {filteredQuizzes.map((quiz) => {
               const isSelected = (activeQuiz?.id ?? selectedQuizId) === quiz.id
-              const quizQuestions = questions.filter((q) => q.quiz_id === quiz.id)
               const title = isAr ? quiz.title_ar : quiz.title_en
               const courseTitle = getCourseTitle(quiz.course_id)
               const lectureTitle = getLectureTitle(quiz.lecture_id)
@@ -795,17 +789,18 @@ export default function CurriculumManager({
                         {quiz.pdf_url && (
                           <Badge variant="outline" className="text-[10px] font-bold text-red-600 dark:text-red-400 border-red-500/30 bg-red-500/10 gap-1">
                             <FileText className="size-2.5" />
-                            PDF
+                            {tr("Questions PDF", "ورقة الأسئلة")}
                           </Badge>
                         )}
-                        {quizQuestions.length > 0 && (
-                          <Badge variant={isSelected ? "default" : "outline"} className="text-[10px]">
-                            {quizQuestions.length} {tr("questions", "سؤال")}
+                        {quiz.solution_pdf_url && (
+                          <Badge variant="outline" className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10 gap-1">
+                            <CheckCircle2 className="size-2.5" />
+                            {tr("Solution PDF", "نموذج الإجابة")}
                           </Badge>
                         )}
-                        {!quiz.pdf_url && quizQuestions.length === 0 && (
+                        {!quiz.pdf_url && !quiz.solution_pdf_url && (
                           <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                            {tr("Draft", "مسودة")}
+                            {tr("Draft (No PDFs)", "مسودة (بدون ملفات)")}
                           </Badge>
                         )}
                       </div>
@@ -865,152 +860,6 @@ export default function CurriculumManager({
               )
             })}
           </div>
-
-          {/* Interactive Question Explorer for Selected Quiz */}
-          {activeQuiz && (
-            <Card className="shadow-none border-primary/30">
-              <CardContent className="p-4 sm:p-5 space-y-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <HelpCircle className="size-4 text-primary" />
-                      <h4 className="font-extrabold text-sm sm:text-base">
-                        {tr("Questions in:", "الأسئلة في:")} {isAr ? activeQuiz.title_ar : activeQuiz.title_en}
-                      </h4>
-                      <Badge variant="secondary" className="text-xs">
-                        {currentQuizQuestions.length} {tr("questions", "سؤال")}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {tr(
-                        "Manage questions, correct answer markers, and multiple-choice options.",
-                        "إدارة الأسئلة، وتحديد الإجابة الصحيحة، وخيارات الاختيار من متعدد."
-                      )}
-                    </p>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    onClick={() => onOpenQuestionEditor()}
-                    className="gap-1.5 text-xs font-bold min-h-[38px] w-full sm:w-auto"
-                  >
-                    <Plus className="size-3.5" />
-                    {tr("Add Question", "إضافة سؤال")}
-                  </Button>
-                </div>
-
-                {/* Questions List */}
-                <div className="space-y-3">
-                  {currentQuizQuestions.map((question, idx) => {
-                    const qTitle = isAr ? question.text_ar : question.text_en
-                    const isMCQ = question.type === "multiple_choice"
-                    const isTF = question.type === "true_false"
-
-                    return (
-                      <div
-                        key={question.id}
-                        className="rounded-xl border bg-card p-3.5 sm:p-4 space-y-3 transition-colors hover:border-primary/40"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2.5">
-                            <span className="grid size-6 place-items-center rounded-full bg-primary/10 text-primary font-bold text-xs shrink-0 mt-0.5">
-                              {idx + 1}
-                            </span>
-                            <div className="space-y-1">
-                              <p className="font-bold text-sm leading-snug">{qTitle}</p>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] capitalize">
-                                  {question.type.replaceAll("_", " ")}
-                                </Badge>
-                                <span className="text-[11px] text-muted-foreground font-mono">
-                                  #{question.order}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              onClick={() => onOpenQuestionEditor(question)}
-                              title={tr("Edit question", "تعديل السؤال")}
-                              aria-label={tr(`Edit question: ${qTitle}`, `تعديل سؤال: ${qTitle}`)}
-                            >
-                              <Pencil className="size-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => onDeleteEntity("questions", question.id, qTitle)}
-                              title={tr("Delete question", "حذف السؤال")}
-                              aria-label={tr(`Delete question: ${qTitle}`, `حذف سؤال: ${qTitle}`)}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Options preview with correct answer highlighted */}
-                        {isMCQ && question.options && (
-                          <div className="grid gap-1.5 sm:grid-cols-2 pt-1 ps-0 sm:ps-8">
-                            {question.options.map((opt, oIdx) => {
-                              const isCorrect = opt.trim().toLowerCase() === question.correct_answer.trim().toLowerCase()
-                              return (
-                                <div
-                                  key={oIdx}
-                                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium ${
-                                    isCorrect
-                                      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold"
-                                      : "bg-muted/30 text-muted-foreground"
-                                  }`}
-                                >
-                                  {isCorrect ? (
-                                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                  ) : (
-                                    <span className="size-1.5 rounded-full bg-muted-foreground/50 shrink-0" />
-                                  )}
-                                  <span className="truncate">{opt}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {isTF && (
-                          <div className="flex items-center gap-2 ps-0 sm:ps-8">
-                            <Badge
-                              variant="outline"
-                              className="gap-1 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold text-xs py-1"
-                            >
-                              <CheckCircle2 className="size-3" />
-                              {tr("Correct Answer:", "الإجابة الصحيحة:")} {question.correct_answer}
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-
-                  {!currentQuizQuestions.length && (
-                    <div className="grid min-h-32 place-items-center rounded-xl border border-dashed p-6 text-center text-muted-foreground">
-                      <div>
-                        <HelpCircle className="mx-auto size-6 opacity-40" />
-                        <p className="mt-2 text-xs font-bold">
-                          {tr("No questions added yet", "لم تتم إضافة أسئلة بعد")}
-                        </p>
-                        <p className="mt-0.5 text-[11px]">
-                          {tr("Click 'Add Question' to create question checkpoints.", "انقر على 'إضافة سؤال' لإنشاء أسئلة الاختبار.")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
 

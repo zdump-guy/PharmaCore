@@ -240,11 +240,11 @@ describe("Tier 1 - Feature 5: Internal Cross-Linking Navigation (R2)", () => {
   })
 
   it("5.3 verifies pages/course/[id].tsx syllabus links directly to lectures (/lecture/[id])", () => {
-    expect(courseTsx).toMatch(/\/lecture\/\$\{lecture\.id\}|\/lecture\/\[id\]/)
+    expect(courseTsx).toMatch(/\/lecture\/\$\{lecture\.id\}|\/lecture\/\[id\]|getLectureUrl/)
   })
 
   it("5.4 verifies pages/course/[id].tsx syllabus provides direct links to course quizzes (/quiz/[id])", () => {
-    expect(courseTsx).toMatch(/\/quiz\/\$\{quiz\.id\}|\/quiz\/\[id\]|\/quiz\//)
+    expect(courseTsx).toMatch(/\/quiz\/\$\{quiz\.id\}|\/quiz\/\[id\]|\/quiz\/|getQuizUrl/)
   })
 
   it("5.5 verifies pages/quiz/[id].tsx results screen provides onward navigation beyond retry", () => {
@@ -725,14 +725,14 @@ describe("Tier 4 - Real-World Workflows & Personas", () => {
     const quizTsx = readFile("pages/quiz/[id].tsx") || ""
 
     // 1. Home links to courses
-    expect(indexTsx).toMatch(/\/course\/|href="\/#courses"/)
+    expect(indexTsx).toMatch(/\/course\/|href="\/#courses"|getCourseUrl/)
     // 2. Course links to lectures & quizzes
-    expect(courseTsx).toMatch(/\/lecture\//)
-    expect(courseTsx).toMatch(/\/quiz\//)
+    expect(courseTsx).toMatch(/\/lecture\/|getLectureUrl/)
+    expect(courseTsx).toMatch(/\/quiz\/|getQuizUrl/)
     // 3. Lecture has prev/next controls
     expect(/nextLecture|next_lecture|nextId/.test(lectureTsx)).toBe(true)
     // 4. Quiz results has onward return path
-    expect(quizTsx).toMatch(/\/course\//)
+    expect(quizTsx).toMatch(/\/course\/|getCourseUrl/)
   })
 
   it("4.2 Workflow 2 (Search Engine Crawler Full Audit): Canonical uniqueness, hreflang symmetry, JSON-LD validity, noindex isolation", () => {

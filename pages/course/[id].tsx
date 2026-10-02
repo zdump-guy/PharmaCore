@@ -26,6 +26,7 @@ import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { trackCourseView } from "@/lib/analytics"
+import { getCourseUrl, getCourseSlug, getLectureUrl, getQuizUrl, resolveCourse, isUuid } from "@/lib/slugs"
 import type { Course, Lecture, Quiz } from "@/types"
 
 interface CoursePageProps {
@@ -227,7 +228,7 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
       }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
-  const courseUrl = `${siteUrl}${isAr ? "/ar" : ""}/course/${course.id}`
+  const courseUrl = `${siteUrl}${getCourseUrl(course, isAr)}`
   const courseSchema = [
     {
       "@type": "Course",
@@ -358,7 +359,14 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
                   <span className="font-bold whitespace-nowrap">{copy.progress}</span>
                   <span className="font-mono font-bold text-primary whitespace-nowrap">{progressPercent}% ({completedLecturesCount}/{lectures.length})</span>
                 </div>
-                <Progress value={progressPercent} className="h-2.5" />
+                <Progress
+                  value={progressPercent}
+                  className="h-2.5"
+                  aria-label={isAr ? "نسبة إتمام المساق" : "Course completion progress"}
+                  aria-valuenow={progressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
 
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   {needsAuth
@@ -398,20 +406,23 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
                   </p>
                 )}
 
-                {lectures[0] && (
-                  <Button size="lg" variant={isEnrolled ? "default" : "outline"} className="btn-nowrap w-full font-bold" asChild>
-                    <Link
-                      href={
-                        needsAuth
-                          ? `/login?returnUrl=/lecture/${lectures[0].id}&tab=signup`
-                          : `/lecture/${lectures[0].id}`
-                      }
-                    >
-                      {needsAuthToWatch ? <LockKeyhole className="size-4 shrink-0" /> : <PlayCircle className="size-4 shrink-0" />}
-                      <span>{needsAuth ? copy.startLocked : needsEnrollment ? copy.startEnroll : completedLecturesCount > 0 ? copy.continue : copy.start}</span>
-                    </Link>
-                  </Button>
-                )}
+                {lectures[0] && (() => {
+                  const firstLecUrl = getLectureUrl(lectures[0], false, lectures)
+                  return (
+                    <Button size="lg" variant={isEnrolled ? "default" : "outline"} className="btn-nowrap w-full font-bold" asChild>
+                      <Link
+                        href={
+                          needsAuth
+                            ? `/login?returnUrl=${encodeURIComponent(firstLecUrl)}&tab=signup`
+                            : firstLecUrl
+                        }
+                      >
+                        {needsAuthToWatch ? <LockKeyhole className="size-4 shrink-0" /> : <PlayCircle className="size-4 shrink-0" />}
+                        <span>{needsAuth ? copy.startLocked : needsEnrollment ? copy.startEnroll : completedLecturesCount > 0 ? copy.continue : copy.start}</span>
+                      </Link>
+                    </Button>
+                  )
+                })()}
               </CardContent>
             </Card>
           </div>
@@ -430,9 +441,10 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
               {lectures.map((lecture, index) => {
                 const lectureTitle = isAr ? lecture.title_ar : lecture.title_en
                 const details = isAr ? lecture.details_ar : lecture.details_en
+                const lecUrl = getLectureUrl(lecture, false, lectures)
                 const targetHref = needsAuthToWatch
-                  ? `/login?returnUrl=/lecture/${lecture.id}&tab=signup`
-                  : `/lecture/${lecture.id}`
+                  ? `/login?returnUrl=${encodeURIComponent(lecUrl)}&tab=signup`
+                  : lecUrl
 
                 return (
                   <AccordionItem
@@ -465,9 +477,9 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
                         </Button>
                         {quizzes?.filter((q) => q.lecture_id === lecture.id).map((quiz) => (
                           <Button key={quiz.id} variant="secondary" className="btn-nowrap gap-1.5" asChild>
-                            <Link href={quiz.pdf_url && quiz.lecture_id ? `/lecture/${quiz.lecture_id}` : `/quiz/${quiz.id}`}>
+                            <Link href={quiz.pdf_url && quiz.lecture_id ? `${getLectureUrl(lecture, isAr, lectures)}?tab=quizzes` : getQuizUrl(quiz, isAr, quizzes)}>
                               <BookOpen className="size-4 shrink-0 text-primary" />
-                              <span>{isAr ? quiz.title_ar || "اختبار المحاضرة" : quiz.title_en || "Lecture Quiz"}</span>
+                              <span>{isAr ? quiz.title_ar || "ورقة التقييم" : quiz.title_en || "Assessment Sheet"}</span>
                             </Link>
                           </Button>
                         ))}
@@ -480,7 +492,7 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
 
             {quizzes && quizzes.length > 0 && (
               <div className="mt-8 border-t pt-6">
-                <h3 className="text-xl font-bold mb-4">{isAr ? "اختبارات التقييم الإكلينيكي" : "Clinical Assessment Quizzes"}</h3>
+                <h3 className="text-xl font-bold mb-4">{isAr ? "أوراق التقييم الإكلينيكي" : "Clinical Assessments"}</h3>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {quizzes.map((quiz) => (
                     <Card key={quiz.id} className="p-4 flex items-center justify-between">
@@ -488,8 +500,8 @@ export default function CoursePage({ course, lectures, quizzes = [] }: CoursePag
                         <h4 className="font-semibold text-sm truncate">{isAr ? quiz.title_ar : quiz.title_en}</h4>
                       </div>
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/quiz/${quiz.id}`}>
-                          {isAr ? "بدء الاختبار" : "Take Quiz"}
+                        <Link href={getQuizUrl(quiz, isAr, quizzes)}>
+                          {isAr ? "عرض ورقة التقييم" : "View Assessment"}
                         </Link>
                       </Button>
                     </Card>
@@ -549,33 +561,48 @@ export const getServerSideProps: GetServerSideProps<CoursePageProps> = async ({ 
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
   }
 
-  if (supabase) {
+  if (supabase && id) {
     try {
-      const [{ data: courseData }, { data: lecturesData }, { data: quizzesData }, siteContent, translations] =
-        await Promise.all([
-          supabase.from("courses").select("*").eq("id", id).maybeSingle(),
-          supabase
-            .from("lectures")
-            .select("*")
-            .eq("course_id", id)
-            .order("order", { ascending: true }),
-          supabase.from("quizzes").select("*").eq("course_id", id),
-          loadSiteContent(),
-          serverSideTranslations(locale ?? "en", ["common"]),
-        ])
+      const resolved = await resolveCourse(id)
+      if (resolved) {
+        course = resolved
 
-      if (courseData) course = courseData
-      if (lecturesData) lectures = lecturesData
-      if (quizzesData) quizzes = quizzesData
+        // If accessed via old raw UUID, permanently redirect to clean human-readable slug
+        if (isUuid(id)) {
+          const canonicalSlug = getCourseSlug(resolved)
+          const prefix = locale === "ar" ? "/ar" : ""
+          return {
+            redirect: {
+              destination: `${prefix}/course/${canonicalSlug}`,
+              permanent: true,
+            },
+          }
+        }
 
-      return {
-        props: {
-          course,
-          lectures,
-          quizzes,
-          siteContent,
-          ...translations,
-        },
+        const [{ data: lecturesData }, { data: quizzesData }, siteContent, translations] =
+          await Promise.all([
+            supabase
+              .from("lectures")
+              .select("*")
+              .eq("course_id", course.id)
+              .order("order", { ascending: true }),
+            supabase.from("quizzes").select("*").eq("course_id", course.id),
+            loadSiteContent(),
+            serverSideTranslations(locale ?? "en", ["common"]),
+          ])
+
+        if (lecturesData) lectures = lecturesData
+        if (quizzesData) quizzes = quizzesData
+
+        return {
+          props: {
+            course,
+            lectures,
+            quizzes,
+            siteContent,
+            ...translations,
+          },
+        }
       }
     } catch {}
   }

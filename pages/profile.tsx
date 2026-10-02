@@ -38,6 +38,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
+import { getCourseUrl } from "@/lib/slugs"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { resetUser } from "@/lib/analytics"
 import { Progress } from "@/components/ui/progress"
@@ -837,7 +838,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
                       const courseTitle = isAr ? item.course.title_ar : item.course.title_en
                       const nextLectureHref = item.lastActiveLectureId
                         ? `/lecture/${item.lastActiveLectureId}`
-                        : `/course/${item.courseId}`
+                        : getCourseUrl(item.course, isAr)
 
                       return (
                         <div
@@ -887,7 +888,7 @@ export default function ProfilePage({ siteContent }: ProfilePageProps) {
 
                           {item.status === "pending" ? (
                             <Button size="sm" variant="outline" className="btn-nowrap w-full font-bold text-xs gap-1.5 h-8 mt-2 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10" asChild>
-                              <Link href={`/course/${item.courseId}`}>
+                              <Link href={getCourseUrl(item.course, isAr)}>
                                 <Clock className="size-3.5 shrink-0" />
                                 <span>{tr("Pending Approval", "قيد مراجعة الإدارة")}</span>
                               </Link>

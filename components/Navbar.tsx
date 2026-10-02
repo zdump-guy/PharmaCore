@@ -95,7 +95,7 @@ export default function Navbar() {
       rafId = window.requestAnimationFrame(() => {
         rafId = null
         const scrollY = window.scrollY
-        if (scrollY < 100) {
+        if (scrollY < 120) {
           setActiveSection("home")
           return
         }
@@ -107,14 +107,15 @@ export default function Navbar() {
         }
 
         const header = document.querySelector("header")
-        const navBottom = (header?.getBoundingClientRect().bottom ?? 76) + 60
+        const navHeight = header?.getBoundingClientRect().height ?? 76
+        const viewportAnchor = Math.max(160, window.innerHeight * 0.35)
 
         const sectionIds: Array<"about" | "courses" | "feedback"> = ["feedback", "courses", "about"]
         for (const id of sectionIds) {
           const el = document.getElementById(id)
           if (el) {
             const rect = el.getBoundingClientRect()
-            if (rect.top <= navBottom && rect.bottom > 0) {
+            if (rect.top <= viewportAnchor && rect.bottom > navHeight + 20) {
               setActiveSection(id)
               return
             }

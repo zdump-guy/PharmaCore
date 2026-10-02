@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabaseClient"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { getDirectImageUrl } from "@/lib/utils"
+import { getCourseUrl } from "@/lib/slugs"
 import type { Course } from "@/types"
 
 interface HomeProps { courses: Course[]; siteContent: SiteContent }
@@ -54,7 +55,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
                 "description": isAr
                   ? course.description_ar || "مقرر تخصصي في علم الأدوية السريري"
                   : course.description_en || "Specialized clinical pharmacology course.",
-                "url": `${siteUrl}${isAr ? "/ar" : ""}/course/${course.id}`,
+                "url": `${siteUrl}${getCourseUrl(course, isAr)}`,
                 "provider": {
                   "@type": "EducationalOrganization",
                   "name": "PharmaCore",
@@ -195,7 +196,7 @@ export default function Home({ courses, siteContent }: HomeProps) {
               const description = isAr ? course.description_ar : course.description_en
               const coverUrl = getDirectImageUrl(course.thumbnail_url)
               return (
-                <Link href={`/course/${course.id}`} key={course.id} className="group rounded-xl focus-visible:ring-2 block h-full">
+                <Link href={getCourseUrl(course, isAr)} key={course.id} className="group rounded-xl focus-visible:ring-2 block h-full">
                   <Card className="card-interactive card-equal overflow-hidden shadow-none">
                     <div className="relative flex h-44 items-end border-b bg-secondary/65 bg-cover bg-center p-6 shrink-0" style={coverUrl ? { backgroundImage: `url(${coverUrl})` } : undefined} role={coverUrl ? "img" : undefined} aria-label={coverUrl ? `${title} cover` : undefined}>
                       {coverUrl && <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" aria-hidden="true" />}

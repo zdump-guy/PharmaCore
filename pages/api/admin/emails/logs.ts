@@ -68,6 +68,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { count, error: countError } = await countQuery
     if (countError) {
+      if (countError.code === 'PGRST205' || countError.code === '42P01' || countError.message?.includes('email_logs')) {
+        return res.status(200).json({
+          success: true,
+          logs: [],
+          totalCount: 0,
+          page,
+          limit,
+          tablePending: true,
+          notice: 'Email logs database table has not been initialized. Please run migration supabase/04_enhanced_email_system.sql.',
+        })
+      }
       return res.status(500).json({ error: 'Failed to count logs: ' + countError.message })
     }
 
@@ -102,6 +113,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: logs, error: logsError } = await logsQuery
     if (logsError) {
+      if (logsError.code === 'PGRST205' || logsError.code === '42P01' || logsError.message?.includes('email_logs')) {
+        return res.status(200).json({
+          success: true,
+          logs: [],
+          totalCount: 0,
+          page,
+          limit,
+          tablePending: true,
+          notice: 'Email logs database table has not been initialized. Please run migration supabase/04_enhanced_email_system.sql.',
+        })
+      }
       return res.status(500).json({ error: 'Failed to query logs: ' + logsError.message })
     }
 

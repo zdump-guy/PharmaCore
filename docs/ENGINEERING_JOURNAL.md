@@ -4,6 +4,40 @@ This document acts as an append-only, chronological engineering log recording me
 
 ---
 
+## 2026-10-02 — Pure PDF Assessment Hub, Semantic Routing, and Fullscreen Viewer Remediation (Task TASK-006)
+
+### Objective
+Execute a comprehensive functional, UI/UX, and routing overhaul:
+1. Transition from interactive MCQ engines to academic, clinical PDF assessment and worksheet modules.
+2. Replace gibberish/raw UUID URLs across courses, lectures, and quizzes with human-readable semantic slugs, phonetic Arabic transliteration, and permanent 308 canonical redirects.
+3. Fix resource attachments to open documents and diagram images in-app (`PdfPreviewModal` / `ImagePreviewModal`) rather than triggering immediate browser downloads.
+4. Correct the critical layout defect in PDF & image preview modals where maximizing displaced 75% of the modal off-screen due to uncancelled CSS translate transforms.
+5. Resolve video player rendering and responsive presentation issues.
+
+### Observations & Discoveries
+- **Radix Dialog Coordinate Conflicts**: `DialogContent` in `components/ui/dialog.tsx` had hardcoded `fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]`. When toggling `isFullscreen`, setting `w-screen h-screen inset-0` failed to clear the `translate-x-[-50%] translate-y-[-50%]` and `left-[50%]` styles. A 100vw × 100vh element was translated -50vw and -50vh, hiding the header and toolbar entirely in the top-left off-screen space. Explicit `!fixed !inset-0 !left-0 !top-0 !translate-x-0 !translate-y-0 !transform-none !w-screen !h-screen !w-dvw !h-dvh` overrides resolve this reliably.
+- **Close Button Collisions**: `DialogContent` was unconditionally rendering `<DialogPrimitive.Close>`, overlaying an extra close icon directly on top of modal toolbars. Introducing `hideCloseButton?: boolean` cleanly solves this without breaking other dialogs.
+- **Slug SEO & Canonical Authority**: Using raw UUIDs in URLs damages shareability and search indexing. Adding dual-resolution (`isUuid` vs slug) with HTTP 308 permanent canonical redirects preserves backward compatibility for existing bookmarks while consolidating SEO authority on clean semantic slugs.
+- **Escape Key UX**: In fullscreen modals, pressing Escape should first exit fullscreen before dismissing the modal.
+
+### Actions Taken
+- **Assessment Redesign**: Refactored `pages/quiz/[id].tsx` into a pure PDF assessment hub with question sheet and solution sheet preview modals, direct downloads, and student completion tracking. Removed `Interactive Question Explorer` from `components/admin/CurriculumManager.tsx` and `Question Editor Dialog` from `components/admin/AdminModals.tsx`.
+- **Semantic Slugs**: Created `lib/slugs.ts` with Arabic transliteration, kebab-casing, collision suffix handling, and entity URL builders. Updated `pages/course/[id].tsx`, `pages/lecture/[id].tsx`, `pages/quiz/[id].tsx`, and `pages/sitemap.xml.ts`.
+- **Resource Actions**: Updated `components/ui/media-action-card.tsx` to route PDFs to `PdfPreviewModal` and images to `ImagePreviewModal`.
+- **Modal Maximization**: Fixed `components/ui/dialog.tsx`, `components/ui/pdf-preview-modal.tsx`, and `components/ui/image-preview-modal.tsx` with `hideCloseButton`, `!transform-none` positioning, `min-h-0` flex sizing, and Escape key handling.
+- **Video & UI Polish**: Optimized `components/YouTubePlayer.tsx` and `components/Navbar.tsx`.
+- **API Resilience**: Added PGRST205/42P01 error handling in `pages/api/admin/emails/logs.ts` and `pages/api/admin/emails/templates/index.ts`.
+- **Automated Tests**: Created `tests/quiz_and_tab_deep_linking.test.mjs` (22 tests) and `tests/slugs_and_routing.test.mjs` (16 tests).
+
+### Verification
+- `npm test`: 100% PASS across all 11 test suites.
+- `npx tsc --noEmit`: 0 errors.
+- `npm run lint`: 0 errors/warnings.
+- `npm run build`: Production build succeeded in 6.5s.
+- Chrome DevTools visual and interactive verification of fullscreen, Escape key, and bilingual layout.
+
+---
+
 ## 2026-09-23 — Complete Removal of Cloudflare Turnstile Bot Verification (Task TASK-005)
 
 ### Objective

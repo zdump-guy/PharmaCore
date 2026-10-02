@@ -16,7 +16,6 @@ import type {
   QuizForm,
   VoiceRecordForm,
   ResourceForm,
-  QuestionForm,
 } from "@/components/admin/AdminModals"
 
 const AnalyticsDashboard = dynamic(() => import("@/components/admin/AnalyticsDashboard"), {
@@ -81,7 +80,7 @@ import type {
   UserProfile,
 } from "@/types"
 
-type Editor = "course" | "lecture" | "quiz" | "resource" | "question" | "voiceRecord" | null
+type Editor = "course" | "lecture" | "quiz" | "resource" | "voiceRecord" | null
 type Notice = { error?: boolean; text: string } | null
 
 const emptyCourse: CourseForm = {
@@ -137,16 +136,6 @@ const emptyResource: ResourceForm = {
   type: "pdf",
 }
 
-const emptyQuestion: QuestionForm = {
-  quiz_id: "",
-  text_en: "",
-  text_ar: "",
-  type: "multiple_choice",
-  optionsText: "",
-  correct_answer: "",
-  order: 1,
-}
-
 const emptyUser: UserForm = {
   full_name: "",
   email: "",
@@ -198,7 +187,6 @@ export default function AdminPage() {
   const [quizForm, setQuizForm] = useState<QuizForm>(emptyQuiz)
   const [voiceRecordForm, setVoiceRecordForm] = useState<VoiceRecordForm>(emptyVoiceRecord)
   const [resourceForm, setResourceForm] = useState<ResourceForm>(emptyResource)
-  const [questionForm, setQuestionForm] = useState<QuestionForm>(emptyQuestion)
 
   const [selectedQuizId, setSelectedQuizId] = useState("")
   const [reply, setReply] = useState<Record<string, string>>({})
@@ -536,47 +524,6 @@ export default function AdminPage() {
       })
     }
     result(res.error, tr("Resource saved successfully.", "تم حفظ المادة بنجاح."))
-    setSaving(false)
-  }
-
-  async function saveQuestion(e: React.FormEvent) {
-    e.preventDefault()
-    if (!supabase) return
-    setSaving(true)
-    const { id, optionsText, ...form } = questionForm
-    const options =
-      form.type === "multiple_choice"
-        ? optionsText.split("\n").map((v) => v.trim()).filter(Boolean)
-        : form.type === "true_false"
-        ? ["True", "False"]
-        : null
-
-    if (form.type === "multiple_choice" && (options?.length ?? 0) < 2) {
-      setNotice({
-        error: true,
-        text: tr("Enter at least two options, one per line.", "أدخل خيارين على الأقل، كل خيار في سطر."),
-      })
-      setSaving(false)
-      return
-    }
-
-    const payload = { ...form, options }
-    const res = id
-      ? await supabase.from("questions").update(payload).eq("id", id).select().single()
-      : await supabase.from("questions").insert([payload]).select().single()
-
-    if (res.data) {
-      setQuestions((rows) => merge(rows, res.data))
-      setEditor(null)
-      setQuestionForm({ ...emptyQuestion, quiz_id: res.data.quiz_id })
-      trackAdminAction({
-        action: id ? "updated" : "created",
-        entityType: "question",
-        entityId: res.data.id,
-        entityName: res.data.text_en,
-      })
-    }
-    result(res.error, tr("Question saved successfully.", "تم حفظ السؤال بنجاح."))
     setSaving(false)
   }
 
@@ -1063,28 +1010,6 @@ export default function AdminPage() {
     setEditor("resource")
   }
 
-  const openQuestion = (x?: Question) => {
-    const currentQuestions = questions.filter((q) => q.quiz_id === selectedQuizId)
-    setQuestionForm(
-      x
-        ? {
-            id: x.id,
-            quiz_id: x.quiz_id,
-            text_en: x.text_en,
-            text_ar: x.text_ar,
-            type: x.type,
-            optionsText: x.options?.join("\n") ?? "",
-            correct_answer: x.correct_answer,
-            order: x.order,
-          }
-        : {
-            ...emptyQuestion,
-            quiz_id: selectedQuizId || quizzes[0]?.id || "",
-            order: currentQuestions.length + 1,
-          }
-    )
-    setEditor("question")
-  }
 
   async function handleUpdateEnrollmentSettings(newSettings: EnrollmentSettings) {
     if (!sessionToken) return
@@ -1221,7 +1146,6 @@ export default function AdminPage() {
                 onOpenVoiceRecordEditor={openVoiceRecord}
                 onOpenQuizEditor={openQuiz}
                 onOpenResourceEditor={openResource}
-                onOpenQuestionEditor={openQuestion}
                 onDeleteEntity={remove}
                 onNavigateToEnrollments={handleNavigateToCourseEnrollments}
                 onEnrollmentsUpdated={(count) => setPendingEnrollmentsCount(count)}
@@ -1354,9 +1278,6 @@ export default function AdminPage() {
         resourceForm={resourceForm}
         setResourceForm={setResourceForm}
         onSaveResource={saveResource}
-        questionForm={questionForm}
-        setQuestionForm={setQuestionForm}
-        onSaveQuestion={saveQuestion}
         editingUser={editingUser}
         setEditingUser={setEditingUser}
         userEditForm={userEditForm}

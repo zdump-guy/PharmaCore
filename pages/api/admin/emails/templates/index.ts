@@ -208,6 +208,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .single()
 
       if (insertError) {
+        if (insertError.code === 'PGRST205' || insertError.code === '42P01' || insertError.message?.includes('email_templates')) {
+          return res.status(503).json({
+            error: 'Custom template storage table has not been provisioned in Supabase. Please execute migration supabase/04_enhanced_email_system.sql.'
+          })
+        }
         return res.status(500).json({ error: 'Failed to create template: ' + insertError.message })
       }
 

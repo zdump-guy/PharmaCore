@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   FiDownload as Download,
   FiExternalLink as ExternalLink,
@@ -11,6 +11,7 @@ import {
 } from "react-icons/fi"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface ImagePreviewModalProps {
   open: boolean
@@ -30,6 +31,14 @@ export default function ImagePreviewModal({
   const [zoom, setZoom] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // Reset state when closed
+  useEffect(() => {
+    if (!open) {
+      setIsFullscreen(false)
+      setZoom(1)
+    }
+  }, [open])
+
   const tr = (en: string, ar: string) => (isAr ? ar : en)
 
   const handleDownload = () => {
@@ -48,11 +57,19 @@ export default function ImagePreviewModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`flex flex-col p-0 overflow-hidden bg-background/95 backdrop-blur-xl border shadow-2xl transition-all duration-200 ${
+        hideCloseButton
+        onEscapeKeyDown={(e) => {
+          if (isFullscreen) {
+            e.preventDefault()
+            setIsFullscreen(false)
+          }
+        }}
+        className={cn(
+          "flex flex-col p-0 overflow-hidden bg-background/95 backdrop-blur-xl border shadow-2xl transition-all duration-200",
           isFullscreen
-            ? "fixed inset-0 z-50 w-screen h-screen max-w-none rounded-none m-0 border-0"
+            ? "!fixed !inset-0 !left-0 !top-0 !translate-x-0 !translate-y-0 !transform-none !w-screen !h-screen !w-dvw !h-dvh !max-w-none !max-h-none !rounded-none !m-0 !p-0 !border-0 z-50"
             : "w-[95vw] sm:max-w-3xl lg:max-w-4xl h-[85vh] rounded-2xl"
-        }`}
+        )}
         dir={isAr ? "rtl" : "ltr"}
       >
         {/* Header toolbar */}
@@ -138,7 +155,7 @@ export default function ImagePreviewModal({
         </div>
 
         {/* Image viewport */}
-        <div className="relative flex-1 w-full h-full overflow-auto flex items-center justify-center p-4 sm:p-6 bg-black/40">
+        <div className="relative flex-1 min-h-0 w-full overflow-auto flex items-center justify-center p-4 sm:p-6 bg-black/40">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={url}

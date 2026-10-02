@@ -38,6 +38,7 @@ import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
 import { trackLectureView, trackResourceClick, trackCommunityQuestionSubmit } from "@/lib/analytics"
+import { getCourseUrl, getLectureUrl, getLectureSlug, getQuizUrl, resolveLecture, isUuid } from "@/lib/slugs"
 import type { AudioRecord, CommunityQuestion, Course, Lecture, Quiz, Resource } from "@/types"
 
 interface LecturePageProps {
@@ -312,6 +313,8 @@ function QuestionForm({
   )
 }
 
+const VALID_TABS = ["summary", "records", "resources", "quizzes", "discussion"] as const
+
 export default function LecturePage({
   lecture,
   resources,
@@ -326,8 +329,30 @@ export default function LecturePage({
   currentIndex = 0,
   totalLectures = 1,
 }: LecturePageProps) {
-  const { locale } = useRouter()
+  const router = useRouter()
+  const { locale } = router
   const isAr = locale === "ar"
+
+  const tabQuery = typeof router.query.tab === "string" ? router.query.tab : ""
+  const [activeTab, setActiveTab] = useState<string>("summary")
+
+  useEffect(() => {
+    if (tabQuery && (VALID_TABS as readonly string[]).includes(tabQuery)) {
+      setActiveTab(tabQuery)
+    }
+  }, [tabQuery])
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val)
+    if (router.query.tab !== val) {
+      router.replace(
+        { pathname: router.pathname, query: { ...router.query, tab: val } },
+        undefined,
+        { shallow: true }
+      )
+    }
+  }
+
   const prevLecture = previousLecture
   const hasPrev = Boolean(prevLecture)
   const isLastLecture = !nextLecture || (totalLectures > 0 && currentIndex === totalLectures - 1)
@@ -548,10 +573,15 @@ export default function LecturePage({
   }
 
   const videoId = parseYouTubeVideoId(lecture.youtube_url)
+  const isSampleLecture = lecture.order === 1
   const isEnrolledOnly = course?.access_policy === "enrolled_only"
   const isGatedAuth = isLocked && !isAuthenticated
   const isGatedEnrollment = isEnrolledOnly && isAuthenticated && !isEnrolled
-  const isGated = !isStaff && (isGatedAuth || isGatedEnrollment)
+  // Free preview for Lecture 1 (sample lecture) is always open
+  // If not yet mounted on client, match SSR to eliminate React 19 hydration mismatches
+  const isGated = isMounted
+    ? !isSampleLecture && !isStaff && (isGatedAuth || isGatedEnrollment)
+    : !isSampleLecture && isLocked
 
   const copy = isAr
     ? {
@@ -566,8 +596,11 @@ export default function LecturePage({
         quizBody: "ورقة اختبار PDF ومفتاح الحل لمراجعة وتثبيت المفاهيم.",
         startQuiz: "بدء الاختبار",
         noRecords: "لا توجد تسجيلات صوتية لهذه المحاضرة حتى الآن.",
+        noRecordsDesc: "سيتم رفع التسجيلات الصوتية والملخصات التوضيحية لهذه المحاضرة فور مراجعتها مع هيئة التدريس.",
         noResources: "لا توجد مواد مرفقة حتى الآن.",
+        noResourcesDesc: "سيتم إتاحة العروض التقديمية والملخصات العلمية المرجعية لهذه المحاضرة هنا قريباً.",
         noQuizzes: "لا توجد أوراق اختبارات مرفقة لهذه المحاضرة حتى الآن.",
+        noQuizzesDesc: "سيتم نشر اختبارات الفهم وتطبيقات الحالات الإكلينيكية فور اكتمال مراجعتها.",
         mentor: "إجابة المرشد",
         ask: "لديك سؤال؟",
         askBody: "اكتب سؤالك بوضوح ليستفيد منه باقي الطلاب أيضًا.",
@@ -591,8 +624,11 @@ export default function LecturePage({
         quizBody: "PDF quiz sheets and solution keys to practice and master concepts.",
         startQuiz: "Start quiz",
         noRecords: "No voice records are attached to this lecture yet.",
+        noRecordsDesc: "Audio recordings and voice summaries for this lecture will be uploaded following the live faculty review.",
         noResources: "No resources are attached yet.",
+        noResourcesDesc: "Supplementary slide decks and pharmacology reference handouts will be published here.",
         noQuizzes: "No quiz sheets are attached to this lecture yet.",
+        noQuizzesDesc: "Understanding checkpoints and clinical case assessments will be posted once finalized.",
         mentor: "Mentor answer",
         ask: "Have a question?",
         askBody: "Ask clearly so other students can benefit from the answer too.",
@@ -606,9 +642,9 @@ export default function LecturePage({
       }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
-  const courseUrl = courseId ? `${siteUrl}${isAr ? "/ar" : ""}/course/${courseId}` : undefined
+  const courseUrl = course ? `${siteUrl}${getCourseUrl(course, isAr)}` : undefined
   const courseTitle = isAr ? course?.title_ar || "المقرر" : course?.title_en || "Course"
-  const lectureUrl = `${siteUrl}${isAr ? "/ar" : ""}/lecture/${lecture.id}`
+  const lectureUrl = `${siteUrl}${getLectureUrl(lecture, isAr)}`
   const lectureThumbnail = videoId
     ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
     : `${siteUrl}/og-course.jpg`
@@ -720,7 +756,7 @@ export default function LecturePage({
           </Button>
         ) : (
           <Button size="sm" className="mt-4" asChild>
-            <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
+            <Link href={`/login?returnUrl=${encodeURIComponent(getLectureUrl(lecture, false))}&tab=signup`}>
               {copy.signInCta}
             </Link>
           </Button>
@@ -742,17 +778,17 @@ export default function LecturePage({
           <Breadcrumb
             items={[
               { label: isAr ? "المقررات" : "Courses", href: "/#courses" },
-              ...(courseId && course
-                ? [{ label: isAr ? course.title_ar : course.title_en, href: `/course/${courseId}` }]
+              ...(course
+                ? [{ label: isAr ? course.title_ar : course.title_en, href: getCourseUrl(course, isAr) }]
                 : []),
               { label: title },
             ]}
             className="mb-4"
           />
 
-          {courseId && (
+          {course && (
             <Button variant="ghost" className="-ms-4 mb-4 sm:mb-6" asChild>
-              <Link href={`/course/${courseId}`}>
+              <Link href={getCourseUrl(course, isAr)}>
                 <DirectionArrow className="size-4" />
                 <span>{copy.back}</span>
               </Link>
@@ -764,7 +800,12 @@ export default function LecturePage({
                 <PlayCircle className="size-3.5 shrink-0" />
                 <span>{copy.lecture} {lecture.order}</span>
               </Badge>
-              {isEnrolledOnly ? (
+              {isSampleLecture ? (
+                <Badge variant="secondary" className="badge-nowrap gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
+                  <PlayCircle className="size-3 shrink-0" />
+                  <span>{isAr ? "معاينة مجانية" : "Free Preview"}</span>
+                </Badge>
+              ) : isEnrolledOnly ? (
                 <Badge variant="secondary" className="badge-nowrap gap-1 border-purple-500/30 bg-purple-500/10 text-purple-800 dark:text-purple-300 font-bold text-xs">
                   <LockKeyhole className="size-3 shrink-0" />
                   <span>{isAr ? "مجموعات محددة" : "Cohort Only"}</span>
@@ -837,7 +878,7 @@ export default function LecturePage({
                       </div>
                     ) : (
                       <Button size="lg" className="btn-nowrap bg-primary hover:bg-primary/90 text-primary-foreground font-bold" asChild>
-                        <Link href={`/login?returnUrl=/lecture/${lecture.id}&tab=signup`}>
+                        <Link href={`/login?returnUrl=${encodeURIComponent(getLectureUrl(lecture, false))}&tab=signup`}>
                           <LogIn className="size-4 shrink-0" />
                           <span>{copy.signInCta}</span>
                         </Link>
@@ -860,41 +901,41 @@ export default function LecturePage({
             </div>
 
             {/* Tabs for Summary, Voice Records, Resources, Quiz PDFs, Discussion */}
-            <Tabs defaultValue="summary" className="mt-6 sm:mt-8">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6 sm:mt-8">
               <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 bg-muted/80 p-1.5 gap-1.5 rounded-2xl">
-                <TabsTrigger value="summary" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm">
-                  {copy.summary}
+                <TabsTrigger value="summary" className="min-h-[44px] min-w-0 px-2 text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm">
+                  <span className="truncate">{copy.summary}</span>
                 </TabsTrigger>
-                <TabsTrigger value="records" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
+                <TabsTrigger value="records" className="min-h-[44px] min-w-0 px-2 text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
                   <Headphones className="size-3.5 shrink-0" />
-                  <span>{copy.records}</span>
+                  <span className="truncate">{copy.records}</span>
                   {audioRecords.length > 0 && (
-                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold">
+                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold shrink-0">
                       {audioRecords.length}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="resources" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
+                <TabsTrigger value="resources" className="min-h-[44px] min-w-0 px-2 text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
                   <FileText className="size-3.5 shrink-0" />
-                  <span>{copy.resources}</span>
+                  <span className="truncate">{copy.resources}</span>
                   {resources.length > 0 && (
-                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold">
+                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold shrink-0">
                       {resources.length}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="quizzes" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
+                <TabsTrigger value="quizzes" className="min-h-[44px] min-w-0 px-2 text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5">
                   <HelpCircle className="size-3.5 shrink-0" />
-                  <span>{copy.quizzes}</span>
+                  <span className="truncate">{copy.quizzes}</span>
                   {quizzes.length > 0 && (
-                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold">
+                    <Badge variant="secondary" className="px-1.5 py-0 h-4 min-w-4 text-[10px] font-mono font-bold shrink-0">
                       {quizzes.length}
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="discussion" className="min-h-[44px] text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1">
+                <TabsTrigger value="discussion" className="min-h-[44px] min-w-0 px-2 text-xs sm:text-sm font-bold rounded-xl data-[state=active]:shadow-sm flex items-center justify-center gap-1.5 col-span-2 sm:col-span-1">
                   <MessageCircle className="size-3.5 shrink-0" />
-                  <span>{copy.discussion}</span>
+                  <span className="truncate">{copy.discussion}</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -936,9 +977,10 @@ export default function LecturePage({
                   </div>
                 ) : (
                   <Card className="shadow-none">
-                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                    <CardContent className="p-8 text-center text-sm text-muted-foreground space-y-1">
                       <Headphones className="mx-auto size-8 opacity-30 mb-2" />
-                      <p className="font-medium">{copy.noRecords}</p>
+                      <p className="font-bold text-foreground text-sm">{copy.noRecords}</p>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">{copy.noRecordsDesc}</p>
                     </CardContent>
                   </Card>
                 )}
@@ -955,13 +997,22 @@ export default function LecturePage({
                       const isArchive =
                         resource.type === "other" &&
                         (resource.url.match(/\.(zip|rar|7z|tar|gz)(\?.*)?$/i) !== null ||
-                          resTitle.toLowerCase().includes(".zip") ||
-                          resource.title_en.toLowerCase().includes("zip") ||
-                          resource.title_ar.includes("zip"))
+                          /\b(zip|rar|7z|archive|أرشيف|ملف مضغوط)\b/i.test(resTitle) ||
+                          resTitle.toLowerCase().includes(".zip"))
+                      const isPdf =
+                        !isArchive &&
+                        (resource.type === "pdf" ||
+                          /\bpdf\b/i.test(resTitle) ||
+                          resource.url.toLowerCase().includes(".pdf"))
+                      const isImage =
+                        !isArchive &&
+                        (resource.type === "image" ||
+                          /\.(jpg|jpeg|png|webp|gif|svg)/i.test(resource.url) ||
+                          /mind map|diagram|خريطة ذهنية|صورة/i.test(resTitle))
                       const kind =
-                        resource.type === "image"
+                        isImage
                           ? "image"
-                          : resource.type === "pdf"
+                          : isPdf
                           ? "pdf"
                           : isArchive
                           ? "archive"
@@ -1005,9 +1056,10 @@ export default function LecturePage({
                   </div>
                 ) : (
                   <Card className="shadow-none">
-                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                    <CardContent className="p-8 text-center text-sm text-muted-foreground space-y-1">
                       <FileText className="mx-auto size-8 opacity-30 mb-2" />
-                      <p className="font-medium">{copy.noResources}</p>
+                      <p className="font-bold text-foreground text-sm">{copy.noResources}</p>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">{copy.noResourcesDesc}</p>
                     </CardContent>
                   </Card>
                 )}
@@ -1039,11 +1091,11 @@ export default function LecturePage({
                               )}
                             </div>
 
-                            {/* Fallback to interactive online quiz if needed */}
+                            {/* Link to dedicated quiz assessment page */}
                             <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5 self-start sm:self-auto shrink-0" asChild>
-                              <Link href={`/quiz/${quiz.id}`}>
-                                <HelpCircle className="size-3.5" />
-                                <span>{isAr ? "بدء الاختبار التفاعلي" : "Online Interactive Mode"}</span>
+                              <Link href={getQuizUrl(quiz, isAr, quizzes)}>
+                                <FileText className="size-3.5" />
+                                <span>{isAr ? "عرض ورقة التقييم" : "View Assessment"}</span>
                               </Link>
                             </Button>
                           </div>
@@ -1087,9 +1139,9 @@ export default function LecturePage({
 
                             {!quiz.pdf_url && !quiz.solution_pdf_url && (
                               <div className="flex items-center justify-between rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
-                                <span>{isAr ? "الملف الورقي غير متوفر، يمكنك أداء الاختبار التفاعلي أونلاين." : "PDF sheet not uploaded yet. You can take the interactive quiz online."}</span>
-                                <Button size="sm" className="h-8 text-xs font-bold" asChild>
-                                  <Link href={`/quiz/${quiz.id}`}>{copy.startQuiz}</Link>
+                                <span>{isAr ? "ورقة التقييم قيد التجهيز من قبل المرشد الأكاديمي." : "Assessment worksheet is currently being prepared by the instructor."}</span>
+                                <Button size="sm" variant="outline" className="h-8 text-xs font-bold" asChild>
+                                  <Link href={getQuizUrl(quiz, isAr, quizzes)}>{isAr ? "صفحة التقييم" : "Assessment Page"}</Link>
                                 </Button>
                               </div>
                             )}
@@ -1100,9 +1152,10 @@ export default function LecturePage({
                   </div>
                 ) : (
                   <Card className="shadow-none">
-                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                    <CardContent className="p-8 text-center text-sm text-muted-foreground space-y-1">
                       <HelpCircle className="mx-auto size-8 opacity-30 mb-2" />
-                      <p className="font-medium">{copy.noQuizzes}</p>
+                      <p className="font-bold text-foreground text-sm">{copy.noQuizzes}</p>
+                      <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">{copy.noQuizzesDesc}</p>
                     </CardContent>
                   </Card>
                 )}
@@ -1132,7 +1185,7 @@ export default function LecturePage({
             <nav className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 border-t pt-6" aria-label={isAr ? "التنقل بين المحاضرات" : "Lecture navigation"}>
               {prevLecture ? (
                 <Button variant="outline" className="w-full sm:w-auto min-h-[48px] py-2 px-3.5 gap-2.5 text-start justify-start shadow-xs rounded-xl" asChild>
-                  <Link href={`/lecture/${prevLecture.id}`} aria-label={`${isAr ? "المحاضرة السابقة" : "Previous lecture"}: ${isAr ? prevLecture.title_ar : prevLecture.title_en}`}>
+                  <Link href={getLectureUrl(prevLecture, isAr)} aria-label={`${isAr ? "المحاضرة السابقة" : "Previous lecture"}: ${isAr ? prevLecture.title_ar : prevLecture.title_en}`}>
                     <DirectionArrow className="size-4 shrink-0 text-primary" aria-hidden="true" />
                     <div className="min-w-0 text-start">
                       <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{isAr ? "المحاضرة السابقة" : "Previous Lecture"}</span>
@@ -1149,7 +1202,7 @@ export default function LecturePage({
 
               {nextLecture ? (
                 <Button variant="default" className="w-full sm:w-auto min-h-[48px] py-2 px-3.5 gap-2.5 text-end justify-end ms-auto bg-primary text-primary-foreground font-bold shadow-xs rounded-xl" asChild>
-                  <Link href={`/lecture/${nextLecture.id}`} aria-label={`${isAr ? "المحاضرة التالية" : "Next lecture"}: ${isAr ? nextLecture.title_ar : nextLecture.title_en}`}>
+                  <Link href={getLectureUrl(nextLecture, isAr)} aria-label={`${isAr ? "المحاضرة التالية" : "Next lecture"}: ${isAr ? nextLecture.title_ar : nextLecture.title_en}`}>
                     <div className="min-w-0 text-end">
                       <span className="block text-[10px] font-bold uppercase tracking-wider opacity-85">{isAr ? "المحاضرة التالية" : "Next Lecture"}</span>
                       <span className="block font-semibold text-xs truncate max-w-[260px]">{isAr ? nextLecture.title_ar : nextLecture.title_en}</span>
@@ -1160,14 +1213,14 @@ export default function LecturePage({
               ) : isLastLecture ? (
                 quizzes && quizzes.length > 0 ? (
                   <Button variant="default" className="w-full sm:w-auto min-h-[48px] py-2 px-4 gap-2 ms-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs rounded-xl" asChild>
-                    <Link href={`/quiz/${quizzes[0].id}`} aria-label={isAr ? "بدء اختبار التقييم النهائي" : "Start final assessment quiz"}>
-                      <span>{isAr ? "إتمام المقرر: بدء الاختبار" : "Course Completion: Take Quiz"}</span>
+                    <Link href={getQuizUrl(quizzes[0], isAr, quizzes)} aria-label={isAr ? "عرض ورقة التقييم النهائي" : "View final assessment sheet"}>
+                      <span>{isAr ? "إتمام المقرر: ورقة التقييم" : "Course Completion: Assessment"}</span>
                       <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
                     </Link>
                   </Button>
-                ) : courseId ? (
+                ) : course ? (
                   <Button variant="outline" className="w-full sm:w-auto min-h-[48px] py-2 px-4 gap-2 ms-auto rounded-xl" asChild>
-                    <Link href={`/course/${courseId}`} aria-label={isAr ? "إتمام المقرر والعودة للفهرس" : "Course completion, return to overview"}>
+                    <Link href={getCourseUrl(course, isAr)} aria-label={isAr ? "إتمام المقرر والعودة للفهرس" : "Course completion, return to overview"}>
                       <span>{isAr ? "إتمام المقرر: العودة للمقرر" : "Course Completed: Return to Course"}</span>
                       <CheckCircle2 className="size-4 shrink-0 text-primary" aria-hidden="true" />
                     </Link>
@@ -1335,7 +1388,7 @@ export default function LecturePage({
   )
 }
 
-export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({ params, locale, res }) => {
+export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({ params, query, locale, res }) => {
   const id = params?.id as string
   let lecture: Lecture | null = null
   let resources: Resource[] = []
@@ -1354,12 +1407,27 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
   }
 
-  if (supabase) {
+  if (supabase && id) {
     try {
-      const { data: lectureData } = await supabase.from("lectures").select("*").eq("id", id).maybeSingle()
-      if (lectureData) {
-        lecture = lectureData
-        courseId = lectureData.course_id
+      const { lecture: resolvedLecture, allLectures } = await resolveLecture(id)
+      if (resolvedLecture) {
+        // If accessed via old raw UUID, permanently redirect to clean human-readable slug
+        if (isUuid(id)) {
+          const canonicalSlug = getLectureSlug(resolvedLecture, allLectures)
+          const prefix = locale === "ar" ? "/ar" : ""
+          const queryParams = { ...query }
+          delete queryParams.id
+          const qs = new URLSearchParams(queryParams as Record<string, string>).toString()
+          return {
+            redirect: {
+              destination: `${prefix}/lecture/${canonicalSlug}${qs ? `?${qs}` : ""}`,
+              permanent: true,
+            },
+          }
+        }
+
+        lecture = resolvedLecture
+        courseId = resolvedLecture.course_id
 
         const [
           courseResult,
@@ -1379,13 +1447,13 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
                 .eq("course_id", courseId)
                 .order("order", { ascending: true })
             : Promise.resolve({ data: null }),
-          supabase.from("resources").select("*").eq("lecture_id", id),
-          supabase.from("audio_records").select("*").eq("lecture_id", id).order("created_at", { ascending: true }),
-          supabase.from("quizzes").select("*").eq("lecture_id", id).order("created_at", { ascending: false }),
+          supabase.from("resources").select("*").eq("lecture_id", lecture.id),
+          supabase.from("audio_records").select("*").eq("lecture_id", lecture.id).order("created_at", { ascending: true }),
+          supabase.from("quizzes").select("*").eq("lecture_id", lecture.id).order("created_at", { ascending: false }),
           supabase
             .from("community_questions")
             .select("id, lecture_id, user_id, author_name, text, created_at, is_anonymous, answers:community_answers(*)")
-            .eq("lecture_id", id)
+            .eq("lecture_id", lecture.id)
             .order("created_at", { ascending: false }),
           loadSiteContent(),
           serverSideTranslations(locale ?? "en", ["common"]),
@@ -1404,7 +1472,7 @@ export const getServerSideProps: GetServerSideProps<LecturePageProps> = async ({
         const allLecturesData = allLecturesResult.data
         if (allLecturesData && allLecturesData.length > 0) {
           totalLectures = allLecturesData.length
-          const idx = allLecturesData.findIndex((l) => l.id === id)
+          const idx = allLecturesData.findIndex((l) => l.id === resolvedLecture.id)
           if (idx !== -1) {
             currentIndex = idx
             previousLecture = idx > 0 ? (allLecturesData[idx - 1] as unknown as Lecture) : null

@@ -48,25 +48,29 @@ export default function MediaActionCard({
   const isArchive =
     kind === "archive" ||
     url.toLowerCase().match(/\.(zip|rar|7z|tar|gz)(\?.*)?$/i) !== null ||
-    title.toLowerCase().match(/\.(zip|rar|7z|tar|gz)(\b|$)/i) !== null
+    title.toLowerCase().match(/\.(zip|rar|7z|tar|gz)(\b|$)/i) !== null ||
+    /\b(zip|rar|7z|archive|أرشيف|ملف مضغوط)\b/i.test(title)
 
   const isPdf =
     !isArchive &&
     (kind === "pdf" ||
       url.toLowerCase().match(/\.(pdf)(\?.*)?$/i) !== null ||
-      title.toLowerCase().match(/\.(pdf)(\b|$)/i) !== null)
+      /\bpdf\b/i.test(title) ||
+      /بي دي إف|مستند/i.test(title))
 
   const isImage =
     !isArchive &&
     (kind === "image" ||
       url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i) !== null ||
-      title.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)(\b|$)/i) !== null)
+      title.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif|svg)(\b|$)/i) !== null ||
+      /\b(mind map|diagram|infographic|صورة|خريطة ذهنية)\b/i.test(title))
 
   const isAudio =
     !isArchive &&
     (kind === "audio" ||
       url.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)(\?.*)?$/i) !== null ||
-      title.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)(\b|$)/i) !== null)
+      title.toLowerCase().match(/\.(mp3|wav|m4a|ogg|webm|aac)(\b|$)/i) !== null ||
+      /\b(audio|voice|تسجيل|صوت)\b/i.test(title))
 
   const resolvedKind: MediaKind =
     kind && kind !== "other"
@@ -81,8 +85,8 @@ export default function MediaActionCard({
       ? "audio"
       : "other"
 
-  const handleDownload = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleDownload = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     onTrackClick?.()
     const a = document.createElement("a")
     a.href = url
@@ -104,8 +108,15 @@ export default function MediaActionCard({
       setImageOpen(true)
     } else if (resolvedKind === "audio") {
       setShowAudioPlayer((prev) => !prev)
+    } else if (resolvedKind === "archive") {
+      handleDownload()
     } else {
-      window.open(url, "_blank", "noopener,noreferrer")
+      // For general files (e.g. docs, slides), preview in modal reader or open
+      if (url.includes("utfs.io") || url.match(/\.(doc|docx|ppt|pptx|xls|xlsx|txt)$/i)) {
+        setPdfOpen(true)
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer")
+      }
     }
   }
 
@@ -176,29 +187,44 @@ export default function MediaActionCard({
             </div>
           </div>
 
-          {/* 2 Custom Action Buttons */}
+          {/* Action Buttons */}
           <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0 justify-end pt-1 sm:pt-0">
-            {/* Button 1: View / Listen */}
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleView}
-              className="flex-1 sm:flex-none min-h-[40px] h-10 sm:h-9 px-3.5 text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer"
-            >
-              <ViewIcon className="size-3.5 shrink-0" />
-              <span>{viewLabel}</span>
-            </Button>
+            {resolvedKind === "archive" ? (
+              /* Archive: Single clean prominent download button */
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => handleDownload()}
+                className="flex-1 sm:flex-none min-h-[40px] h-10 sm:h-9 px-4 text-xs font-bold gap-1.5 bg-purple-600 hover:bg-purple-700 text-white shadow-xs cursor-pointer"
+              >
+                <Download className="size-3.5 shrink-0" />
+                <span>{tr("Download Archive", "تحميل الملف")}</span>
+              </Button>
+            ) : (
+              <>
+                {/* Button 1: View / Listen */}
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleView}
+                  className="flex-1 sm:flex-none min-h-[40px] h-10 sm:h-9 px-3.5 text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer"
+                >
+                  <ViewIcon className="size-3.5 shrink-0" />
+                  <span>{viewLabel}</span>
+                </Button>
 
-            {/* Button 2: Direct Download */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              className="flex-1 sm:flex-none min-h-[40px] h-10 sm:h-9 px-3.5 text-xs font-bold gap-1.5 border-border hover:border-primary/40 hover:bg-muted/80 shadow-xs cursor-pointer"
-            >
-              <Download className="size-3.5 text-muted-foreground shrink-0" />
-              <span>{tr("Download", "تحميل")}</span>
-            </Button>
+                {/* Button 2: Direct Download */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  className="flex-1 sm:flex-none min-h-[40px] h-10 sm:h-9 px-3.5 text-xs font-bold gap-1.5 border-border hover:border-primary/40 hover:bg-muted/80 shadow-xs cursor-pointer"
+                >
+                  <Download className="size-3.5 text-muted-foreground shrink-0" />
+                  <span>{tr("Download", "تحميل")}</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -217,8 +243,8 @@ export default function MediaActionCard({
         )}
       </div>
 
-      {/* PDF Modal Viewer */}
-      {resolvedKind === "pdf" && (
+      {/* PDF & Document Modal Viewer */}
+      {(resolvedKind === "pdf" || resolvedKind === "other") && (
         <PdfPreviewModal
           open={pdfOpen}
           onOpenChange={setPdfOpen}

@@ -9,45 +9,50 @@ import {
   FiCheck as Check,
   FiCheckCircle as CheckCircle2,
   FiClipboard as ClipboardCheck,
+  FiDownload as Download,
+  FiExternalLink as ExternalLink,
+  FiEye as Eye,
+  FiFileText as FileText,
   FiLock as LockKeyhole,
   FiLogIn as LogIn,
-  FiRotateCcw as RotateCcw,
-  FiSend as Send,
-  FiX as X,
 } from "react-icons/fi"
 import Layout from "@/components/Layout"
 import Breadcrumb from "@/components/Breadcrumb"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import PdfPreviewModal from "@/components/ui/pdf-preview-modal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
 import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "@/components/AuthProvider"
 import { loadSiteContent, type SiteContent } from "@/lib/siteContent"
-import { cn } from "@/lib/utils"
-import { trackQuizStart, trackQuestionAnswered, trackQuizSubmit, trackQuizRetry } from "@/lib/analytics"
-import type { Course, Lecture, Question, Quiz } from "@/types"
+import { trackQuizStart, trackQuizSubmit } from "@/lib/analytics"
+import { getCourseUrl, getLectureUrl, getQuizUrl, getQuizSlug, resolveQuiz, isUuid } from "@/lib/slugs"
+import type { Course, Lecture, Quiz } from "@/types"
 
 interface QuizPageProps {
   quiz: Quiz | null
-  questions: Question[]
   isLocked: boolean
   course?: Course | null
   lecture?: Lecture | null
   siteContent: SiteContent
 }
 
-export default function QuizPage({ quiz, questions, isLocked, course = null, lecture = null }: QuizPageProps) {
+export default function QuizPage({ quiz, isLocked, course = null, lecture = null }: QuizPageProps) {
   const { locale } = useRouter()
   const isAr = locale === "ar"
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [submitted, setSubmitted] = useState(false)
+  const [activeModal, setActiveModal] = useState<{ open: boolean; url: string; title: string }>({
+    open: false,
+    url: "",
+    title: "",
+  })
+  const [isPdfCompleted, setIsPdfCompleted] = useState(false)
   const { isAuthenticated } = useAuth()
   const DirectionArrow = isAr ? ArrowRight : ArrowLeft
 
   const title = quiz ? (isAr ? quiz.title_ar : quiz.title_en) : ""
+  const description = quiz ? (isAr ? quiz.description_ar : quiz.description_en) : ""
+  const courseTitle = course ? (isAr ? course.title_ar : course.title_en) : ""
+  const lectureTitle = lecture ? (isAr ? lecture.title_ar : lecture.title_en) : ""
 
   useEffect(() => {
     if (quiz) {
@@ -56,387 +61,445 @@ export default function QuizPage({ quiz, questions, isLocked, course = null, lec
         quizTitle: title,
         lectureId: quiz.lecture_id,
         courseId: quiz.course_id,
-        totalQuestions: questions.length,
+        totalQuestions: 1,
       })
     }
-  }, [quiz, title, questions.length])
+  }, [quiz, title])
 
   if (!quiz) {
     return (
       <Layout title="Quiz not found">
         <div className="page-shell section-space text-center">
           <ClipboardCheck className="mx-auto size-12 text-muted-foreground" />
-          <h1 className="mt-5 text-3xl font-bold">{isAr ? "الاختبار غير موجود" : "Quiz not found"}</h1>
+          <h1 className="mt-5 text-3xl font-bold">{isAr ? "الاختبار غير موجود" : "Assessment not found"}</h1>
+          <Button className="mt-4" asChild>
+            <Link href="/#courses">{isAr ? "العودة للمقررات" : "Browse Courses"}</Link>
+          </Button>
         </div>
       </Layout>
     )
   }
 
   const isGated = isLocked && !isAuthenticated
-  const answeredCount = Object.values(answers).filter(Boolean).length
-  const score = questions.filter(
-    (question) => (answers[question.id] ?? "").trim().toLowerCase() === question.correct_answer.trim().toLowerCase()
-  ).length
-  const percent = questions.length ? Math.round((score / questions.length) * 100) : 0
-  const backHref = quiz.lecture_id ? `/lecture/${quiz.lecture_id}` : quiz.course_id ? `/course/${quiz.course_id}` : "/"
+  const backHref = lecture
+    ? getLectureUrl(lecture, isAr)
+    : course
+    ? getCourseUrl(course, isAr)
+    : "/#courses"
 
-  const copy = isAr
-    ? {
-        back: "العودة للمحاضرة",
-        label: "اختبار قصير",
-        helper: "اختر أفضل إجابة لكل سؤال. يمكنك المراجعة قبل الإرسال.",
-        answered: "تمت الإجابة",
-        of: "من",
-        submit: "إرسال الإجابات",
-        complete: "أجب عن جميع الأسئلة للإرسال",
-        result: "نتيجتك",
-        excellent: "إتقان ممتاز — يمكنك الانتقال بثقة.",
-        improve: "بداية جيدة. راجع الإجابات وحاول مرة أخرى.",
-        correct: "إجابة صحيحة",
-        incorrect: "تحتاج مراجعة",
-        answer: "الإجابة الصحيحة",
-        retry: "إعادة المحاولة",
-        true: "صح",
-        false: "خطأ",
-        placeholder: "اكتب إجابتك هنا",
-        lockedTitle: "هذا الاختبار مخصص للطلاب المسجلين",
-        lockedDesc: "سجل الدخول بحساب الطالب الخاص بك لحل الاختبار وحفظ درجاتك وتقييم مستواك.",
-        signInCta: "تسجيل الدخول / إنشاء حساب",
-      }
-    : {
-        back: "Back to lecture",
-        label: "Knowledge checkpoint",
-        helper: "Choose the best answer for each question. You can review before submitting.",
-        answered: "Answered",
-        of: "of",
-        submit: "Submit answers",
-        complete: "Answer every question to submit",
-        result: "Your result",
-        excellent: "Excellent mastery — move forward with confidence.",
-        improve: "Good start. Review the feedback and try once more.",
-        correct: "Correct answer",
-        incorrect: "Needs review",
-        answer: "Correct answer",
-        retry: "Retake quiz",
-        true: "True",
-        false: "False",
-        placeholder: "Type your answer here",
-        lockedTitle: "This quiz is reserved for registered students",
-        lockedDesc: "Sign in to take this interactive quiz, test your pharmacological mastery, and record your score.",
-        signInCta: "Sign In / Register Free",
-      }
-
-  const setAnswer = (id: string, value: string) => {
-    setAnswers((current) => ({ ...current, [id]: value }))
-    const qIndex = questions.findIndex((q) => q.id === id)
-    const targetQ = questions[qIndex]
-    if (targetQ) {
-      trackQuestionAnswered({
+  const handleTogglePdfCompleted = () => {
+    const next = !isPdfCompleted
+    setIsPdfCompleted(next)
+    if (next) {
+      trackQuizSubmit({
         quizId: quiz.id,
-        questionId: id,
-        questionType: targetQ.type,
-        isCorrect: value.trim().toLowerCase() === targetQ.correct_answer.trim().toLowerCase(),
-        questionIndex: qIndex + 1,
+        quizTitle: title,
+        score: 1,
+        totalQuestions: 1,
+        percentage: 100,
+        passed: true,
       })
     }
   }
 
-  const reset = () => {
-    trackQuizRetry({ quizId: quiz.id, quizTitle: title })
-    setAnswers({})
-    setSubmitted(false)
-    window.scrollTo({ top: 0, behavior: "smooth" })
+  const handleDownloadFile = (fileUrl: string, fileTitle: string) => {
+    const a = document.createElement("a")
+    a.href = fileUrl
+    a.target = "_blank"
+    a.rel = "noopener noreferrer"
+    const hasExt = fileTitle.toLowerCase().endsWith(".pdf")
+    a.download = fileTitle.replace(/[\\/:*?"<>|]/g, "_") + (hasExt ? "" : ".pdf")
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 
-  const handleSubmitQuiz = () => {
-    setSubmitted(true)
-    trackQuizSubmit({
-      quizId: quiz.id,
-      quizTitle: title,
-      score,
-      totalQuestions: questions.length,
-      percentage: percent,
-      passed: percent >= 70,
-    })
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
+  const copy = isAr
+    ? {
+        back: "العودة للمحاضرة",
+        assessmentBadge: "ورقة تقييم وتدريب إكلينيكي (PDF)",
+        introTitle: "ورقة الاختبار والتقييم السريري",
+        introDesc:
+          "يوفر هذا التقييم ملف أسئلة إكلينيكية بصيغة PDF معدة من قبل المرشد الأكاديمي، ونموذج إجابات تفصيلي للمراجعة الذاتية وتثبيت المفاهيم الصيدلانية.",
+        previewWorksheet: "معاينة ورقة الأسئلة",
+        downloadWorksheet: "تحميل ورقة الأسئلة",
+        previewSolution: "معاينة نموذج الإجابة والشرح",
+        downloadSolution: "تحميل نموذج الإجابة",
+        openNewTab: "فتح في نافذة جديدة",
+        markCompleted: "تحديد ورقة الاختبار كمكتملة ومُراجَعة",
+        completedBadge: "تم إكمال ومراجعة ورقة التقييم بنجاح",
+        pendingWorksheet: "ورقة الأسئلة قيد التجهيز من قبل المرشد الأكاديمي.",
+        solutionTitle: "نموذج الإجابات والشرح التفصيلي",
+        solutionDesc: "راجع إجاباتك النموذجية مع التفسيرات الدوائية والشروح السريرية المعتمدة.",
+        questionsSheetTitle: "ورقة أسئلة التقييم",
+        questionsSheetDesc: "تحتوي على الحالات الإكلينيكية والأسئلة التحليلية الخاصة بالمحاضرة.",
+        lockedTitle: "هذا التقييم مخصص للطلاب المسجلين",
+        lockedDesc: "سجل الدخول بحساب الطالب الخاص بك للوصول إلى أوراق التقييم ونماذج الإجابات.",
+        signInCta: "تسجيل الدخول / إنشاء حساب",
+        reviewLecture: "مراجعة المحاضرة",
+        courseOverview: "فهرس المقرر",
+      }
+    : {
+        back: "Back to lecture",
+        assessmentBadge: "Clinical PDF Assessment & Worksheet",
+        introTitle: "Clinical Assessment Worksheet",
+        introDesc:
+          "This module provides a clinical worksheet assessment prepared by your academic mentor along with official model answers and pharmacological explanations for self-review.",
+        previewWorksheet: "Preview Questions Sheet",
+        downloadWorksheet: "Download Worksheet PDF",
+        previewSolution: "Preview Model Solutions",
+        downloadSolution: "Download Solutions PDF",
+        openNewTab: "Open in New Tab",
+        markCompleted: "Mark Worksheet as Completed & Reviewed",
+        completedBadge: "Worksheet completed and reviewed",
+        pendingWorksheet: "Assessment worksheet is currently being prepared by the instructor.",
+        solutionTitle: "Model Solutions & Explanations",
+        solutionDesc: "Review verified clinical answers with in-depth pharmacological rationales.",
+        questionsSheetTitle: "Questions Assessment Sheet",
+        questionsSheetDesc: "Contains clinical scenario cases, checkpoint questions, and problem sets.",
+        lockedTitle: "This assessment is reserved for registered students",
+        lockedDesc: "Sign in with your student account to access full assessment sheets and solution keys.",
+        signInCta: "Sign In / Register Free",
+        reviewLecture: "Review Lecture",
+        courseOverview: "Course Overview",
+      }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
-  const quizUrl = `${siteUrl}${isAr ? "/ar" : ""}/quiz/${quiz.id}`
-  const courseId = quiz.course_id
-  const courseUrl = courseId ? `${siteUrl}${isAr ? "/ar" : ""}/course/${courseId}` : undefined
-  const courseTitle = isAr ? course?.title_ar || "المقرر" : course?.title_en || "Course"
-  const lectureId = quiz.lecture_id
-  const lectureUrl = lectureId ? `${siteUrl}${isAr ? "/ar" : ""}/lecture/${lectureId}` : undefined
-  const lectureTitle = isAr ? lecture?.title_ar || "المحاضرة" : lecture?.title_en || "Lecture"
-
-  const breadcrumbItems = [
-    { label: isAr ? "المقررات" : "Courses", href: "/#courses" },
-    ...(courseId
-      ? [{ label: courseTitle, href: `/course/${courseId}` }]
-      : []),
-    ...(lectureId
-      ? [{ label: lectureTitle, href: `/lecture/${lectureId}` }]
-      : []),
-    { label: title },
-  ]
+  const quizUrl = `${siteUrl}${getQuizUrl(quiz, isAr)}`
+  const courseFullUrl = course ? `${siteUrl}${getCourseUrl(course, isAr)}` : undefined
+  const lectureFullUrl = lecture ? `${siteUrl}${getLectureUrl(lecture, isAr)}` : undefined
 
   const quizSchema = [
     {
       "@type": "Quiz",
       "@id": `${quizUrl}#quiz`,
       "name": title,
-      "description": copy.helper,
+      "description": description || title,
+      "learningResourceType": "Assessment Worksheet",
       "educationalLevel": "HigherEducation",
       "inLanguage": isAr ? "ar" : "en",
       "url": quizUrl,
-      ...(courseUrl
-        ? {
-            "isPartOf": {
-              "@type": "Course",
-              "name": courseTitle,
-              "url": courseUrl,
-            },
-          }
-        : {}),
-      "provider": {
-        "@type": "EducationalOrganization",
-        "name": "PharmaCore",
-        "sameAs": siteUrl,
-      },
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": isAr ? "الرئيسية" : "Home", "item": `${siteUrl}${isAr ? "/ar" : ""}` },
-        { "@type": "ListItem", "position": 2, "name": isAr ? "المقررات" : "Courses", "item": `${siteUrl}${isAr ? "/ar" : ""}/#courses` },
-        ...(courseUrl
-          ? [
-              {
-                "@type": "ListItem",
-                "position": 3,
-                "name": courseTitle,
-                "item": courseUrl,
-              },
-            ]
-          : []),
-        ...(lectureUrl
-          ? [
-              {
-                "@type": "ListItem",
-                "position": courseUrl ? 4 : 3,
-                "name": lectureTitle,
-                "item": lectureUrl,
-              },
-            ]
-          : []),
-        {
-          "@type": "ListItem",
-          "position": (courseUrl ? 1 : 0) + (lectureUrl ? 1 : 0) + 2 + 1,
-          "name": title,
-          "item": quizUrl,
-        },
-      ],
-    },
+      ...(courseFullUrl ? {
+        "isPartOf": {
+          "@type": "Course",
+          "name": courseTitle,
+          "url": courseFullUrl,
+        }
+      } : {}),
+      ...(lectureFullUrl ? {
+        "about": {
+          "@type": "LearningResource",
+          "name": lectureTitle,
+          "url": lectureFullUrl,
+        }
+      } : {}),
+    }
   ]
 
-  if (isGated) {
-    return (
-      <Layout
-        title={`${title} — PharmaCore`}
-        description={copy.helper}
-        image="/og-quiz.jpg"
-        schema={quizSchema}
-      >
-        <div className="page-shell section-space max-w-xl text-center">
-          <Breadcrumb items={breadcrumbItems} className="mb-6 justify-center" />
-          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/30">
-            <LockKeyhole className="size-8" />
-          </div>
-          <h1 className="mt-5 text-3xl font-bold">{copy.lockedTitle}</h1>
-          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{copy.lockedDesc}</p>
-          <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
-            <Button size="lg" className="font-bold gap-2" asChild>
-              <Link href={`/login?returnUrl=/quiz/${quiz.id}&tab=signup`}>
-                <LogIn className="size-4" />
-                {copy.signInCta}
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href={backHref}>
-                <DirectionArrow />
-                {copy.back}
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
+  const breadcrumbs = [
+    { label: isAr ? "المقررات" : "Courses", href: "/#courses" },
+    ...(course
+      ? [{ label: courseTitle, href: getCourseUrl(course, isAr) }]
+      : []),
+    ...(lecture
+      ? [{ label: lectureTitle, href: getLectureUrl(lecture, isAr) }]
+      : []),
+    { label: title },
+  ]
 
   return (
     <Layout
       title={`${title} — PharmaCore`}
-      description={copy.helper}
-      image="/og-quiz.jpg"
+      description={description || `${title} assessment sheet and model solutions on PharmaCore.`}
+      type="article"
       schema={quizSchema}
     >
-      <section className="border-b bg-muted/45">
-        <div className="page-shell max-w-4xl py-9 lg:py-12">
-          <Breadcrumb items={breadcrumbItems} className="mb-4" />
-          <Button variant="ghost" className="mb-4 sm:mb-6 px-3" asChild>
+      <section className="border-b bg-muted/40">
+        <div className="page-shell py-6 sm:py-8 lg:py-12">
+          <Breadcrumb items={breadcrumbs} className="mb-4" />
+
+          <Button variant="ghost" className="-ms-4 mb-4 sm:mb-6" asChild>
             <Link href={backHref}>
-              <DirectionArrow />
+              <DirectionArrow className="size-4" />
               <span>{copy.back}</span>
             </Link>
           </Button>
-          <Badge variant="outline" className="badge-nowrap gap-2 bg-card">
-            <ClipboardCheck className="size-3.5 shrink-0" />
-            <span>{copy.label}</span>
-          </Badge>
-          <h1 className="mt-4 text-balance text-3xl font-extrabold sm:text-4xl">{title}</h1>
-          <p className="body-lead mt-3">{copy.helper}</p>
-          <div className="mt-6 flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="whitespace-nowrap">
-              {copy.answered} {answeredCount} {copy.of} {questions.length}
-            </span>
+
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400 font-bold text-xs gap-1.5 py-1 px-2.5">
+                <FileText className="size-3.5" />
+                <span>{copy.assessmentBadge}</span>
+              </Badge>
+              {course && (
+                <Badge variant="secondary" className="text-xs font-semibold">
+                  {courseTitle}
+                </Badge>
+              )}
+              {lecture && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  {isAr ? `المحاضرة ${lecture.order}` : `Lecture ${lecture.order}`}
+                </Badge>
+              )}
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">
+              {title}
+            </h1>
+            {description ? (
+              <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
+                {description}
+              </p>
+            ) : (
+              <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
+                {copy.introDesc}
+              </p>
+            )}
           </div>
-          <Progress value={questions.length ? (answeredCount / questions.length) * 100 : 0} className="mt-3" />
         </div>
       </section>
 
-      <section className="page-shell max-w-4xl section-space">
-        {submitted && (
-          <Alert className="mb-8 border-primary/40 bg-secondary/80 p-6">
-            <CheckCircle2 className="size-6 text-primary shrink-0" />
-            <div className="ms-3 min-w-0">
-              <AlertTitle className="text-xl font-bold">
-                {copy.result}: {score}/{questions.length} ({percent}%)
-              </AlertTitle>
-              <AlertDescription className="mt-2 text-sm text-muted-foreground">
-                {percent >= 70 ? copy.excellent : copy.improve}
-              </AlertDescription>
-            </div>
-          </Alert>
-        )}
-
-        <div className="space-y-6">
-          {questions.map((question, index) => {
-            const qText = isAr ? question.text_ar : question.text_en
-            const isCorrect = (answers[question.id] ?? "").trim().toLowerCase() === question.correct_answer.trim().toLowerCase()
-            const options = question.type === "true_false" ? [copy.true, copy.false] : (question.options ?? [])
-
-            return (
-              <Card
-                key={question.id}
-                className={cn(
-                  "shadow-none transition-colors",
-                  submitted && (isCorrect ? "border-emerald-500/50 bg-emerald-500/5" : "border-destructive/50 bg-destructive/5")
-                )}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline" className="badge-nowrap">
-                      {index + 1} {copy.of} {questions.length}
-                    </Badge>
-                    {submitted && (
-                      <span className={cn("badge-nowrap flex items-center gap-1 text-xs font-bold shrink-0", isCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
-                        {isCorrect ? <Check className="size-3.5 shrink-0" /> : <X className="size-3.5 shrink-0" />}
-                        <span>{isCorrect ? copy.correct : copy.incorrect}</span>
-                      </span>
-                    )}
-                  </div>
-                  <CardTitle className="mt-3 text-lg leading-relaxed">{qText}</CardTitle>
-                </CardHeader>
-
-                <CardContent className="space-y-3">
-                  {question.type === "short_text" ? (
-                    <Input
-                      value={answers[question.id] ?? ""}
-                      onChange={(e) => setAnswer(question.id, e.target.value)}
-                      placeholder={copy.placeholder}
-                      disabled={submitted}
-                    />
-                  ) : (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {options.map((option) => {
-                        const selected = answers[question.id] === option
-                        return (
-                          <Button
-                            key={option}
-                            type="button"
-                            variant={selected ? "default" : "outline"}
-                            className={cn(
-                              "h-auto min-h-12 justify-start whitespace-normal p-4 text-start font-medium",
-                              selected && "font-bold shadow-xs"
-                            )}
-                            disabled={submitted}
-                            onClick={() => setAnswer(question.id, option)}
-                          >
-                            <span className="me-2.5 grid size-6 shrink-0 place-items-center rounded-md bg-muted/60 text-xs font-mono font-bold">
-                              {options.indexOf(option) + 1}
-                            </span>
-                            <span className="flex-1">{option}</span>
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {submitted && !isCorrect && (
-                    <p className="mt-3 text-xs font-semibold text-muted-foreground">
-                      {copy.answer}: <span className="font-bold text-foreground">{question.correct_answer}</span>
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-
-        <div className="sticky bottom-4 z-20 mt-8 flex flex-col gap-3 rounded-2xl border bg-background/95 p-3.5 sm:p-4 shadow-xl backdrop-blur-md sm:flex-row sm:items-center sm:justify-between safe-area-bottom">
-          <p className="text-xs sm:text-sm font-semibold text-muted-foreground whitespace-nowrap">
-            {answeredCount < questions.length ? copy.complete : `${questions.length} / ${questions.length}`}
-          </p>
-          {submitted ? (
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Button size="default" variant="outline" className="flex-1 sm:flex-none min-h-[44px] btn-nowrap rounded-xl" onClick={reset}>
-                <RotateCcw className="size-4 shrink-0" />
-                <span>{copy.retry}</span>
-              </Button>
-              {quiz.course_id && (
-                <Button size="default" className="flex-1 sm:flex-none min-h-[44px] btn-nowrap bg-primary text-primary-foreground font-bold rounded-xl" asChild>
-                  <Link href={`/course/${quiz.course_id}`}>
-                    <CheckCircle2 className="size-4 shrink-0" />
-                    <span>{isAr ? "العودة إلى المقرر" : "Return to Course"}</span>
+      <section className="section-space">
+        <div className="page-shell max-w-4xl space-y-6">
+          {/* Gated Access Banner for logged-out users */}
+          {isGated && (
+            <Card className="border-amber-500/30 bg-amber-500/5 shadow-none mb-6">
+              <CardContent className="p-6 text-center space-y-3">
+                <LockKeyhole className="mx-auto size-8 text-amber-600 dark:text-amber-400" />
+                <h3 className="font-bold text-lg text-foreground">{copy.lockedTitle}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  {copy.lockedDesc}
+                </p>
+                <Button size="default" className="font-bold gap-2" asChild>
+                  <Link href={`/login?returnUrl=${encodeURIComponent(getQuizUrl(quiz, false))}&tab=signup`}>
+                    <LogIn className="size-4 shrink-0" />
+                    <span>{copy.signInCta}</span>
                   </Link>
                 </Button>
-              )}
-              {quiz.lecture_id && (
-                <Button size="default" variant="secondary" className="flex-1 sm:flex-none min-h-[44px] btn-nowrap font-bold rounded-xl" asChild>
-                  <Link href={`/lecture/${quiz.lecture_id}`}>
-                    <DirectionArrow className="size-4 shrink-0" />
-                    <span>{isAr ? "مراجعة المحاضرة" : "Review Lecture"}</span>
-                  </Link>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <Button size="lg" className="w-full sm:w-auto min-h-[44px] font-bold rounded-xl btn-nowrap" disabled={answeredCount !== questions.length} onClick={handleSubmitQuiz}>
-              <Send className="size-4 shrink-0" />
-              <span>{copy.submit}</span>
-            </Button>
+              </CardContent>
+            </Card>
           )}
+
+          {/* 1. Questions Sheet Card */}
+          <Card className="rounded-2xl border bg-card shadow-xs overflow-hidden">
+            <CardHeader className="pb-3 border-b bg-muted/20">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0">
+                  <FileText className="size-5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] font-bold border-red-500/30 text-red-700 dark:text-red-300 bg-red-500/5">
+                      PDF Worksheet
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-base sm:text-lg font-bold mt-0.5">
+                    {copy.questionsSheetTitle}
+                  </CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                {copy.questionsSheetDesc}
+              </p>
+
+              {quiz.pdf_url ? (
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() =>
+                      setActiveModal({
+                        open: true,
+                        url: quiz.pdf_url!,
+                        title: `${title} — ${isAr ? "ورقة الأسئلة" : "Questions Sheet"}`,
+                      })
+                    }
+                    className="min-h-[40px] h-10 px-4 text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer"
+                  >
+                    <Eye className="size-3.5 shrink-0" />
+                    <span>{copy.previewWorksheet}</span>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleDownloadFile(
+                        quiz.pdf_url!,
+                        `${title}_Questions_Sheet`
+                      )
+                    }
+                    className="min-h-[40px] h-10 px-4 text-xs font-bold gap-1.5 border-border hover:border-primary/40 hover:bg-muted/80 shadow-xs cursor-pointer"
+                  >
+                    <Download className="size-3.5 text-muted-foreground shrink-0" />
+                    <span>{copy.downloadWorksheet}</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(quiz.pdf_url!, "_blank", "noopener,noreferrer")}
+                    className="min-h-[40px] h-10 px-3 text-xs font-semibold gap-1.5 text-muted-foreground hover:text-foreground"
+                    title={copy.openNewTab}
+                  >
+                    <ExternalLink className="size-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{copy.openNewTab}</span>
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed p-4 text-xs text-muted-foreground bg-muted/20">
+                  {copy.pendingWorksheet}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 2. Model Solution & Explanation Card (if present) */}
+          {quiz.solution_pdf_url && (
+            <Card className="rounded-2xl border bg-card shadow-xs overflow-hidden">
+              <CardHeader className="pb-3 border-b bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <span className="grid size-10 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                    <CheckCircle2 className="size-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] font-bold border-emerald-500/30 text-emerald-700 dark:text-emerald-300 bg-emerald-500/5">
+                        {isAr ? "نموذج الإجابة" : "Solution Key"}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-base sm:text-lg font-bold mt-0.5">
+                      {copy.solutionTitle}
+                    </CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 space-y-4">
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  {copy.solutionDesc}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() =>
+                      setActiveModal({
+                        open: true,
+                        url: quiz.solution_pdf_url!,
+                        title: `${title} — ${isAr ? "نموذج الإجابة والشرح" : "Model Answers & Explanation"}`,
+                      })
+                    }
+                    className="min-h-[40px] h-10 px-4 text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer"
+                  >
+                    <Eye className="size-3.5 shrink-0" />
+                    <span>{copy.previewSolution}</span>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleDownloadFile(
+                        quiz.solution_pdf_url!,
+                        `${title}_Solution_Explanation`
+                      )
+                    }
+                    className="min-h-[40px] h-10 px-4 text-xs font-bold gap-1.5 border-border hover:border-emerald-500/40 hover:bg-muted/80 shadow-xs cursor-pointer"
+                  >
+                    <Download className="size-3.5 text-muted-foreground shrink-0" />
+                    <span>{copy.downloadSolution}</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(quiz.solution_pdf_url!, "_blank", "noopener,noreferrer")}
+                    className="min-h-[40px] h-10 px-3 text-xs font-semibold gap-1.5 text-muted-foreground hover:text-foreground"
+                    title={copy.openNewTab}
+                  >
+                    <ExternalLink className="size-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{copy.openNewTab}</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 3. Student Completion Tracker */}
+          <div className="rounded-2xl border p-4 sm:p-5 bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="font-bold text-sm sm:text-base text-foreground">
+                {isPdfCompleted ? (isAr ? "✅ تم تقييم ومراجعة ورقة الاختبار" : "✅ Assessment Sheet Completed") : (isAr ? "إتمام التقييم الذاتي" : "Self-Assessment Progress")}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {isPdfCompleted ? copy.completedBadge : copy.introDesc}
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              variant={isPdfCompleted ? "default" : "outline"}
+              size="sm"
+              onClick={handleTogglePdfCompleted}
+              className={`min-h-[42px] px-4 font-bold text-xs gap-2 shrink-0 rounded-xl transition-all cursor-pointer ${
+                isPdfCompleted
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-sm"
+                  : "border-border hover:border-primary/40 text-foreground"
+              }`}
+            >
+              {isPdfCompleted ? <Check className="size-4 shrink-0" /> : <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" />}
+              <span>{isPdfCompleted ? copy.completedBadge : copy.markCompleted}</span>
+            </Button>
+          </div>
+
+          {/* 4. Sequential Navigation Footer */}
+          <nav className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t" aria-label="Assessment Navigation">
+            {lecture ? (
+              <Button variant="outline" className="w-full sm:w-auto min-h-[44px] gap-2 rounded-xl" asChild>
+                <Link href={getLectureUrl(lecture, isAr)}>
+                  <DirectionArrow className="size-4 shrink-0 text-primary" />
+                  <span>{copy.reviewLecture}: {lectureTitle}</span>
+                </Link>
+              </Button>
+            ) : course ? (
+              <Button variant="outline" className="w-full sm:w-auto min-h-[44px] gap-2 rounded-xl" asChild>
+                <Link href={getCourseUrl(course, isAr)}>
+                  <DirectionArrow className="size-4 shrink-0 text-primary" />
+                  <span>{copy.courseOverview}: {courseTitle}</span>
+                </Link>
+              </Button>
+            ) : null}
+
+            {course && (
+              <Button variant="secondary" className="w-full sm:w-auto min-h-[44px] gap-2 rounded-xl ms-auto" asChild>
+                <Link href={getCourseUrl(course, isAr)}>
+                  <span>{copy.courseOverview}</span>
+                  {isAr ? <ArrowLeft className="size-4 shrink-0" /> : <ArrowRight className="size-4 shrink-0" />}
+                </Link>
+              </Button>
+            )}
+          </nav>
         </div>
       </section>
+
+      {/* PDF Modal Viewer */}
+      <PdfPreviewModal
+        open={activeModal.open}
+        onOpenChange={(open) => setActiveModal((prev) => ({ ...prev, open }))}
+        url={activeModal.url}
+        title={activeModal.title}
+        isAr={isAr}
+      />
     </Layout>
   )
 }
 
-export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ params, locale, res }) => {
+export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ params, query, locale, res }) => {
   const id = params?.id as string
   let quiz: Quiz | null = null
-  let questions: Question[] = []
   let isLocked = false
   let course: Course | null = null
   let lecture: Lecture | null = null
@@ -445,18 +508,32 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
   }
 
-  if (supabase) {
+  if (supabase && id) {
     try {
-      const { data: quizData } = await supabase.from("quizzes").select("*").eq("id", id).maybeSingle()
-      if (quizData) {
-        quiz = quizData
-        const courseId = quizData.course_id
-        const lectureId = quizData.lecture_id
+      const { quiz: resolvedQuiz, allQuizzes } = await resolveQuiz(id)
+      if (resolvedQuiz) {
+        // If accessed by old raw UUID, issue permanent 308 redirect to clean slug URL
+        if (isUuid(id)) {
+          const canonicalSlug = getQuizSlug(resolvedQuiz, allQuizzes)
+          const prefix = locale === "ar" ? "/ar" : ""
+          const queryParams = { ...query }
+          delete queryParams.id
+          const qs = new URLSearchParams(queryParams as Record<string, string>).toString()
+          return {
+            redirect: {
+              destination: `${prefix}/quiz/${canonicalSlug}${qs ? `?${qs}` : ""}`,
+              permanent: true,
+            },
+          }
+        }
 
-        const [courseResult, lectureResult, questionsResult, siteContent, translations] = await Promise.all([
+        quiz = resolvedQuiz
+        const courseId = resolvedQuiz.course_id
+        const lectureId = resolvedQuiz.lecture_id
+
+        const [courseResult, lectureResult, siteContent, translations] = await Promise.all([
           courseId ? supabase.from("courses").select("*").eq("id", courseId).maybeSingle() : Promise.resolve({ data: null }),
           lectureId ? supabase.from("lectures").select("*").eq("id", lectureId).maybeSingle() : Promise.resolve({ data: null }),
-          supabase.from("questions").select("*").eq("quiz_id", id).order("order", { ascending: true }),
           loadSiteContent(),
           serverSideTranslations(locale ?? "en", ["common"]),
         ])
@@ -475,14 +552,9 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
           lecture = lectureResult.data
         }
 
-        if (questionsResult.data) {
-          questions = questionsResult.data
-        }
-
         return {
           props: {
             quiz,
-            questions,
             isLocked,
             course,
             lecture,
@@ -502,7 +574,6 @@ export const getServerSideProps: GetServerSideProps<QuizPageProps> = async ({ pa
   return {
     props: {
       quiz,
-      questions,
       isLocked,
       course,
       lecture,

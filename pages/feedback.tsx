@@ -36,6 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabaseClient"
+import { loadSiteContent } from "@/lib/siteContent"
 import type {
   FeedbackDeviceInfo,
   FeedbackSeverity,
@@ -442,9 +443,9 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                   <div className="space-y-6">
                     {/* Category Cards */}
                     <div className="space-y-3">
-                      <Label className="text-sm font-bold">
+                      <p className="text-sm font-bold text-foreground">
                         {tr("1. Issue Category *", "1. نوع المشكلة التقنية *")}
-                      </Label>
+                      </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {techCategories.map((cat) => {
                           const IconComp = cat.icon
@@ -507,15 +508,20 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                         </Select>
 
                         {pagePreset === "custom" && (
-                          <Input
-                            id="custom-page-url"
-                            name="custom_page_url"
-                            aria-label={tr("Specific Page URL", "رابط الصفحة المحددة")}
-                            placeholder="e.g. /course/cardio-101"
-                            value={customPageUrl}
-                            onChange={(e) => setCustomPageUrl(e.target.value)}
-                            className="mt-2 text-xs"
-                          />
+                          <div className="mt-2">
+                            <Label htmlFor="custom-page-url" className="sr-only">
+                              {tr("Specific Page URL", "رابط الصفحة المحددة")}
+                            </Label>
+                            <Input
+                              id="custom-page-url"
+                              name="custom_page_url"
+                              aria-label={tr("Specific Page URL", "رابط الصفحة المحددة")}
+                              placeholder="e.g. /course/cardio-101"
+                              value={customPageUrl}
+                              onChange={(e) => setCustomPageUrl(e.target.value)}
+                              className="text-xs"
+                            />
+                          </div>
                         )}
                       </div>
 
@@ -589,9 +595,9 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                   <div className="space-y-6">
                     {/* Academic Category Cards */}
                     <div className="space-y-3">
-                      <Label className="text-sm font-bold">
+                      <p className="text-sm font-bold text-foreground">
                         {tr("1. Feedback Nature *", "1. طبيعة الملاحظة الأكاديمية *")}
-                      </Label>
+                      </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {academicCategories.map((cat) => {
                           const IconComp = cat.icon
@@ -781,9 +787,9 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
                 {/* ─── CONTACT INFORMATION ─────────────────────────────────── */}
                 <div className="space-y-4 pt-2 border-t">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs sm:text-sm font-bold">
+                    <p className="text-xs sm:text-sm font-bold text-foreground">
                       {tr("Contact for Follow-up (Optional)", "بيانات التواصل للمتابعة (اختياري)")}
-                    </Label>
+                    </p>
                     {isLoggedIn && (
                       <Badge variant="secondary" className="badge-nowrap text-[11px] gap-1 font-mono">
                         <CheckCircle2 className="size-3 text-emerald-500" />
@@ -873,6 +879,11 @@ export default function FeedbackPage({ courses }: FeedbackPageProps) {
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
   let courses: Array<{ id: string; title_en: string; title_ar: string }> = []
 
+  const [siteContent, translations] = await Promise.all([
+    loadSiteContent(),
+    serverSideTranslations(locale || "en", ["common"]),
+  ])
+
   if (supabase) {
     try {
       const { data } = await supabase
@@ -887,7 +898,8 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
 
   return {
     props: {
-      ...(await serverSideTranslations(locale || "en", ["common"])),
+      ...translations,
+      siteContent,
       courses,
     },
   }

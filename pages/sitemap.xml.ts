@@ -1,5 +1,6 @@
 import type { GetServerSideProps } from "next"
 import { supabase } from "@/lib/supabaseClient"
+import { getCourseSlug, getLectureSlug, getQuizSlug } from "@/lib/slugs"
 
 export default function Sitemap() {
   return null
@@ -8,16 +9,16 @@ export default function Sitemap() {
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pharma-core-edu.vercel.app"
 
-  let courses: { id: string; updated_at?: string; created_at?: string }[] = []
-  let lectures: { id: string; updated_at?: string; created_at?: string }[] = []
-  let quizzes: { id: string; created_at?: string }[] = []
+  let courses: { id: string; title_en: string; updated_at?: string; created_at?: string }[] = []
+  let lectures: { id: string; title_en: string; updated_at?: string; created_at?: string }[] = []
+  let quizzes: { id: string; title_en: string; created_at?: string }[] = []
 
   if (supabase) {
     try {
       const [coursesRes, lecturesRes, quizzesRes] = await Promise.all([
-        supabase.from("courses").select("id, updated_at, created_at"),
-        supabase.from("lectures").select("id, updated_at, created_at"),
-        supabase.from("quizzes").select("id, created_at"),
+        supabase.from("courses").select("id, title_en, updated_at, created_at"),
+        supabase.from("lectures").select("id, title_en, updated_at, created_at"),
+        supabase.from("quizzes").select("id, title_en, created_at"),
       ])
       if (coursesRes.data) courses = coursesRes.data
       if (lecturesRes.data) lectures = lecturesRes.data
@@ -61,10 +62,11 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   </url>`)
   }
 
-  // Course pages
+  // Course pages with clean semantic slugs
   for (const course of courses) {
-    const urlEn = `${baseUrl}/course/${course.id}`
-    const urlAr = `${baseUrl}/ar/course/${course.id}`
+    const courseSlug = getCourseSlug(course)
+    const urlEn = `${baseUrl}/course/${courseSlug}`
+    const urlAr = `${baseUrl}/ar/course/${courseSlug}`
     const lastmod = (course.updated_at || course.created_at || new Date().toISOString()).split("T")[0]
 
     urls.push(`  <url>
@@ -88,10 +90,11 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   </url>`)
   }
 
-  // Lecture pages
+  // Lecture pages with clean semantic slugs
   for (const lecture of lectures) {
-    const urlEn = `${baseUrl}/lecture/${lecture.id}`
-    const urlAr = `${baseUrl}/ar/lecture/${lecture.id}`
+    const lectureSlug = getLectureSlug(lecture, lectures)
+    const urlEn = `${baseUrl}/lecture/${lectureSlug}`
+    const urlAr = `${baseUrl}/ar/lecture/${lectureSlug}`
     const lastmod = (lecture.updated_at || lecture.created_at || new Date().toISOString()).split("T")[0]
 
     urls.push(`  <url>
@@ -115,10 +118,11 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   </url>`)
   }
 
-  // Quiz pages
+  // Quiz assessment pages with clean semantic slugs
   for (const quiz of quizzes) {
-    const urlEn = `${baseUrl}/quiz/${quiz.id}`
-    const urlAr = `${baseUrl}/ar/quiz/${quiz.id}`
+    const quizSlug = getQuizSlug(quiz, quizzes)
+    const urlEn = `${baseUrl}/quiz/${quizSlug}`
+    const urlAr = `${baseUrl}/ar/quiz/${quizSlug}`
     const lastmod = (quiz.created_at || new Date().toISOString()).split("T")[0]
 
     urls.push(`  <url>
@@ -148,10 +152,12 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
 ${urls.join("\n")}
 </urlset>`
 
-  res.setHeader("Content-Type", "text/xml; charset=utf-8")
-  res.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=43200")
-  res.write(sitemapXml)
-  res.end()
+  if (res) {
+    res.setHeader("Content-Type", "application/xml")
+    res.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=43200")
+    res.write(sitemapXml)
+    res.end()
+  }
 
   return {
     props: {},

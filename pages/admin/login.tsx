@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabaseClient"
+import { loadSiteContent } from "@/lib/siteContent"
 import { identifyUser, trackLocaleSwitch, trackThemeToggle } from "@/lib/analytics"
 
 export default function AdminLoginPage() {
@@ -310,9 +311,15 @@ export default function AdminLoginPage() {
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
+  const [siteContent, translations] = await Promise.all([
+    loadSiteContent(),
+    serverSideTranslations(locale ?? "en", ["common"]),
+  ])
+
   return {
     props: {
-      ...(await serverSideTranslations(locale ?? "en", ["common"])),
+      ...translations,
+      siteContent,
     },
   }
 }

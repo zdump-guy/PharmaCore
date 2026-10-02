@@ -7,3 +7,4 @@ This directory records engineering work sessions, implementation plans, findings
 - [**TASK-003 — Dev-Exclusive Discussion Questions & Answers Deletion**](./TASK-003-dev-discussion-deletion.md)
 - [**TASK-004 — Enhanced Email System, Custom Templates & Multi-Audience Campaigns**](./TASK-004-enhanced-email-and-campaign-system.md)
 - [**TASK-005 — Complete Removal of Cloudflare Turnstile Bot Verification**](./TASK-005-complete-removal-of-cloudflare-turnstile.md)
+- [**TASK-006 — Pure PDF Assessment Hub, Semantic Routing, and Fullscreen Viewer Remediation**](./TASK-006-pdf-assessment-semantic-slugs-and-modal-viewers.md)

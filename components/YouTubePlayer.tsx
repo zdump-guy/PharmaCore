@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react"
 import {
   FiAlertCircle as AlertCircle,
+  FiExternalLink as ExternalLink,
   FiMaximize as Maximize,
   FiMinimize as Minimize,
   FiPause as Pause,
@@ -20,17 +21,39 @@ import { trackVideoEvent } from "@/lib/analytics"
  * - embed: https://www.youtube.com/embed/VIDEO_ID
  * - shorts: https://www.youtube.com/shorts/VIDEO_ID
  * - live: https://www.youtube.com/live/VIDEO_ID
- * - with query strings / timestamps: ?si=..., ?t=..., &feature=...
+ * - youtube-nocookie: https://www.youtube-nocookie.com/embed/VIDEO_ID
+ * - pasted iframe embed codes: <iframe ... src="https://www.youtube.com/embed/VIDEO_ID" ...>
+ * - query strings / timestamps: ?si=..., ?t=..., &feature=...
  * - raw 11-char ID: VIDEO_ID
  */
 export function parseYouTubeVideoId(input?: string | null): string | null {
   if (!input) return null
-  const trimmed = input.trim()
+  let trimmed = input.trim()
+  if (!trimmed) return null
+
+  // If user pasted an iframe embed code, extract the src URL
+  const srcMatch = trimmed.match(/src=["']([^"']+)["']/)
+  if (srcMatch) {
+    trimmed = srcMatch[1].trim()
+  }
+
+  // Raw 11-character video ID
   if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed
+
+  // Comprehensive URL pattern matching
   const match = trimmed.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([a-zA-Z0-9_-]{11})/
+    /(?:youtu\.be\/|(?:www\.|m\.)?youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|watch\?.*v=|shorts\/|live\/))([a-zA-Z0-9_-]{11})/i
   )
-  return match ? match[1] : null
+  if (match) return match[1]
+
+  // Fallback query parameter parsing for arbitrary YouTube query orders
+  try {
+    const url = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`)
+    const v = url.searchParams.get("v")
+    if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v
+  } catch {}
+
+  return null
 }
 
 interface YouTubePlayerInstance {
@@ -90,15 +113,15 @@ function loadYouTubeApi(): Promise<YouTubeNamespace> {
   }
 
   youTubeApiPromise = new Promise((resolve, reject) => {
-    // If already available
     if (window.YT?.Player) {
       resolve(window.YT)
       return
     }
 
     const timeout = window.setTimeout(() => {
+      youTubeApiPromise = undefined
       reject(new Error("YouTube API load timed out (adblock or network policy)."))
-    }, 4000)
+    }, 8000)
 
     const prevCallback = window.onYouTubeIframeAPIReady
     window.onYouTubeIframeAPIReady = () => {
@@ -107,6 +130,7 @@ function loadYouTubeApi(): Promise<YouTubeNamespace> {
       if (window.YT?.Player) {
         resolve(window.YT)
       } else {
+        youTubeApiPromise = undefined
         reject(new Error("YouTube namespace missing after ready event."))
       }
     }
@@ -118,6 +142,7 @@ function loadYouTubeApi(): Promise<YouTubeNamespace> {
       script.async = true
       script.onerror = () => {
         window.clearTimeout(timeout)
+        youTubeApiPromise = undefined
         reject(new Error("YouTube API script blocked or failed to load."))
       }
       document.head.appendChild(script)
@@ -180,6 +205,7 @@ export default function YouTubePlayer({
   const [ready, setReady] = useState(false)
   const [useNativeFallback, setUseNativeFallback] = useState(false)
   const [unavailable, setUnavailable] = useState(false)
+  const [isRestrictedEmbed, setIsRestrictedEmbed] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -198,6 +224,7 @@ export default function YouTubePlayer({
     setPosterError(false)
     setUseNativeFallback(false)
     setUnavailable(false)
+    setIsRestrictedEmbed(false)
   }, [videoId])
 
   useEffect(() => {
@@ -207,6 +234,7 @@ export default function YouTubePlayer({
     hasStartedRef.current = false
     setReady(false)
     setUnavailable(false)
+    setIsRestrictedEmbed(false)
     setPlaying(false)
     setCurrentTime(0)
     setDuration(0)
@@ -219,7 +247,7 @@ export default function YouTubePlayer({
         // Fall back seamlessly to native embed if API initialization takes too long
         setUseNativeFallback(true)
       }
-    }, 3000)
+    }, 8000)
 
     loadYouTubeApi()
       .then((YT) => {
@@ -308,9 +336,14 @@ export default function YouTubePlayer({
                 playbackRate: data,
               })
             },
-            onError: () => {
+            onError: (event) => {
               window.clearTimeout(initTimeout)
-              setUseNativeFallback(true)
+              const errorCode = (event as { data?: number })?.data
+              if (errorCode === 101 || errorCode === 150) {
+                setIsRestrictedEmbed(true)
+              } else {
+                setUseNativeFallback(true)
+              }
             },
           },
         })
@@ -551,6 +584,41 @@ export default function YouTubePlayer({
     )
   }
 
+  // Restricted Embed Fallback Mode (Fail-Safe for Error 101/150)
+  if (isRestrictedEmbed) {
+    return (
+      <div
+        ref={shell}
+        className="relative h-full w-full overflow-hidden bg-[#101819] text-white grid place-items-center p-6 text-center"
+        aria-label={`${title}. Video player restricted`}
+      >
+        <div className="max-w-md space-y-4">
+          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <AlertCircle className="size-8" />
+          </div>
+          <h3 className="text-lg sm:text-xl font-bold">
+            {tr("Direct YouTube Playback Required", "المشاهدة المباشرة على YouTube مطلوبة")}
+          </h3>
+          <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+            {tr(
+              "The content creator has restricted this lecture from playing inside embedded external web players. You can open and watch it directly on YouTube.",
+              "قام ناشر الفيديو بتقييد تشغيله داخل المشغلات الخارجية المضمنة. يمكنك فتح المحاضرة ومشاهدتها مباشرة على منصة YouTube."
+            )}
+          </p>
+          <a
+            href={`https://www.youtube.com/watch?v=${videoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#8BCDE1] px-5 py-2.5 text-xs sm:text-sm font-bold text-black hover:bg-[#8BCDE1]/90 transition-colors shadow-lg"
+          >
+            <ExternalLink className="size-4" />
+            <span>{tr("Watch on YouTube", "مشاهدة مباشرة على YouTube")}</span>
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   // Native Embed Fallback Mode (Fail-Safe)
   if (useNativeFallback) {
     return (
@@ -568,6 +636,16 @@ export default function YouTubePlayer({
         />
         {/* Reconnect / Info bar */}
         <div className="absolute top-2 end-2 z-10 flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
+          <a
+            href={`https://www.youtube.com/watch?v=${videoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 rounded-full bg-black/75 backdrop-blur-md px-2.5 py-1 text-[11px] font-semibold text-white/90 hover:text-white border border-white/20 transition-colors"
+            title={tr("Watch directly on YouTube", "مشاهدة على YouTube")}
+          >
+            <ExternalLink className="size-3" />
+            <span className="hidden sm:inline">{tr("YouTube", "يوتيوب")}</span>
+          </a>
           <button
             type="button"
             onClick={() => setUseNativeFallback(false)}
@@ -594,7 +672,7 @@ export default function YouTubePlayer({
         if (event.target === event.currentTarget) togglePlay()
       }}
     >
-      <div ref={host} className="pointer-events-none h-full w-full" aria-label={title} />
+      <div ref={host} className="h-full w-full" aria-label={title} />
 
       {unavailable ? (
         <div className="absolute inset-0 grid place-items-center bg-[#101819] p-6 text-center">
@@ -725,6 +803,18 @@ export default function YouTubePlayer({
                     </option>
                   ))}
                 </select>
+
+                {/* Watch directly on YouTube */}
+                <a
+                  href={`https://www.youtube.com/watch?v=${videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden min-[480px]:grid size-8 sm:size-9 place-items-center rounded-full transition-colors hover:bg-white/15 text-white/80 hover:text-white"
+                  title={tr("Open on YouTube", "فتح في YouTube")}
+                  aria-label={tr("Open on YouTube", "فتح في YouTube")}
+                >
+                  <ExternalLink className="size-4" />
+                </a>
 
                 {/* Switch to Standard Player */}
                 <button

@@ -1,4 +1,6 @@
 import {
+  FiAlertCircle as AlertCircle,
+  FiCheck as Check,
   FiGlobe as Globe,
   FiHeadphones as Headphones,
   FiLoader as Loader2,
@@ -15,7 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import FileUploader from "@/components/ui/file-uploader"
 import VoiceRecorder from "@/components/admin/VoiceRecorder"
-import type { Course, Lecture, Question, QuestionType, Quiz, Resource, ResourceType, UserRole } from "@/types"
+import { parseYouTubeVideoId } from "@/components/YouTubePlayer"
+import type { Course, Lecture, Quiz, Resource, ResourceType, UserRole } from "@/types"
 import type { ManagedUser, UserForm } from "@/components/admin/UserManager"
 
 export type CourseForm = {
@@ -71,19 +74,14 @@ export type ResourceForm = Pick<Resource, "lecture_id" | "title_en" | "title_ar"
   course_id: string
 }
 
-export type QuestionForm = Pick<Question, "quiz_id" | "text_en" | "text_ar" | "type" | "correct_answer" | "order"> & {
-  id?: string
-  optionsText: string
-}
-
 interface AdminModalsProps {
   isAr: boolean
-  editor: "course" | "lecture" | "quiz" | "resource" | "question" | "voiceRecord" | null
-  setEditor: (val: "course" | "lecture" | "quiz" | "resource" | "question" | "voiceRecord" | null) => void
+  editor: "course" | "lecture" | "quiz" | "resource" | "voiceRecord" | null
+  setEditor: (val: "course" | "lecture" | "quiz" | "resource" | "voiceRecord" | null) => void
   saving: boolean
   courses: Course[]
   lectures: Lecture[]
-  quizzes: Quiz[]
+  quizzes?: Quiz[]
   // Form states
   courseForm: CourseForm
   setCourseForm: React.Dispatch<React.SetStateAction<CourseForm>>
@@ -100,9 +98,6 @@ interface AdminModalsProps {
   resourceForm: ResourceForm
   setResourceForm: React.Dispatch<React.SetStateAction<ResourceForm>>
   onSaveResource: (e: React.FormEvent) => void
-  questionForm: QuestionForm
-  setQuestionForm: React.Dispatch<React.SetStateAction<QuestionForm>>
-  onSaveQuestion: (e: React.FormEvent) => void
   // User modals
   editingUser: ManagedUser | null
   setEditingUser: (u: ManagedUser | null) => void
@@ -128,7 +123,6 @@ export default function AdminModals({
   saving,
   courses,
   lectures,
-  quizzes,
   courseForm,
   setCourseForm,
   onSaveCourse,
@@ -144,9 +138,6 @@ export default function AdminModals({
   resourceForm,
   setResourceForm,
   onSaveResource,
-  questionForm,
-  setQuestionForm,
-  onSaveQuestion,
   editingUser,
   setEditingUser,
   userEditForm,
@@ -370,9 +361,49 @@ export default function AdminModals({
                   placeholder="https://www.youtube.com/watch?v=..."
                   className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  {tr("Paste the direct video watch URL (not an embed iframe tag).", "الصق رابط المشاهدة المباشر وليس كود التضمين iframe.")}
-                </p>
+                {(() => {
+                  const url = lectureForm.youtube_url ? lectureForm.youtube_url.trim() : ""
+                  if (!url) {
+                    return (
+                      <p className="text-[11px] text-muted-foreground">
+                        {tr("Paste the direct video watch URL (not an embed iframe tag).", "الصق رابط المشاهدة المباشر وليس كود التضمين iframe.")}
+                      </p>
+                    )
+                  }
+                  const extractedId = parseYouTubeVideoId(url)
+                  if (extractedId) {
+                    return (
+                      <div className="mt-2 flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-800 dark:text-emerald-300">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`https://i.ytimg.com/vi/${extractedId}/hqdefault.jpg`}
+                          alt="YouTube Preview"
+                          className="h-10 w-16 rounded object-cover border border-emerald-500/20"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold flex items-center gap-1">
+                            <Check className="size-3.5" />
+                            <span>{tr("Valid YouTube Video Detected", "رابط فيديو يوتيوب صحيح")}</span>
+                          </p>
+                          <p className="font-mono text-[10px] text-muted-foreground truncate">
+                            ID: {extractedId}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="mt-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                      <AlertCircle className="size-4 shrink-0" />
+                      <span>
+                        {tr(
+                          "Invalid YouTube URL. Please enter a valid YouTube video link (e.g., https://youtu.be/... or https://www.youtube.com/watch?v=...).",
+                          "رابط يوتيوب غير صالح. يرجى إدخال رابط فيديو صحيح (مثل https://youtu.be/... أو https://www.youtube.com/watch?v=...)."
+                        )}
+                      </span>
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="space-y-1.5">
@@ -864,169 +895,6 @@ export default function AdminModals({
         </DialogContent>
       </Dialog>
 
-      {/* ─── 5. QUESTION MODAL ───────────────────────────────────────── */}
-      <Dialog open={editor === "question"} onOpenChange={(v) => !v && setEditor(null)}>
-        <DialogContent className="max-h-[92vh] w-[95vw] sm:max-w-2xl overflow-y-auto custom-scrollbar p-4 sm:p-6" dir={isAr ? "rtl" : "ltr"}>
-          <form onSubmit={onSaveQuestion}>
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl font-extrabold">
-                {questionForm.id ? tr("Edit Question", "تعديل السؤال") : tr("New Question", "إضافة سؤال جديد")}
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                {tr("Define question prompt, format (MCQ / True-False), and correct answer.", "تحديد نص السؤال ونوعه والإجابة الصحيحة.")}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-3.5 sm:gap-4 py-4 sm:py-5 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold">{tr("Assigned Quiz", "الاختبار التابع له")}</Label>
-                <Select
-                  value={questionForm.quiz_id}
-                  onValueChange={(val) => setQuestionForm((prev) => ({ ...prev, quiz_id: val }))}
-                  required
-                >
-                  <SelectTrigger className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]">
-                    <SelectValue placeholder={tr("Select quiz", "اختر الاختبار")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {quizzes.map((q) => (
-                      <SelectItem key={q.id} value={q.id}>
-                        {isAr ? q.title_ar : q.title_en}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold">{tr("Question Type", "نوع السؤال")}</Label>
-                <Select
-                  value={questionForm.type}
-                  onValueChange={(val) =>
-                    setQuestionForm((prev) => ({
-                      ...prev,
-                      type: val as QuestionType,
-                      correct_answer: val === "true_false" ? "True" : "",
-                    }))
-                  }
-                >
-                  <SelectTrigger className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="multiple_choice">{tr("Multiple Choice (MCQ)", "اختيار من متعدد")}</SelectItem>
-                    <SelectItem value="true_false">{tr("True / False", "صح / خطأ")}</SelectItem>
-                    <SelectItem value="short_text">{tr("Short Text", "إجابة قصيرة")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5 sm:col-span-2" dir="ltr">
-                <Label htmlFor="q-text-en" className="text-xs font-bold">Question in English</Label>
-                <Textarea
-                  id="q-text-en"
-                  required
-                  rows={2}
-                  value={questionForm.text_en}
-                  onChange={(e) => setQuestionForm((prev) => ({ ...prev, text_en: e.target.value }))}
-                  placeholder="Enter the question prompt in English..."
-                  className="text-sm sm:text-xs"
-                />
-              </div>
-
-              <div className="space-y-1.5 sm:col-span-2" dir="rtl">
-                <Label htmlFor="q-text-ar" className="text-xs font-bold">السؤال بالعربية</Label>
-                <Textarea
-                  id="q-text-ar"
-                  required
-                  rows={2}
-                  value={questionForm.text_ar}
-                  onChange={(e) => setQuestionForm((prev) => ({ ...prev, text_ar: e.target.value }))}
-                  placeholder="أدخل نص السؤال بالعربية..."
-                  className="text-sm sm:text-xs"
-                />
-              </div>
-
-              {questionForm.type === "multiple_choice" && (
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="q-options" className="text-xs font-bold">
-                    {tr("Multiple Choice Options (1 per line)", "خيارات السؤال (خيار واحد في كل سطر)")}
-                  </Label>
-                  <Textarea
-                    id="q-options"
-                    required
-                    rows={4}
-                    value={questionForm.optionsText}
-                    onChange={(e) => setQuestionForm((prev) => ({ ...prev, optionsText: e.target.value }))}
-                    placeholder={"Option A\nOption B\nOption C\nOption D"}
-                    className="text-sm sm:text-xs font-mono"
-                  />
-                  <p className="text-[11px] text-muted-foreground">
-                    {tr("Enter each possible answer choice on a separate line.", "أدخل كل خيار متاح في سطر مستقل.")}
-                  </p>
-                </div>
-              )}
-
-              {questionForm.type === "true_false" ? (
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold">{tr("Correct Answer", "الإجابة الصحيحة")}</Label>
-                  <Select
-                    value={questionForm.correct_answer}
-                    onValueChange={(val) => setQuestionForm((prev) => ({ ...prev, correct_answer: val }))}
-                  >
-                    <SelectTrigger className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="True">{tr("True", "صح")}</SelectItem>
-                      <SelectItem value="False">{tr("False", "خطأ")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label htmlFor="q-correct" className="text-xs font-bold">
-                    {tr("Exact Correct Answer", "نص الإجابة الصحيحة")}
-                  </Label>
-                  <Input
-                    id="q-correct"
-                    required
-                    value={questionForm.correct_answer}
-                    onChange={(e) => setQuestionForm((prev) => ({ ...prev, correct_answer: e.target.value }))}
-                    placeholder={tr("Must match one of the options above", "يجب أن يطابق أحد الخيارات أعلاه بالضبط")}
-                    className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px]"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="q-order" className="text-xs font-bold">
-                  {tr("Question Order", "ترتيب السؤال")}
-                </Label>
-                <Input
-                  id="q-order"
-                  type="number"
-                  min="1"
-                  required
-                  value={questionForm.order}
-                  onChange={(e) => setQuestionForm((prev) => ({ ...prev, order: +e.target.value }))}
-                  className="text-sm sm:text-xs min-h-[40px] sm:min-h-[36px] font-mono"
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => setEditor(null)} className="w-full sm:w-auto min-h-[40px] sm:min-h-[36px]">
-                {tr("Cancel", "إلغاء")}
-              </Button>
-              <Button type="submit" disabled={saving} className="w-full sm:w-auto min-h-[40px] sm:min-h-[36px]">
-                {saving && <Loader2 className="size-3.5 animate-spin me-1.5" />}
-                {saving ? tr("Saving...", "جارٍ الحفظ...") : tr("Save Question", "حفظ السؤال")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* ─── 6. EDIT USER MODAL ──────────────────────────────────────── */}
       <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
